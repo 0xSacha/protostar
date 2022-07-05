@@ -160,3 +160,13 @@ def test_disabling_hint_validation(protostar: ProtostarFixture, copy_fixture):
         ignore_exit_code=True,
     )
     assert "Hint is not whitelisted" not in result_after
+
+
+@pytest.mark.usefixtures("init")
+def test_fuzzing(protostar, copy_fixture):
+    copy_fixture("test_fuzz.cairo", "./tests")
+
+    # TODO(mkaput): Implement this.
+    result = protostar(["test", "tests"])
+    print(result)
+    raise NotImplementedError
