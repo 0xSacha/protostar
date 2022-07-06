@@ -1,5 +1,9 @@
 from typing import Optional
 
+from protostar.commands.test.environments.fuzz_test_execution_environment import (
+    is_fuzz_test,
+    FuzzTestExecutionEnvironment,
+)
 from protostar.commands.test.environments.setup_execution_environment import (
     SetupExecutionEnvironment,
 )
@@ -20,5 +24,9 @@ async def invoke_setup(function_name: str, state: TestExecutionState):
 async def invoke_test_case(
     function_name: str, state: TestExecutionState
 ) -> Optional[ExecutionResourcesSummary]:
-    env = TestExecutionEnvironment(state)
+    if is_fuzz_test(function_name, state):
+        env = FuzzTestExecutionEnvironment(state)
+    else:
+        env = TestExecutionEnvironment(state)
+
     return await env.invoke(function_name)
