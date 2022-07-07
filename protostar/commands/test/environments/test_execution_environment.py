@@ -34,6 +34,10 @@ class TestExecutionEnvironment(
         self._finish_hook = Hook()
 
     async def invoke(self, function_name: str) -> Optional[ExecutionResourcesSummary]:
+        assert not DataTransformerFacade.has_function_parameters(
+            self.state.contract.abi, function_name
+        ), f"{self.__class__.__name__} expects no function parameters."
+
         self.set_cheatcodes(
             TestCaseCheatcodeFactory(
                 state=self.state,
