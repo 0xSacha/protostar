@@ -7,8 +7,8 @@ from protostar.utils import DataTransformerFacade
 from protostar.utils.data_transformer_facade import AbiItemNotFoundException
 
 
-@pytest.fixture(scope="module")
-def abi() -> AbiType:
+@pytest.fixture(name="abi", scope="module")
+def abi_fixture() -> AbiType:
     code = """
 %lang starknet
 
