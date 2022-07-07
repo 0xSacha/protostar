@@ -27,7 +27,9 @@ func test_fuzz{syscall_ptr : felt*, range_check_ptr}(a, b : felt):
     return ()
 end
 """
-    return compile_starknet_codes([(code, "")]).abi
+    abi = compile_starknet_codes([(code, "")]).abi
+    assert abi is not None
+    return abi
 
 
 def test_has_function_parameters(abi: AbiType):
