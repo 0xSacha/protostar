@@ -73,6 +73,14 @@ class DataTransformerFacade:
         raise AbiItemNotFoundException(f"Couldn't find '{name}' ABI")
 
     @classmethod
+    def has_function_parameters(cls, contract_abi: AbiType, name: str) -> bool:
+        fn_abi_item = cls._find_abi_item(contract_abi, name)
+        if fn_abi_item["type"] != "function":
+            raise AbiItemNotFoundException(f"ABI item '{name}' not a function.")
+
+        return bool(fn_abi_item["inputs"])
+
+    @classmethod
     def get_function_parameters(
         cls, contract_abi: AbiType, name: str
     ) -> Dict[str, CairoType]:
