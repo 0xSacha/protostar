@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 from protostar.cli.activity_indicator import ActivityIndicator
 from protostar.cli.command import Command
+from protostar.commands.test.managed_random import managed_random
 from protostar.commands.test.test_collector import TestCollector
 from protostar.commands.test.test_runner import TestRunner
 from protostar.commands.test.test_scheduler import TestScheduler
@@ -108,33 +109,36 @@ class TestCommand(Command):
 
         include_paths = self._build_include_paths(cairo_path or [])
 
-        with ActivityIndicator(log_color_provider.colorize("GRAY", "Collecting tests")):
-            test_collector_result = TestCollector(
-                StarknetCompiler(
-                    disable_hint_validation=True, include_paths=include_paths
+        with managed_random():
+            with ActivityIndicator(
+                log_color_provider.colorize("GRAY", "Collecting tests")
+            ):
+                test_collector_result = TestCollector(
+                    StarknetCompiler(
+                        disable_hint_validation=True, include_paths=include_paths
+                    )
+                ).collect(
+                    targets=targets,
+                    ignored_targets=ignored_targets,
+                    default_test_suite_glob=str(self._project.project_root),
                 )
-            ).collect(
-                targets=targets,
-                ignored_targets=ignored_targets,
-                default_test_suite_glob=str(self._project.project_root),
+
+            test_collector_result.log(logger)
+
+            testing_summary = TestingSummary(
+                case_results=test_collector_result.broken_test_suites  # type: ignore | pyright bug?
             )
 
-        test_collector_result.log(logger)
+            if test_collector_result.test_cases_count > 0:
+                live_logger = TestingLiveLogger(logger, testing_summary)
+                TestScheduler(live_logger, worker=TestRunner.worker).run(
+                    include_paths=include_paths,
+                    test_collector_result=test_collector_result,
+                    is_account_contract=is_account_contract,
+                    disable_hint_validation=disable_hint_validation,
+                )
 
-        testing_summary = TestingSummary(
-            case_results=test_collector_result.broken_test_suites  # type: ignore | pyright bug?
-        )
-
-        if test_collector_result.test_cases_count > 0:
-            live_logger = TestingLiveLogger(logger, testing_summary)
-            TestScheduler(live_logger, worker=TestRunner.worker).run(
-                include_paths=include_paths,
-                test_collector_result=test_collector_result,
-                is_account_contract=is_account_contract,
-                disable_hint_validation=disable_hint_validation,
-            )
-
-        return testing_summary
+            return testing_summary
 
     def _build_include_paths(self, cairo_paths: List[Path]) -> List[str]:
         cairo_paths = self._protostar_directory.add_protostar_cairo_dir(cairo_paths)
