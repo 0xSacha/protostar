@@ -1,5 +1,3 @@
-from typing import Any
-
 from hypothesis.strategies import SearchStrategy, integers
 from starknet_py.cairo.felt import MIN_FELT, MAX_FELT
 from starkware.crypto.signature.signature import FIELD_PRIME
