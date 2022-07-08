@@ -1,4 +1,7 @@
-from typing import Optional, List
+import asyncio
+import functools
+import inspect
+from typing import Optional, List, Callable, Awaitable, Any
 
 from hypothesis import settings, seed, Verbosity, given
 from hypothesis.database import InMemoryExampleDatabase
@@ -53,21 +56,55 @@ class FuzzTestExecutionEnvironment(TestExecutionEnvironment):
             strategy_selector = StrategySelector(parameters)
 
             @seed(current_testing_seed())
-            @settings(database=self.database, verbosity=Verbosity.debug)
+            @settings(database=self.database, deadline=None)
             @given(data_object=data())
-            async def fuzz_test(data_object: DataObject):
+            async def test(data_object: DataObject):
                 inputs = {}
                 for param in strategy_selector.parameter_names:
                     search_strategy = strategy_selector.search_strategies[param]
                     inputs[param] = data_object.draw(search_strategy, label=param)
 
-                run_ers = await self.invoke_test_case(function_name)
+                run_ers = await self.invoke_test_case(function_name, **inputs)
                 if run_ers is not None:
                     execution_resources.append(run_ers)
 
-            await fuzz_test()
+            loop = asyncio.get_running_loop()
 
-        return sum(execution_resources) or None
+            test.hypothesis.inner_test = wrap_in_sync(test.hypothesis.inner_test)
+
+            await loop.run_in_executor(None, test)
+
+        return ExecutionResourcesSummary.sum(execution_resources)
+
+
+def wrap_in_sync(func: Callable[..., Awaitable[Any]]):
+    """
+    Return a sync wrapper around an async function executing it in separate event loop.
+
+    Separate event loop is used, because Hypothesis engine is running in current executor
+    and is effectively blocking it.
+
+    Partially borrowed from pytest-asyncio.
+    """
+
+    @functools.wraps(func)
+    def inner(*args, **kwargs):
+        coro = func(*args, **kwargs)
+        assert inspect.isawaitable(coro)
+
+        loop = asyncio.new_event_loop()
+        task = asyncio.ensure_future(coro, loop=loop)
+        try:
+            loop.run_until_complete(task)
+        except BaseException:
+            # run_until_complete doesn't get the result from exceptions
+            # that are not subclasses of `Exception`.
+            # Consume all exceptions to prevent asyncio's warning from logging.
+            if task.done() and not task.cancelled():
+                task.exception()
+            raise
+
+    return inner
 
 
 def protostar_reporter(value):
