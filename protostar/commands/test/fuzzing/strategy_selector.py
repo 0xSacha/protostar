@@ -48,7 +48,7 @@ class LazySearchStrategiesDict(DefaultDict[str, SearchStrategy[Any]]):
 
 
 def infer_strategy_from_cairo_type(cairo_type: CairoType) -> StrategyDescriptor:
-    if cairo_type is TypeFelt:
+    if isinstance(cairo_type, TypeFelt):
         return UnsignedFeltStrategyDescriptor()
 
     raise FuzzingError(f"Type {cairo_type.format()} cannot be fuzzed.")
