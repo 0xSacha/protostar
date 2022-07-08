@@ -48,6 +48,11 @@ class TestExecutionEnvironment(
 
         self.set_custom_hint_locals([TestContextHintLocal(self.state.context)])
 
+        return await self.invoke_test_case(function_name)
+
+    async def invoke_test_case(
+        self, function_name: str
+    ) -> Optional[ExecutionResourcesSummary]:
         execution_resources: Optional[ExecutionResourcesSummary] = None
 
         async with self._expect_revert_context.test():
