@@ -100,7 +100,7 @@ class ExecutionResourcesSummary:
         )
 
     @staticmethod
-    def sum(items: Iterable[Self]) -> Optional[Self]:
+    def sum(items: Iterable["ExecutionResourcesSummary"]) -> Optional["ExecutionResourcesSummary"]:
         result = None
         for item in items:
             if result is None:
