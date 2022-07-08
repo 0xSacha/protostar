@@ -3,7 +3,7 @@ import statistics
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Iterable, Optional
 from typing_extensions import Self
 
 from starkware.cairo.lang.vm.cairo_pie import ExecutionResources
@@ -98,3 +98,13 @@ class ExecutionResourcesSummary:
             n_memory_holes=self.n_memory_holes + other.n_memory_holes,
             builtin_name_to_count_map=dict(builtin_name_to_count_map),
         )
+
+    @staticmethod
+    def sum(items: Iterable[Self]) -> Optional[Self]:
+        result = None
+        for item in items:
+            if result is None:
+                result = item
+            else:
+                result += item
+        return result
