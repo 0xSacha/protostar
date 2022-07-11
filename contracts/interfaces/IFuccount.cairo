@@ -10,6 +10,9 @@ namespace IFuccount:
     func activater(_fundName : felt, _fundSymbol : felt, _assetManager : felt, _denominationAsset : felt):
     end   
 
+    func mintFromVF(_assetManager : felt, share_amount : Uint256, share_price : Uint256):
+    end   
+
     # Vault getters
 
     func getManagerAccount() -> (res : felt):

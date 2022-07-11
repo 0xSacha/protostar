@@ -74,7 +74,7 @@ const SELLSHARE_SELECTOR = 48171946380744487310448203515318920862752427823122522
 const POW18 = 1000000000000000000
 const POW20 = 100000000000000000000
 
-struct integration:
+struct Integration:
     member contract : felt
     member selector : felt
     member integration: felt
@@ -120,6 +120,10 @@ func approvePreLogic() -> (res: felt):
 end
 
 @storage_var
+func sharePriceFeed() -> (res : felt):
+end
+
+@storage_var
 func assetManagerVaultAmount(assetManager: felt) -> (res: felt):
 end
 
@@ -154,7 +158,7 @@ func constructor{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }(owner: felt):
-   Ownable.initalizer(owner)
+   Ownable.initializer(owner)
     return ()
 end
 
@@ -171,9 +175,9 @@ func onlyDependenciesSet{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range
     return ()
 end
 
-func onlyAssetManager{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}(_vault:felt):
+func onlyAssetManager{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}(_fund:felt):
     let (caller_:felt) = get_caller_address()
-    let (assetManager_:felt) = IFuccount.getManagerAccount(_vault)
+    let (assetManager_:felt) = IFuccount.getManagerAccount(_fund)
     with_attr error_message("addAllowedDepositors: caller is not asset manager"):
         assert caller_ = assetManager_
     end
@@ -191,7 +195,6 @@ func areDependenciesSet{
         range_check_ptr
     }() -> (res: felt):
     alloc_locals
-    let (comptroller_:felt) = getComptroller()
     let (oracle_:felt) = getOracle()
     let (feeManager_:felt) = getFeeManager()
     let (policyManager_:felt) = getPolicyManager()
@@ -199,7 +202,7 @@ func areDependenciesSet{
     let (valueInterpretor_:felt) = getValueInterpretor()
     let (primitivePriceFeed_:felt) = getPrimitivePriceFeed()
     let (approvePreLogic_:felt) = getApprovePreLogic()
-    let  mul_:felt = approvePreLogic_ * comptroller_ * oracle_ * feeManager_ * policyManager_ * integrationManager_ * valueInterpretor_ * primitivePriceFeed_
+    let  mul_:felt = approvePreLogic_  * oracle_ * feeManager_ * policyManager_ * integrationManager_ * valueInterpretor_ * primitivePriceFeed_
     let (isZero_:felt) = __is_zero(mul_)
     if isZero_ == 1:
         return (res = 0)
@@ -218,15 +221,7 @@ func getOwner{
     return(res)
 end
 
-@view
-func getComptroller{
-        syscall_ptr: felt*,
-        pedersen_ptr: HashBuiltin*,
-        range_check_ptr
-    }() -> (res: felt):
-    let (res:felt) = comptroller.read()
-    return(res)
-end
+
 
 @view
 func getOracle{
@@ -298,6 +293,19 @@ func getApprovePreLogic{
     let (res:felt) = approvePreLogic.read()
     return(res)
 end
+
+@view
+func getSharePriceFeed{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }() -> (res: felt):
+    let (res:felt) = sharePriceFeed.read()
+    return(res)
+end
+
+
+
 
 @view
 func getDaoTreasury{
@@ -444,6 +452,24 @@ func setPrimitivePriceFeed{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ran
     return ()
 end
 
+@external
+func setApprovePreLogic{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        _approvePreLogic : felt):
+    Ownable.assert_only_owner()
+    approvePreLogic.write(_approvePreLogic)
+    return ()
+end
+
+@external
+func setSharePriceFeed{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        _sharePriceFeed : felt):
+    Ownable.assert_only_owner()
+    sharePriceFeed.write(_sharePriceFeed)
+    return ()
+end
+
+
+
 
 @external
 func setStackingVault{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
@@ -495,7 +521,7 @@ func addGlobalAllowedIntegration{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }(_integrationList_len:felt, _integrationList:integration*) -> ():
+    }(_integrationList_len:felt, _integrationList:Integration*) -> ():
     alloc_locals
     Ownable.assert_only_owner()
     onlyDependenciesSet()
@@ -513,15 +539,15 @@ func addAllowedDepositors{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }(_vault:felt, _depositors_len:felt, _depositors:felt*) -> ():
+    }(_fund:felt, _depositors_len:felt, _depositors:felt*) -> ():
     alloc_locals
-    onlyAssetManager(_vault)
+    onlyAssetManager(_fund)
     let (policyManager_:felt) = policyManager.read()
-    let (isPublic_:felt) = IPolicyManager.checkIsPublic(policyManager_, _vault)
+    let (isPublic_:felt) = IPolicyManager.checkIsPublic(policyManager_, _fund)
     with_attr error_message("addAllowedDepositors: the fund is already public"):
         assert isPublic_ = 0
     end
-   __addAllowedDepositors(_vault, _depositors_len, _depositors)
+   __addAllowedDepositors(_fund, _depositors_len, _depositors)
     return ()
 end
 
@@ -533,7 +559,7 @@ func initializeFund{
         range_check_ptr
     }(
     #vault initializer
-    _vault: felt,
+    _fund: felt,
     _fundName:felt,
     _fundSymbol:felt,
     _denominationAsset:felt,
@@ -544,6 +570,9 @@ func initializeFund{
     _feeConfig_len: felt,
     _feeConfig: felt*,
 
+    _maxAmount: Uint256,
+    _minAmount: Uint256,
+
     #Timelock before selling shares
     _timelock:felt,
     #allowed depositors 
@@ -551,25 +580,22 @@ func initializeFund{
     ):
     alloc_locals
     onlyDependenciesSet()
-    let (comptroller_:felt) = comptroller.read()
     let (feeManager_:felt) = feeManager.read()
     let (policyManager_:felt) = policyManager.read()
     let (integrationManager_:felt) = integrationManager.read()
     let (primitivePriceFeed_:felt) = primitivePriceFeed.read()
-
-    let (name_:felt) = IFuccount.getName(_vault)
+    let (name_:felt) = IFuccount.getName(_fund)
     with_attr error_message("initializeFund: vault already initialized"):
         assert name_ = 0
     end
-
     with_attr error_message("initializeFund: can not set value to 0"):
-        assert_not_zero(_vault * _fundName * _fundSymbol * _denominationAsset)
+        assert_not_zero(_fund * _fundName * _fundSymbol * _denominationAsset)
     end
 
     let (assetManager_: felt) = get_caller_address()
 
     #Fuccount activater
-    IFuccount.activater(_vault, _fundName, _fundSymbol, assetManager_, _denominationAsset)
+    IFuccount.activater(_fund, _fundName, _fundSymbol, assetManager_, _denominationAsset)
 
     #check allowed amount, min amount > decimal/1000 & share amount in [1, 100]
     let (decimals_:felt) = IERC20.decimals(_denominationAsset)
@@ -583,75 +609,84 @@ func initializeFund{
 
     #save fund and add it to the global allowed integrations
     let (currentAssetManagerVaultAmount_: felt) = assetManagerVaultAmount.read(assetManager_)
-    assetManagerVault.write(assetManager_, currentAssetManagerVaultAmount_, _vault)
+    assetManagerVault.write(assetManager_, currentAssetManagerVaultAmount_, _fund)
     assetManagerVaultAmount.write(assetManager_, currentAssetManagerVaultAmount_ + 1)
     let (currentVaultAmount:felt) = vaultAmount.read()
     vaultAmount.write(currentVaultAmount + 1)
-    idToVault.write(currentVaultAmount, _vault)
+    idToVault.write(currentVaultAmount, _fund)
 
-
+    # let _integrationList_len:felt = 2   
+    # let (_integrationList:Integration*) = alloc()
+    # assert _integrationList[0].contract = _fund
+    # assert _integrationList[0].selector = BUYSHARE_SELECTOR
+    # assert _integrationList[0].integration = 0
+    # assert _integrationList[Integration.SIZE].contract = _fund
+    # assert _integrationList[Integration.SIZE].selector = SELLSHARE_SELECTOR
+    # assert _integrationList[Integration.SIZE].integration = 0
+    #  __addGlobalAllowedIntegration(_integrationList_len, _integrationList, integrationManager_)
+     
 
     # shares have 18 decimals
     let (amountPow18_:Uint256, _) = uint256_mul(_amount, Uint256(POW18,0))
     let (sharePricePurchased_:Uint256) = uint256_div(amountPow18_ , _shareAmount)
-    IFuccount.mintFromVF(comptroller_,_vault, assetManager_, _shareAmount, sharePricePurchased_)
-    IERC20.transferFrom(_denominationAsset, assetManager_, _vault, _amount)
+    IFuccount.mintFromVF(_fund, assetManager_, _shareAmount, sharePricePurchased_)
+    IERC20.transferFrom(_denominationAsset, assetManager_, _fund, _amount)
     
     #Set feeconfig for vault
     let entrance_fee = _feeConfig[0]
     let (is_entrance_fee_not_enabled) = __is_zero(entrance_fee)
     if is_entrance_fee_not_enabled == 1 :
-        IFeeManager.setFeeConfig(feeManager_, _vault, FeeConfig.ENTRANCE_FEE_ENABLED, 0)
+        IFeeManager.setFeeConfig(feeManager_, _fund, FeeConfig.ENTRANCE_FEE_ENABLED, 0)
     else:
         with_attr error_message("initializeFund: entrance fee must be between 0 and 10"):
             assert_le(entrance_fee, 10)
         end
-        IFeeManager.setFeeConfig(feeManager_, _vault, FeeConfig.ENTRANCE_FEE_ENABLED, 1)
-        IFeeManager.setFeeConfig(feeManager_, _vault, FeeConfig.ENTRANCE_FEE, entrance_fee)
+        IFeeManager.setFeeConfig(feeManager_, _fund, FeeConfig.ENTRANCE_FEE_ENABLED, 1)
+        IFeeManager.setFeeConfig(feeManager_, _fund, FeeConfig.ENTRANCE_FEE, entrance_fee)
     end
 
     let exit_fee = _feeConfig[1]
     let (is_exit_fee_not_enabled) = __is_zero(exit_fee)
     if is_exit_fee_not_enabled == 1 :
-        IFeeManager.setFeeConfig(feeManager_, _vault, FeeConfig.EXIT_FEE_ENABLED, 0)
+        IFeeManager.setFeeConfig(feeManager_, _fund, FeeConfig.EXIT_FEE_ENABLED, 0)
     else:
         with_attr error_message("initializeFund: exit fee must be between 0 and 10"):
             assert_le(exit_fee, 10)
         end
-        IFeeManager.setFeeConfig(feeManager_, _vault, FeeConfig.EXIT_FEE_ENABLED, 1)
-        IFeeManager.setFeeConfig(feeManager_, _vault, FeeConfig.EXIT_FEE, exit_fee)
+        IFeeManager.setFeeConfig(feeManager_, _fund, FeeConfig.EXIT_FEE_ENABLED, 1)
+        IFeeManager.setFeeConfig(feeManager_, _fund, FeeConfig.EXIT_FEE, exit_fee)
     end
 
     let performance_fee = _feeConfig[2]
     let (is_performance_fee_not_enabled) = __is_zero(performance_fee)
     if is_performance_fee_not_enabled == 1 :
-        IFeeManager.setFeeConfig(feeManager_, _vault, FeeConfig.PERFORMANCE_FEE_ENABLED, 0)
+        IFeeManager.setFeeConfig(feeManager_, _fund, FeeConfig.PERFORMANCE_FEE_ENABLED, 0)
     else:
         with_attr error_message("initializeFund: performance fee must be between 0 and 20"):
             assert_le(performance_fee, 20)
         end
-        IFeeManager.setFeeConfig(feeManager_, _vault, FeeConfig.PERFORMANCE_FEE_ENABLED, 1)
-        IFeeManager.setFeeConfig(feeManager_, _vault, FeeConfig.PERFORMANCE_FEE, performance_fee)
+        IFeeManager.setFeeConfig(feeManager_, _fund, FeeConfig.PERFORMANCE_FEE_ENABLED, 1)
+        IFeeManager.setFeeConfig(feeManager_, _fund, FeeConfig.PERFORMANCE_FEE, performance_fee)
     end
 
     let management_fee = _feeConfig[3]
     let (is_management_fee_not_enabled) = __is_zero(management_fee)
     if is_management_fee_not_enabled == 1 :
-        IFeeManager.setFeeConfig(feeManager_, _vault, FeeConfig.MANAGEMENT_FEE, 0)
+        IFeeManager.setFeeConfig(feeManager_, _fund, FeeConfig.MANAGEMENT_FEE, 0)
     else:
         with_attr error_message("initializeFund: management fee must be between 0 and 20"):
             assert_le(management_fee, 20)
         end
-        IFeeManager.setFeeConfig(feeManager_, _vault, FeeConfig.MANAGEMENT_FEE_ENABLED, 1)
-        IFeeManager.setFeeConfig(feeManager_, _vault, FeeConfig.MANAGEMENT_FEE, management_fee)
+        IFeeManager.setFeeConfig(feeManager_, _fund, FeeConfig.MANAGEMENT_FEE_ENABLED, 1)
+        IFeeManager.setFeeConfig(feeManager_, _fund, FeeConfig.MANAGEMENT_FEE, management_fee)
         let (timestamp_:felt) = get_block_timestamp()
-        IFeeManager.setClaimedTimestamp(feeManager_, _vault, timestamp_)
+        IFeeManager.setClaimedTimestamp(feeManager_, _fund, timestamp_)
     end
 
     # Policy config for fund
-    IPolicyManager.setMaxminAmount(policyManager_, _vault, _maxAmount, _minAmount)
-    IPolicyManager.setTimelock(policyManager_, _vault, _timelock)
-    IPolicyManager.setIsPublic(policyManager_, _vault, _isPublic)
+    IPolicyManager.setMaxminAmount(policyManager_, _fund, _maxAmount, _minAmount)
+    IPolicyManager.setTimelock(policyManager_, _fund, _timelock)
+    IPolicyManager.setIsPublic(policyManager_, _fund, _isPublic)
     return ()
 end
 
@@ -715,17 +750,17 @@ func __addGlobalAllowedIntegration{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }(_integrationList_len:felt, _integrationList:integration*, _integrationManager:felt) -> ():
+    }(_integrationList_len:felt, _integrationList:Integration*, _integrationManager:felt) -> ():
     alloc_locals
     if _integrationList_len == 0:
         return ()
     end
 
-    let integration_:integration = [_integrationList]
+    let integration_:Integration = [_integrationList]
     IIntegrationManager.setAvailableIntegration(_integrationManager, integration_.contract, integration_.selector, integration_.integration)
 
     let newIntegrationList_len:felt = _integrationList_len -1
-    let newIntegrationList:integration* = _integrationList + 3
+    let newIntegrationList:Integration* = _integrationList + 3
 
     return __addGlobalAllowedIntegration(
         _integrationList_len= newIntegrationList_len,
@@ -738,20 +773,20 @@ func __addAllowedDepositors{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }(_vault:felt, _depositors_len:felt, _depositors:felt*) -> ():
+    }(_fund:felt, _depositors_len:felt, _depositors:felt*) -> ():
     alloc_locals
     if _depositors_len == 0:
         return ()
     end
     let (policyManager_:felt) = policyManager.read()
     let depositor_:felt = [_depositors]
-    IPolicyManager.setAllowedDepositor(policyManager_, _vault, depositor_)
+    IPolicyManager.setAllowedDepositor(policyManager_, _fund, depositor_)
 
     let newDepositors_len:felt = _depositors_len -1
     let newDepositors:felt* = _depositors + 1
 
     return __addAllowedDepositors(
-        _vault = _vault,
+        _fund = _fund,
         _depositors_len= newDepositors_len,
         _depositors= newDepositors,
         )

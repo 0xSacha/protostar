@@ -71,12 +71,12 @@ func constructor{
     return ()
 end
 
-func onlyOwner{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}():
+func onlyAuthorized{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}():
     let (vaultFactory_) = vaultFactory.read()
     let (caller_) = get_caller_address()
     let (owner_) = IVaultFactory.getOwner(vaultFactory_)
-    with_attr error_message("onlyOwner: only callable by the owner"):
-        assert owner_ = caller_
+    with_attr error_message("onlyAuthorized: only callable by the owner or VF"):
+        assert (owner_ - caller_) * (vaultFactory_ - caller) = 0
     end
     return ()
 end
@@ -180,7 +180,7 @@ func addDerivative{
         _derivative: felt,
         _priceFeed: felt,
     ):
-    onlyOwner()
+    onlyAuthorized()
     isSupportedDerivativeAsset.write(_derivative, 1)
     derivativeToPriceFeed.write(_derivative, _priceFeed)
     return()
@@ -195,7 +195,7 @@ func addExternalPosition{
         _externalPosition: felt,
         _priceFeed: felt,
     ):
-    onlyOwner()
+    onlyAuthorized()
     isSupportedExternalPosition.write(_externalPosition, 1)
     externalPositionToPriceFeed.write(_externalPosition, _priceFeed)
     return()
