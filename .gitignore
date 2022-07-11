@@ -33,6 +33,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 Python-3.8.0/
+lib/
 MANIFEST
 
 # PyInstaller
