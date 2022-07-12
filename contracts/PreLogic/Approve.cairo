@@ -2,7 +2,8 @@
 %lang starknet
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
-from contracts.interfaces.IVault import IVault
+from contracts.interfaces.IVaultFactory import IVaultFactory
+from contracts.interfaces.IIntegrationManager import IIntegrationManager
 from starkware.cairo.common.math import assert_not_zero
 
 
