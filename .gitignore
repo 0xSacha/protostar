@@ -34,6 +34,7 @@ share/python-wheels/
 *.egg
 Python-3.8.0/
 lib/
+lib
 MANIFEST
 
 # PyInstaller
@@ -134,5 +135,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 .idea
+lib/cairo_contracts
+lib/cairo_contracts
 lib/cairo_contracts
 lib/cairo_contracts
