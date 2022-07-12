@@ -13,6 +13,23 @@ from starkware.cairo.common.math import assert_not_zero
     #     -> (amount_out_received: Uint256):
     # end
 
+@storage_var
+func vaultFactory() -> (res : felt):
+end
+
+
+@constructor
+func constructor{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    }(
+        _vaultFactory:felt,
+    ):
+    vaultFactory.write(_vaultFactory)
+    return ()
+end
+
 @external
 func runPreLogic{
         syscall_ptr: felt*,
@@ -20,9 +37,11 @@ func runPreLogic{
         range_check_ptr 
     }(_vault:felt, _callData_len:felt, _callData:felt*):
     let incomingAsset_:felt = [_callData + 1]
-    let (isTrackedAsset_:felt) = IVault.isTrackedAsset(_vault, incomingAsset_)
+    let (VF_:felt) = vaultFactory.read()
+    let (IM_:felt) = IVaultFactory.getIntegrationManager(VF_)
+    let (isAllowedAsset_:felt) = IIntegrationManager.checkIsAssetAvailable(IM_, incomingAsset_)
     with_attr error_message("swapExactTokensForTokensFromAlphaRoad: incoming Asset not tracked"):
-        assert_not_zero(isTrackedAsset_)
+        assert_not_zero(isAllowedAsset_)
     end
     return()
 end

@@ -19,6 +19,9 @@ namespace IIntegrationManager:
     end
 
 
+    
+    func checkIsContractIntegrated(_contract: felt) -> (res: felt):
+    end
     func checkIsAssetAvailable(_asset: felt) -> (res: felt):
     end
     func checkIsIntegrationAvailable(_contract: felt, _selector: felt) -> (res: felt):

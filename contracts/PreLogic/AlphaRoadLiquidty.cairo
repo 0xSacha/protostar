@@ -1,12 +1,18 @@
 %lang starknet
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
-from contracts.interfaces.IVault import IVault
+from contracts.interfaces.IVaultFactory import IVaultFactory
+from contracts.interfaces.IIntegrationManager import IIntegrationManager
+
 from contracts.interfaces.IARFPoolFactory import IARFPoolFactory, PoolPair
 from starkware.cairo.common.math import assert_not_zero
 
 @storage_var
 func IARFPoolFactoryContract() -> (res : felt):
+end
+
+@storage_var
+func vaultFactory() -> (res : felt):
 end
 
 
@@ -17,9 +23,11 @@ func constructor{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }(
+        _vaultFactory:felt,
         _IARFPoolFactory: felt,
     ):
     IARFPoolFactoryContract.write(_IARFPoolFactory)
+    vaultFactory.write(_vaultFactory)
     return ()
 end
 
@@ -34,9 +42,11 @@ func runPreLogic{
     let token1_:felt = [_callData + 1]
     let poolPair_ = PoolPair(token0_,token1_)
     let (incomingAsset_:felt) = IARFPoolFactory.getPool(IARFPoolFactoryContract_, poolPair_)
-    let (isTrackedAsset_:felt) = IVault.isTrackedAsset(_vault, incomingAsset_)
-    with_attr error_message("addLiquidityFromAlpha: incoming LP Asset not tracked"):
-        assert_not_zero(isTrackedAsset_)
+    let (VF_:felt) = vaultFactory.read()
+    let (IM_:felt) = IVaultFactory.getIntegrationManager(VF_)
+    let (isAllowedAsset_:felt) = IIntegrationManager.checkIsAssetAvailable(IM_, incomingAsset_)
+    with_attr error_message("addLiquidityFromAlpha: incoming LP Asset not available on agnety"):
+        assert_not_zero(isAllowedAsset_)
     end
     return()
 end

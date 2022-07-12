@@ -56,6 +56,10 @@ end
 func isIntegrationAvailable(_integration: integration) -> (res: felt):
 end
 
+@storage_var
+func isContractIntergrated(_contract: felt) -> (res: felt):
+end
+
 
 @storage_var
 func integrationContract(_integration: integration) -> (res: felt):
@@ -117,6 +121,12 @@ end
 @view
 func getIntegration{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_contract: felt, _selector:felt) -> (res: felt): 
     let (res) = integrationContract.read(integration(_contract, _selector))
+    return (res=res)
+end
+
+@view
+func checkIsContractIntegrated{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_contract: felt) -> (res: felt): 
+    let (res) = isContractIntergrated.read(_contract)
     return (res=res)
 end
 
@@ -258,6 +268,7 @@ func setAvailableIntegration{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, r
     if isIntegrationAvailable_ == 1:
     return()
     else:
+    isContractIntergrated.write(_contract, 1)
     isIntegrationAvailable.write(integration(_contract, _selector), 1)
     integrationContract.write(integration(_contract, _selector), _integration)
     let (currentIntegrationAvailableLength_:felt) = integrationAvailableLength.read()
