@@ -304,9 +304,6 @@ func getSharePriceFeed{
     return(res)
 end
 
-
-
-
 @view
 func getDaoTreasury{
         syscall_ptr: felt*,
@@ -327,11 +324,6 @@ func getStackingVault{
     return(res)
 end
 
-
-
-
-
-
 #get Vault info helper to fetch info for the frontend, to be removed once tracker is implemented
 
 @view
@@ -339,7 +331,6 @@ func getUserVaultAmount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_
     let(res:felt) = assetManagerVaultAmount.read(_user)
     return (res=res)
 end
-
 
 @view
 func getUserVault{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_user:felt, _vaultId: felt) -> (res: felt):

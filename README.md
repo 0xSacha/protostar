@@ -38,6 +38,15 @@ curl -L https://raw.githubusercontent.com/software-mansion/protostar/master/inst
 
 ## Development
 
+In order to run Magnety tesuite you juste have to use 
+```shell
+protostar install
+```
+and run the following command
+```shell
+protostar test ./tests/magnety_tests
+```
+
 ### Requirements
 - good knowledge of [Python](https://www.python.org/)
 - good knowledge of [pytest](https://docs.pytest.org/en/7.1.x/)
