@@ -1,0 +1,551 @@
+[
+    {
+        "members": [
+            {
+                "name": "contract",
+                "offset": 0,
+                "type": "felt"
+            },
+            {
+                "name": "selector",
+                "offset": 1,
+                "type": "felt"
+            },
+            {
+                "name": "integration",
+                "offset": 2,
+                "type": "felt"
+            }
+        ],
+        "name": "Integration",
+        "size": 3,
+        "type": "struct"
+    },
+    {
+        "members": [
+            {
+                "name": "low",
+                "offset": 0,
+                "type": "felt"
+            },
+            {
+                "name": "high",
+                "offset": 1,
+                "type": "felt"
+            }
+        ],
+        "name": "Uint256",
+        "size": 2,
+        "type": "struct"
+    },
+    {
+        "data": [
+            {
+                "name": "previousOwner",
+                "type": "felt"
+            },
+            {
+                "name": "newOwner",
+                "type": "felt"
+            }
+        ],
+        "keys": [],
+        "name": "OwnershipTransferred",
+        "type": "event"
+    },
+    {
+        "data": [
+            {
+                "name": "feeManagerAddress",
+                "type": "felt"
+            }
+        ],
+        "keys": [],
+        "name": "FeeManagerSet",
+        "type": "event"
+    },
+    {
+        "data": [
+            {
+                "name": "feeManagerAddress",
+                "type": "felt"
+            }
+        ],
+        "keys": [],
+        "name": "OracleSet",
+        "type": "event"
+    },
+    {
+        "data": [
+            {
+                "name": "fuccountAddress",
+                "type": "felt"
+            }
+        ],
+        "keys": [],
+        "name": "FuccountActivated",
+        "type": "event"
+    },
+    {
+        "inputs": [
+            {
+                "name": "owner",
+                "type": "felt"
+            }
+        ],
+        "name": "constructor",
+        "outputs": [],
+        "type": "constructor"
+    },
+    {
+        "inputs": [],
+        "name": "areDependenciesSet",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getOwner",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getOracle",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getFeeManager",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getPolicyManager",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getIntegrationManager",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getValueInterpretor",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getPrimitivePriceFeed",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getApprovePreLogic",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getSharePriceFeed",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getDaoTreasury",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getStackingVault",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_user",
+                "type": "felt"
+            }
+        ],
+        "name": "getUserVaultAmount",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_user",
+                "type": "felt"
+            },
+            {
+                "name": "_vaultId",
+                "type": "felt"
+            }
+        ],
+        "name": "getUserVault",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getVaultAmount",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_vaultId",
+                "type": "felt"
+            }
+        ],
+        "name": "getVaultFromId",
+        "outputs": [
+            {
+                "name": "res",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "new_owner",
+                "type": "felt"
+            }
+        ],
+        "name": "transferOwnership",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_oracle",
+                "type": "felt"
+            }
+        ],
+        "name": "setOracle",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_feeManager",
+                "type": "felt"
+            }
+        ],
+        "name": "setFeeManager",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_policyManager",
+                "type": "felt"
+            }
+        ],
+        "name": "setPolicyManager",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_integrationManager",
+                "type": "felt"
+            }
+        ],
+        "name": "setIntegrationManager",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_valueInterpretor",
+                "type": "felt"
+            }
+        ],
+        "name": "setValueInterpretor",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_primitivePriceFeed",
+                "type": "felt"
+            }
+        ],
+        "name": "setPrimitivePriceFeed",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_approvePreLogic",
+                "type": "felt"
+            }
+        ],
+        "name": "setApprovePreLogic",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_sharePriceFeed",
+                "type": "felt"
+            }
+        ],
+        "name": "setSharePriceFeed",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_stackingVault",
+                "type": "felt"
+            }
+        ],
+        "name": "setStackingVault",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_daoTreasury",
+                "type": "felt"
+            }
+        ],
+        "name": "setDaoTreasury",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_assetList_len",
+                "type": "felt"
+            },
+            {
+                "name": "_assetList",
+                "type": "felt*"
+            }
+        ],
+        "name": "addGlobalAllowedAsset",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_externalPositionList_len",
+                "type": "felt"
+            },
+            {
+                "name": "_externalPositionList",
+                "type": "felt*"
+            }
+        ],
+        "name": "addGlobalAllowedExternalPosition",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_integrationList_len",
+                "type": "felt"
+            },
+            {
+                "name": "_integrationList",
+                "type": "Integration*"
+            }
+        ],
+        "name": "addGlobalAllowedIntegration",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_fund",
+                "type": "felt"
+            },
+            {
+                "name": "_depositors_len",
+                "type": "felt"
+            },
+            {
+                "name": "_depositors",
+                "type": "felt*"
+            }
+        ],
+        "name": "addAllowedDepositors",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "_fund",
+                "type": "felt"
+            },
+            {
+                "name": "_fundName",
+                "type": "felt"
+            },
+            {
+                "name": "_fundSymbol",
+                "type": "felt"
+            },
+            {
+                "name": "_denominationAsset",
+                "type": "felt"
+            },
+            {
+                "name": "_amount",
+                "type": "Uint256"
+            },
+            {
+                "name": "_shareAmount",
+                "type": "Uint256"
+            },
+            {
+                "name": "_feeConfig_len",
+                "type": "felt"
+            },
+            {
+                "name": "_feeConfig",
+                "type": "felt*"
+            },
+            {
+                "name": "_maxAmount",
+                "type": "Uint256"
+            },
+            {
+                "name": "_minAmount",
+                "type": "Uint256"
+            },
+            {
+                "name": "_timelock",
+                "type": "felt"
+            },
+            {
+                "name": "_isPublic",
+                "type": "felt"
+            }
+        ],
+        "name": "initializeFund",
+        "outputs": [],
+        "type": "function"
+    }
+]
