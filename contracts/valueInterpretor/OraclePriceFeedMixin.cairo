@@ -142,7 +142,7 @@ end
     end
 
     let baseAssetRate = baseAssetRate_
-    let denominationAssetRate = denominationAssetRate__
+    let denominationAssetRate = denominationAssetRate_
 
     
 
