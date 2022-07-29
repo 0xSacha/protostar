@@ -68,6 +68,7 @@ from contracts.shareBaseToken import (
     name,
     symbol,
     balanceOf,
+    tokenOfOwnerByIndex,
     ownerOf,
     sharesBalance,
     approve,
@@ -388,6 +389,15 @@ func getBalanceOf{
     return (balance)
 end
 
+func getTokenOfOwnerByIndex{
+        syscall_ptr : felt*, 
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    }(owner: felt, index: Uint256) -> (tokenId: Uint256):
+    let (tokenId: Uint256) = tokenOfOwnerByIndex(owner, index)
+    return (tokenId)
+end
+
 
 func getOwnerOf{
         syscall_ptr : felt*, 
@@ -429,7 +439,7 @@ end
 
 
 func getSharePrice{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
-     price : Uint256
+     res : Uint256
 ):
     alloc_locals
     let (gav) = calculGav()
@@ -437,45 +447,45 @@ func getSharePrice{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     let (gavPow18_:Uint256,_) = uint256_mul(gav, Uint256(POW18,0))
     let (total_supply) = getSharesTotalSupply()
     let (price : Uint256) = uint256_div(gavPow18_, total_supply)
-    return (price=price)
+    return (res=price)
 end
 
 
 func getAssetValue{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     _asset: felt, _amount: Uint256, _denominationAsset: felt
-) -> (value: Uint256):
+) -> (res: Uint256):
     let (valueInterpretor_:felt) = __getValueInterpretor()
     let (value_:Uint256) = IValueInterpretor.calculAssetValue(valueInterpretor_, _asset, _amount, _denominationAsset)
-    return (value=value_)
+    return (res=value_)
 end
 
 
 func calculLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
-    gav : Uint256
+    res : Uint256
 ):
     alloc_locals
     let (assets_len : felt, assets : AssetInfo*) = getNotNulAssets()
     let (gav) = __calculGav1(assets_len, assets)
-    return (gav=gav)
+    return (res=gav)
 end
 
 func calculNotLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
-    gav : Uint256
+    res : Uint256
 ):
     alloc_locals
     let (externalPosition_len: felt, externalPosition: PositionInfo*) = getNotNulPositions()
     let (gav) = __calculGav2(externalPosition_len, externalPosition)
-    return (gav=gav)
+    return (res=gav)
 end
 
 func calculGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
-    gav : Uint256
+    res : Uint256
 ):
     alloc_locals
     let (gav1_) = calculLiquidGav()
     let (gav2_) = calculNotLiquidGav()
     let (gav, _) = uint256_add(gav1_, gav2_)
-    return (gav=gav)
+    return (res=gav)
 end
 
 

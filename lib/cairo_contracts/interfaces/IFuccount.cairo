@@ -21,6 +21,23 @@ namespace IFuccount:
     func getDenominationAsset() -> (res : felt):
     end
 
+    ## Business 
+
+    func getSharePrice() -> (res : Uint256):
+    end
+
+    func calculLiquidGav() -> (res : Uint256):
+    end
+
+    func calculNotLiquidGav() -> (res : Uint256):
+    end
+
+    func calculGav() -> (res : Uint256):
+    end
+
+    
+
+
 
     # NFT getters
 
@@ -40,6 +57,9 @@ namespace IFuccount:
     end
 
     func getBalanceOf(owner : felt) -> (balance : Uint256):
+    end
+
+    func getTokenOfOwnerByIndex(owner: felt, index: Uint256) -> (tokenId: Uint256):
     end
 
     func getOwnerOf(tokenId : Uint256) -> (owner : felt):
