@@ -576,7 +576,7 @@ func initializeFund{
     let (feeManager_:felt) = feeManager.read()
     let (policyManager_:felt) = policyManager.read()
     let (integrationManager_:felt) = integrationManager.read()
-    let (valueInterpretor_:felt) = ValueInterpreter.read()
+    let (valueInterpretor_:felt) = valueInterpretor.read()
     let (primitivePriceFeed_:felt) = primitivePriceFeed.read()
     let (name_:felt) = IFuccount.getName(_fund)
     with_attr error_message("initializeFund: vault already initialized"):
