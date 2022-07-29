@@ -72,7 +72,6 @@ end
 const APPROVE_SELECTOR = 949021990203918389843157787496164629863144228991510976554585288817234167820
 const BUYSHARE_SELECTOR = 1739160585925371971880668508720131927045855609588612196644536989289532392537
 const SELLSHARE_SELECTOR = 481719463807444873104482035153189208627524278231225222947146558976722465517
-# const addAllowedDepositors_SELECTOR = 876865433
 
 const POW18 = 1000000000000000000
 const POW20 = 100000000000000000000
@@ -738,6 +737,12 @@ func __addGlobalAllowedExternalPosition{
         return ()
     end
     let externalPosition_:felt = [_externalPositionList]
+    let (VI_:felt) = valueInterpretor.read()
+    let (isSupportedExternalPosition_) = IValueInterpretor.checkIsSupportedExternalPosition(VI_,externalPosition_)
+    with_attr error_message("__addGlobalAllowedExternalPosition: PriceFeed not set"):
+        assert isSupportedExternalPosition_ = 1
+    end
+
     IIntegrationManager.setAvailableExternalPosition(_integrationManager, externalPosition_)
 
     let newExternalPositionList_len:felt = _externalPositionList_len -1

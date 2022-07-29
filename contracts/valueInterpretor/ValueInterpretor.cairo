@@ -144,7 +144,7 @@ func checkIsSupportedDerivativeAsset{
 end
 
 @view
-func getExternalPositionPriceFeed{
+func getIsSupportedExternalPositionPriceFeed{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
