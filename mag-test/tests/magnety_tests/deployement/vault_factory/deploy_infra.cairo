@@ -21,6 +21,8 @@ end
 @external
 func __setup__():
     %{ context.VF_address = deploy_contract("./contracts/VaultFactory.cairo",[111]).contract_address %}
+    
+    %{ context.mock_fuccount = deploy_contract("./contracts/Fuccount_mock.cairo",[8338,context.VF_address]).contract_address %}
     return ()
 end
 

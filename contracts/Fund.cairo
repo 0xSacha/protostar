@@ -178,9 +178,7 @@ namespace Fund:
     func assert_only_self{syscall_ptr : felt*}():
         let (self) = get_contract_address()
         let (caller) = get_caller_address()
-        %{ 
-            print("Yolo")
-        %}
+
         with_attr error_message("Fund: caller is not this account"):
             assert self = caller
         end
