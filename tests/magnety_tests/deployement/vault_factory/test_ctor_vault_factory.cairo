@@ -22,6 +22,12 @@ end
 func __setup__():
     %{ context.VF_address = deploy_contract("./contracts/VaultFactory.cairo",[111]).contract_address %}
     %{ context.mock_fuccount = deploy_contract("./contracts/Fuccount_mock.cairo",[8338,context.VF_address]).contract_address %}
+    %{ context.mock_fuccount = deploy_contract("./contracts/PolicyManager.cairo",[context.VF_address]).contract_address %}
+    %{ context.mock_fuccount = deploy_contract("./contracts/IntegrationManager.cairo",[context.VF_address]).contract_address %}
+    %{ context.mock_fuccount = deploy_contract("./contracts/FeeManager.cairo",[context.VF_address]).contract_address %}
+    %{ context.mock_fuccount = deploy_contract("./contracts/mock/EmpiricOracle.cairo",[context.VF_address]).contract_address %}
+
+    %{ context.mock_fuccount = deploy_contract("./contracts/IntegrationManager.cairo",[context.VF_address]).contract_address %}
 
     return ()
 end
