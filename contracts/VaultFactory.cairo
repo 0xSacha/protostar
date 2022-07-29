@@ -576,6 +576,7 @@ func initializeFund{
     let (feeManager_:felt) = feeManager.read()
     let (policyManager_:felt) = policyManager.read()
     let (integrationManager_:felt) = integrationManager.read()
+    let (valueInterpretor_:felt) = ValueInterpreter.read()
     let (primitivePriceFeed_:felt) = primitivePriceFeed.read()
     let (name_:felt) = IFuccount.getName(_fund)
     with_attr error_message("initializeFund: vault already initialized"):
@@ -608,16 +609,22 @@ func initializeFund{
     vaultAmount.write(currentVaultAmount + 1)
     idToVault.write(currentVaultAmount, _fund)
 
-    # let _integrationList_len:felt = 2   
-    # let (_integrationList:Integration*) = alloc()
-    # assert _integrationList[0].contract = _fund
-    # assert _integrationList[0].selector = BUYSHARE_SELECTOR
-    # assert _integrationList[0].integration = 0
-    # assert _integrationList[Integration.SIZE].contract = _fund
-    # assert _integrationList[Integration.SIZE].selector = SELLSHARE_SELECTOR
-    # assert _integrationList[Integration.SIZE].integration = 0
-    #  __addGlobalAllowedIntegration(_integrationList_len, _integrationList, integrationManager_)
+
+    ##add integration so other funds can buy/sell shares from it
+    let _integrationList_len:felt = 2   
+    let (_integrationList:Integration*) = alloc()
+    assert _integrationList[0].contract = _fund
+    assert _integrationList[0].selector = BUYSHARE_SELECTOR
+    assert _integrationList[0].integration = 0
+    assert _integrationList[Integration.SIZE].contract = _fund
+    assert _integrationList[Integration.SIZE].selector = SELLSHARE_SELECTOR
+    assert _integrationList[Integration.SIZE].integration = 0
+     __addGlobalAllowedIntegration(_integrationList_len, _integrationList, integrationManager_)
      
+    ##register the position
+    let (sharePriceFeed_:felt) = getSharePriceFeed()
+    IValueInterpretor.addExternalPosition(valueInterpretor_, _fund, sharePriceFeed_)
+
 
     # shares have 18 decimals
     let (amountPow18_:Uint256, _) = uint256_mul(_amount, Uint256(POW18,0))
