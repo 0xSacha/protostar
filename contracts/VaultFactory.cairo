@@ -45,7 +45,10 @@ from contracts.interfaces.IPolicyManager import IPolicyManager
 
 from contracts.interfaces.IIntegrationManager import IIntegrationManager
 
-from contracts.interfaces.IPontisPriceFeedMixin import IPontisPriceFeedMixin
+from contracts.interfaces.IOraclePriceFeedMixin import IOraclePriceFeedMixin
+
+from contracts.interfaces.IValueInterpretor import IValueInterpretor
+
 
 from contracts.interfaces.IERC20 import IERC20
 
@@ -699,7 +702,17 @@ func __addGlobalAllowedAsset{
     if _assetList_len == 0:
         return ()
     end
+
     let asset_:felt = [_assetList]
+    let (VI_:felt) = valueInterpretor.read()
+    let (PPF_:felt) = primitivePriceFeed.read()
+    let (isSupportedPrimitiveAsset_) = IOraclePriceFeedMixin.checkIsSupportedPrimitiveAsset(PPF_,asset_)
+    let (isSupportedDerivativeAsset_) = IValueInterpretor.checkIsSupportedDerivativeAsset(VI_,asset_)
+    let (notAllowed_) = __is_zero(isSupportedPrimitiveAsset_ + isSupportedDerivativeAsset_)
+    with_attr error_message("onlyDependenciesSet:Dependencies not set"):
+        assert notAllowed_ = 0
+    end
+    
     let (approvePreLogic_:felt) = getApprovePreLogic()
     IIntegrationManager.setAvailableAsset(_integrationManager, asset_)
     IIntegrationManager.setAvailableIntegration(_integrationManager, asset_, APPROVE_SELECTOR, approvePreLogic_)
