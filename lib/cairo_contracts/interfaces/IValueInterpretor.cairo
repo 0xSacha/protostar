@@ -17,7 +17,7 @@ namespace IValueInterpretor:
     func checkIsSupportedDerivativeAsset(_derivative: felt) -> (res:felt):
     end
 
-     func checkIsSupportedExternalPosition(_externalPosition: felt) -> (res:felt):
+    func checkIsSupportedExternalPosition(_externalPosition: felt) -> (res:felt):
     end
 
     func getDerivativePriceFeed(_derivative: felt) -> (res:felt):
