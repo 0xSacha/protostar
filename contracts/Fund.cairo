@@ -60,32 +60,12 @@ from contracts.interfaces.IVault import (
 )
 
 
-from contracts.shareBaseToken import (
-
-    #NFT Shares getters
-    totalSupply,
-    sharesTotalSupply,
-    name,
-    symbol,
-    balanceOf,
-    tokenOfOwnerByIndex,
-    ownerOf,
-    sharesBalance,
-    approve,
-    sharePricePurchased,
-    mintedBlockTimesTamp,
-
-    #NFT Shares externals
-    transferSharesFrom,
-    mint,
-    burn,
-    subShares,
-
-    #init
-    initializeShares,
-)
+from contracts.ERC1155Shares import ERC1155Shares
 
 const POW18 = 1000000000000000000
+const PRECISION = 1000000
+const SECOND_YEAR = 31536000
+
 
 
 #
@@ -161,12 +141,12 @@ namespace Fund:
     }(
         _fundName: felt,
         _fundSymbol: felt,
+        _uri: felt,
         _denominationAsset: felt,
         _managerAccount:felt,
     ):
     onlyVaultFactory()
-    initializeShares(_fundName, _fundSymbol)
-    ## denomination asset adress availability is check in the fundInitializer
+    ERC1155Shares.initializeShares(_fundName, _fundSymbol, _uri)
     denominationAsset.write(_denominationAsset)
     managerAccount.write(_managerAccount)
     return ()
@@ -340,91 +320,152 @@ end
 
 
 #
-# NFT Getters 
+# ERC1155 Getters 
 #
 
-func getTotalSupply{
+func totalId{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
     }() -> (totalSupply_: Uint256):
-    let (totalSupply_: Uint256) = totalSupply()
+    let (totalSupply_: Uint256) = ERC1155Shares.totalId()
     return (totalSupply_)
 end
 
-func getSharesTotalSupply{
+func sharesTotalSupply{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
     }() -> (sharesTotalSupply_: Uint256):
-    let (sharesTotalSupply_: Uint256) = sharesTotalSupply()
+    let (sharesTotalSupply_: Uint256) =  ERC1155Shares.sharesTotalSupply()
     return (sharesTotalSupply_)
 end
 
-func getName{
+func name{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }() -> (name_: felt):
-    let (name_) = name()
+    let (name_) = ERC1155Shares.name()
     return (name_)
 end
 
-func getSymbol{
+func symbol{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }() -> (symbol_: felt):
-    let (symbol_) = symbol()
+    let (symbol_) = ERC1155Shares.symbol()
     return (symbol_)
 end
 
 
-func getBalanceOf{
+func balanceOf{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-    }(owner: felt) -> (balance: Uint256):
-    let (balance: Uint256) = balanceOf(owner)
+    }(account: felt, id: Uint256) -> (balance: Uint256):
+    let (balance: Uint256) = ERC1155Shares.balanceOf(account, id)
     return (balance)
 end
 
-func getTokenOfOwnerByIndex{
+func ownerShares{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-    }(owner: felt, index: Uint256) -> (tokenId: Uint256):
-    let (tokenId: Uint256) = tokenOfOwnerByIndex(owner, index)
-    return (tokenId)
+    }(account: felt) -> (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*):
+    let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = ERC1155Shares.ownerShares(account)
+    return (assetId_len, assetId, assetAmount_len,assetAmount)
 end
 
-
-func getOwnerOf{
-        syscall_ptr : felt*, 
-        pedersen_ptr : HashBuiltin*,
+func balanceOfBatch{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }(tokenId: Uint256) -> (owner: felt):
-    let (owner: felt) = ownerOf(tokenId)
-    return (owner)
+    }(
+        accounts_len: felt,
+        accounts: felt*,
+        ids_len: felt,
+        ids: Uint256*
+    ) -> (balances_len: felt, balances: Uint256*):
+    let (balances_len, balances) =  ERC1155Shares.balanceOfBatch(accounts_len, accounts, ids_len, ids)
+    return (balances_len, balances)
 end
 
-
-
-func getSharesBalance{
-        syscall_ptr : felt*, 
-        pedersen_ptr : HashBuiltin*,
+func isApprovedForAll{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }(tokenId: Uint256) -> (sharesBalance_: Uint256):
-    let (sharesBalance_: Uint256) = sharesBalance(tokenId)
-    return (sharesBalance_)
+    }(account: felt, operator: felt) -> (isApproved: felt):
+    let (is_approved) = ERC1155Shares.isApprovedForAll(account, operator)
+    return (is_approved)
 end
 
-func getSharePricePurchased{
+
+@external
+func setURI{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(uri: felt):
+    ERC1155Shares.setURI(uri)
+    return ()
+end
+
+@external
+func setApprovalForAll{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(operator: felt, approved: felt):
+    ERC1155Shares.setApprovalForAll(operator, approved)
+    return ()
+end
+
+@external
+func safeTransferFrom{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(
+        from_: felt,
+        to: felt,
+        id: Uint256,
+        amount: Uint256,
+        data_len: felt,
+        data: felt*
+    ):
+    ERC1155Shares.safeTransferFrom(from_, to, id, amount, data_len, data)
+    return ()
+end
+
+
+@external
+func safeBatchTransferFrom{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(
+        from_: felt,
+        to: felt,
+        ids_len: felt,
+        ids: Uint256*,
+        amounts_len: felt,
+        amounts: Uint256*,
+        data_len: felt,
+        data: felt*
+    ):
+    ERC1155Shares.safeBatchTransferFrom(
+        from_, to, ids_len, ids, amounts_len, amounts, data_len, data)
+    return ()
+end
+
+func sharePricePurchased{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
         range_check_ptr
-    }(tokenId: Uint256) -> (sharePricePurchased_: Uint256):
-    let (sharePricePurchased_: Uint256) = sharePricePurchased(tokenId)
+    }(id: Uint256) -> (sharePricePurchased_: Uint256):
+    let (sharePricePurchased_: Uint256) = ERC1155Shares.sharePricePurchased(id)
     return (sharePricePurchased_)
 end
 
@@ -432,8 +473,8 @@ func getMintedTimesTamp{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
         range_check_ptr
-    }(tokenId: Uint256) -> (mintedTimesTamp_: felt):
-    let (mintedTimesTamp_:felt) = mintedBlockTimesTamp(tokenId)
+    }(id: Uint256) -> (mintedTimesTamp_: felt):
+    let (mintedTimesTamp_:felt) = ERC1155Shares.mintedBlockTimesTamp(id)
     return (mintedTimesTamp_)
 end
 
@@ -445,7 +486,7 @@ func getSharePrice{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     let (gav) = calculGav()
     #shares have 18 decimals
     let (gavPow18_:Uint256,_) = uint256_mul(gav, Uint256(POW18,0))
-    let (total_supply) = getSharesTotalSupply()
+    let (total_supply) = sharesTotalSupply()
     let (price : Uint256) = uint256_div(gavPow18_, total_supply)
     return (res=price)
 end
@@ -573,7 +614,136 @@ func buyShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}
 end
 
 
-@external
+
+func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    id : Uint256,
+    amount : Uint256,
+    assets_len : felt,
+    assets : felt*,
+    percents_len : felt,
+    percents : felt*,
+):
+    alloc_locals
+    with_attr error_message("sell_share: percents tab and asset tab not same length"):
+        assert assets_len = percents_len
+    end
+
+    let (fund_:felt) = get_contract_address()
+    let (denominationAsset_:felt) = denominationAsset.read()
+    let (caller_) = get_caller_address()
+    let (totalpercent:felt) = __calculTab100(percents_len, percents)
+    with_attr error_message("sell_share: sum of percents tab not equal at 100%"):
+        assert totalpercent = 100
+    end
+
+    #check timelock
+    let (policyManager_:felt) = getPolicyManager()
+    let (mintedBlockTimesTamp_:felt) = getMintedTimesTamp(token_id)
+    let (currentTimesTamp_:felt) = get_block_timestamp()
+    let (timelock_:felt) = IPolicyManager.getTimelock(policyManager_, fund_)
+    let diffTimesTamp_:felt = currentTimesTamp_ - mintedBlockTimesTamp_
+    with_attr error_message("sell_share: timelock not reached"):
+        assert_le(timelock_, diffTimesTamp_)
+    end
+
+    #shareprice retrun price of 10^18 shares 
+    let (share_price) = getSharePrice()
+    let (sharesValuePow_:Uint256,_) = uint256_mul(share_price, amount)
+    let (decimals_:felt) = IERC20.decimals(denominationAsset_)
+    let (decimalsPow_:Uint256) = uint256_pow(Uint256(10,0), decimals_)
+    let (sharesValue:Uint256,) = uint256_div(sharesValuePow_, decimalsPow_)
+
+    #get amount tab according to share_value and the percents tab 
+    let (local amounts : Uint256*) = alloc()
+    calc_amount_of_each_asset(sharesValue, assets_len, assets, percents, amounts)
+
+    #calculate the performance 
+    let(previous_share_price_:Uint256) = getSharePricePurchased(token_id)
+    let(current_share_price_:Uint256) = getSharePrice()
+    let(has_performed_) = uint256_le(previous_share_price_, current_share_price_)
+    if has_performed_ == 1 :
+        let(diff_:Uint256) = SafeUint256.sub_le(current_share_price_, previous_share_price_)
+        let(diffPermillion_:Uint256,diffperc_h_) = uint256_mul(diff_, Uint256(PRECISION,0))
+        let(perfF_:Uint256)=uint256_div(diffPermillion_, current_share_price_)
+        tempvar perf_ = perfF_
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+    else:
+        tempvar perf_ = Uint256(0,0)
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+    end
+    let performancePermillion_ = perf_
+
+    #calculate the duration
+
+    let (mintedBlockTimesTamp_:felt) = ERC1155Shares.mintedBlockTimesTamp(id)
+    let (currentTimesTamp_:felt) = get_block_timestamp()
+    let diff = currentTimesTamp_ - mintedBlockTimesTamp_
+    let diff_precision = diff * PRECISION
+    let (durationPermillion_) = unsigned_div_rem(diff_precision, SECOND_YEAR)
+
+    # transfer token of each amount to the caller_
+    return __resultReedem(assets_len, assets, amounts, performancePermillion_, durationPermillion_)
+end
+
+
+func __resultReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    len : felt, asset : felt*, amount : Uint256*, performancePermillion : Uint256, durationPermillion : felt,
+    callerAmount : Uint256*, feeManagerAmount : Uint256*, stackingVaultAmount : Uint256*, daoTreasuryAmount : Uint256*
+) -> ( len : felt, asset : felt*, amount : Uint256*, performancePermillion : Uint256, durationPermillion : felt,
+    callerAmount : Uint256*, feeManagerAmount : Uint256*, stackingVaultAmount : Uint256*, daoTreasuryAmount : Uint256*):
+    alloc_locals
+    if len == 0:
+        return ( callerAmount : Uint256*, feeManagerAmount : Uint256*, stackingVaultAmount : Uint256*, daoTreasuryAmount : Uint256*)
+    end
+
+    let (amount_ : Uint256) = amounts[0]
+    let (asset : felt) = assets[0]
+
+    #PERFORMANCE FEES
+    let (millionTimePerf:Uint256) = uint256_mul_low(amount_, performancePermillion)
+    let (performanceAmount : Uint256) = uint256_div(millionTimePerf, PRECISION)
+    let (fee0, feeAssetManager0, feeDaoTreasury0, feeStackingVault0) = __get_fee(fund_, FeeConfig.PERFORMANCE_FEE, amount_)
+
+    let (remainingAmount_ : Uint256) = uint256_sub(amount_, fee0)
+
+    #MANAGEMENT FEES
+    let (millionTimeDuration_:Uint256) = uint256_mul_low(remainingAmount_, durationPermillion)
+    let (managementAmount : Uint256) = uint256_div(millionTimeDuration_, PRECISION)
+    let (fee1, feeAssetManager1, feeDaoTreasury1, feeStackingVault1) = __get_fee(fund_, FeeConfig.MANAGEMENT_FEE, managementAmount)
+
+
+
+    # transfer fee to asset maanger, fee_treasury, stacking_vault 
+    let (assetManager_:felt) = managerAccount.read()
+    let (treasury_:felt) = __getTreasury()
+    let (stackingVault_) = __getStackingVault()
+    __withdrawAssetTo(asset, fee_assset_manager, assetManager_)
+    __withdrawAssetTo(asset, fee_treasury, treasury_)
+    __withdrawAssetTo(asset, fee_stacking_vault, stackingVault_)
+
+    let (amount_without_performance_fee) = uint256_sub(amount, fee_perf)
+    #EXIT FEES
+    let (fee_exit, fee_assset_manager, fee_treasury, fee_stacking_vault) = __get_fee(fund_, FeeConfig.EXIT_FEE, amount_without_performance_fee)
+
+    # transfer fee to asset maanger, fee_treasury, stacking_vault 
+    __withdrawAssetTo(asset, fee_assset_manager, assetManager_)
+    __withdrawAssetTo(asset, fee_treasury, treasury_)
+    __withdrawAssetTo(asset, fee_stacking_vault, stackingVault_)
+
+
+    let (amount_without_fee) = uint256_sub(amount_without_performance_fee, fee_exit)
+
+    __withdrawAssetTo(assets[0], amount_without_fee, caller)
+    __transfer_each_asset(caller, len - 1, assets + 1, amounts + 1, perf)
+
+    return ()
+end
+
+
 func sellShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     token_id : Uint256,
     share_amount : Uint256,
@@ -604,7 +774,7 @@ func sellShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     end
 
     #check timelock
-    let (policyManager_:felt) = __getPolicyManager()
+    let (policyManager_:felt) = getPolicyManager()
     let (mintedBlockTimesTamp_:felt) = getMintedTimesTamp(token_id)
     let (currentTimesTamp_:felt) = get_block_timestamp()
     let (timelock_:felt) = IPolicyManager.getTimelock(policyManager_, fund_)
@@ -626,7 +796,7 @@ func sellShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     end
 
     #get amount tab according to share_value and the percents tab 
-    let (amounts : felt*) = alloc()
+    let (local amounts : Uint256*) = alloc()
     calc_amount_of_each_asset(sharesValue, assets_len, assets, percents, amounts)
 
     #calculate the performance 
@@ -702,7 +872,7 @@ end
 
 
 func calc_amount_of_each_asset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    total_value : Uint256, len : felt, assets : felt*, percents : felt*, amounts : felt*
+    total_value : Uint256, len : felt, assets : felt*, percents : felt*, amounts : Uint256*
 ):
     alloc_locals
 
@@ -713,14 +883,14 @@ func calc_amount_of_each_asset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
     let (percent:Uint256) = felt_to_uint256(percents[0])
     let (valuePercent_:Uint256) = uint256_percent(total_value, percent)
     let (assetAmount_:Uint256) = getAssetValue(denominationAsset_, valuePercent_,assets[0])
-    assert [amounts] = assetAmount_.low
+    assert [amounts] = assetAmount_
 
     calc_amount_of_each_asset(
         total_value=total_value,
         len=len - 1,
         assets=assets + 1,
         percents=percents + 1,
-        amounts=amounts + 1,
+        amounts=amounts + Uint256.SIZE,
     )
 
     return ()
@@ -863,7 +1033,7 @@ func __getFeeManager{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
     return (res=feeManager_)
 end
 
-func __getPolicyManager{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
+func getPolicyManager{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
     res: felt
 ):
     let (vaultFactory_:felt) = vaultFactory.read()
@@ -892,7 +1062,7 @@ end
 func __assertMaxminRange{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     _amount : Uint256):
     alloc_locals
-    let (policyManager_) = __getPolicyManager()
+    let (policyManager_) = getPolicyManager()
     let (fund_:felt) = get_contract_address()
     let (max:Uint256, min:Uint256) = IPolicyManager.getMaxminAmount(policyManager_, fund_)
     let (le_max) = uint256_le(_amount, max)
@@ -909,7 +1079,7 @@ end
 func __assertAllowedDepositor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     _caller : felt):
     alloc_locals
-    let (policyManager_) = __getPolicyManager()
+    let (policyManager_) = getPolicyManager()
     let (fund_:felt) = get_contract_address()
     let (isPublic_:felt) = IPolicyManager.checkIsPublic(policyManager_, fund_)
     if isPublic_ == 1:
