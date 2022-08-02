@@ -1,0 +1,25 @@
+["protostar.config"]
+protostar_version = "0.2.5"
+
+["protostar.project"]
+libs_path = "lib"
+
+["protostar.contracts"]
+main = [
+    "contracts/VaultFactory.cairo",
+]
+fuccount = [
+    "contracts/Fuccount_mock.cairo",
+]
+Oracle = [
+    "contracts/valueInterpretor/OraclePriceFeedMixin.cairo",
+]
+
+MgtyShare = [
+    "contracts/valueInterpretor/ExternalPositionPriceFeed/MgtyShare.cairo",
+]
+
+ERC4626PriceFeed = [
+    "contracts/valueInterpretor/derivativePriceFeed/ERC4626_priceFeed.cairo",
+]
+

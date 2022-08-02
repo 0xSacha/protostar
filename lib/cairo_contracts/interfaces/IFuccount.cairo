@@ -23,16 +23,16 @@ namespace IFuccount:
 
     ## Business 
 
-    func getSharePrice() -> (res : Uint256):
+    func getSharePrice() -> (res : felt):
     end
 
-    func calculLiquidGav() -> (res : Uint256):
+    func calculLiquidGav() -> (res : felt):
     end
 
-    func calculNotLiquidGav() -> (res : Uint256):
+    func calculNotLiquidGav() -> (res : felt):
     end
 
-    func calculGav() -> (res : Uint256):
+    func calculGav() -> (res : felt):
     end
 
     

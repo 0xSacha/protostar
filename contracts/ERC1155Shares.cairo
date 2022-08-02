@@ -9,12 +9,18 @@ from starkware.cairo.common.uint256 import (
     uint256_eq,
     uint256_add,
     uint256_mul,
-)from starkware.starknet.common.syscalls import get_caller_address
+)
+from starkware.starknet.common.syscalls import (
+    get_block_timestamp, get_contract_address, get_caller_address
+)
 from starkware.cairo.common.math import assert_not_zero
 
-from openzeppelin.access.ownable.library import Ownable
-from openzeppelin.token.erc1155.library import ERC1155
+from contracts.erc1155 import ERC1155
 from openzeppelin.introspection.erc165.library import ERC165
+
+from starkware.cairo.common.alloc import (
+    alloc,
+)
 
 
 #
@@ -38,11 +44,11 @@ func sharesTotalSupply() -> (res: Uint256):
 end
 
 @storage_var
-func name() -> (res: Uint256):
+func name() -> (res: felt):
 end
 
 @storage_var
-func symbol() -> (res: Uint256):
+func symbol() -> (res: felt):
 end
 
 namespace ERC1155Shares:
@@ -57,13 +63,13 @@ func initializeShares{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }(
-        name: felt,
-        symbol: felt,
+        _name: felt,
+        _symbol: felt,
         uri: felt,
         
     ):
-    name.write(name)
-    symbol.write(symbol)
+    name.write(_name)
+    symbol.write(_symbol)
     ERC1155.initializer(uri)
     return ()
 end
@@ -73,7 +79,7 @@ end
 #
 
 
-func sharePricePurchased{
+func getSharePricePurchased{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
         range_check_ptr
@@ -82,7 +88,7 @@ func sharePricePurchased{
     return (sharePricePurchased)
 end
 
-func mintedBlockTimesTamp{
+func getMintedBlockTimesTamp{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
         range_check_ptr
@@ -111,7 +117,7 @@ func uri{
 end
 
 @view
-func sharesTotalSupply{
+func getSharesTotalSupply{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
@@ -121,13 +127,13 @@ func sharesTotalSupply{
 end
 
 @view
-func totalId{
+func getTotalId{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
-    }() -> (totalId: Uint256):
-    let (totalId: Uint256) = totalId.read()
-    return (totalId)
+    }() -> (res: Uint256):
+    let (totalId_: Uint256) = totalId.read()
+    return (totalId_)
 end
 
 func balanceOf{
@@ -155,56 +161,56 @@ func completeMultiAssetTab{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }(totalId:felt, assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*, account:felt) -> (tabSize:felt):
+    }(totalId:Uint256, assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*, account:felt) -> (tabSize:felt):
     alloc_locals
-    if totalId == 0:
+    if totalId.low == 0:
         return (tabSize=assetId_len)
     end
-    let newTotalId = totalId - 1
-    let (balance:Uint256) = balanceOf(account, assetId_len)
-    let (isZero_:felt) = __is_zero(balance.low)
+    let (newTotalId_) =  uint256_sub( totalId, Uint256(1,0))
+    let (balance_) = balanceOf(account, newTotalId_)
+    let (isZero_) = __is_zero(balance_.low)
     if isZero_ == 0:
         let newAssetId_len:felt = assetId_len + 1
         let newAssetAmount_len:felt = assetAmount_len + 1
-        assert assetId[assetId_len*Uint256.SIZE].address = assetIndex_
-        assert assetAmount[assetId_len*Uint256.SIZE].amount = assetBalance_
-         return completeNonNulAssetTab(
-        totalId= newTotalId
+        assert assetId[assetId_len*Uint256.SIZE].address = newTotalId_
+        assert assetAmount[assetId_len*Uint256.SIZE].amount = balance_
+         return completeMultiAssetTab(
+        totalId= newTotalId_,
         assetId_len=newAssetId_len,
-        assetId= availableAssets,
+        assetId= assetId,
         assetAmount_len=newAssetAmount_len,
-        assetAmount=assetAmount
+        assetAmount=assetAmount,
         account=account,
         )
     end
     return completeMultiAssetTab(
-        totalId=newTotalId,
-        assetId_len= availableAssets,
-        assetId=notNulAssets_len,
-        assetAmount_len=notNulAssets,
+        totalId=newTotalId_,
+        assetId_len= assetId_len,
+        assetId=assetId,
+        assetAmount_len=assetAmount_len,
         assetAmount=assetAmount,
         account=account,
         )
 end
 
 @view
-func name{
+func getName{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-    }() -> (name: felt):
-    let (name) = name.read()
-    return (name)
+    }() -> (res: felt):
+    let (name_) = name.read()
+    return (name_)
 end
 
 @view
-func symbol{
+func getSymbol{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-    }() -> (symbol: felt):
-    let (symbol) = symbol.read()
-    return (symbol)
+    }() -> (res: felt):
+    let (symbol_) = symbol.read()
+    return (symbol_)
 end
 
 @view
@@ -302,7 +308,7 @@ func mint{
     }(
         to: felt, 
         sharesAmount: Uint256, 
-        sharePricePurchased:Uint256
+        sharePricePurchased:Uint256,
         data_len: felt,
         data: felt*
     ):
@@ -331,8 +337,9 @@ func burn{
     end
     ERC1155._burn(from_, id, amount)
     let (currentTotalSupply_) = sharesTotalSupply.read()
-    let (newTotalSupply_) = uint256_sub(currentTotalSupply_, sharesAmount )
+    let (newTotalSupply_) = uint256_sub(currentTotalSupply_, amount )
     sharesTotalSupply.write(newTotalSupply_)
     return ()
+end
 end
 
