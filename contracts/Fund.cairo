@@ -24,8 +24,8 @@ from starkware.starknet.common.syscalls import get_block_timestamp
 
 from starkware.cairo.common.memcpy import memcpy
 
-from openzeppelin.token.erc20.interfaces.IERC20 import IERC20
-
+from openzeppelin.token.erc20.IERC20 import IERC20
+lib/openzeppelin/token/erc20/IERC20.cairo
 from contracts.interfaces.IFeeManager import FeeConfig, IFeeManager
 from contracts.interfaces.IPolicyManager import IPolicyManager
 
@@ -562,7 +562,7 @@ func buyShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}
     let (amountWithoutFeesPow_,_) = uint256_mul(amountWithoutFees_, decimalsPow_)
     let (sharePrice_) = getSharePrice()
     let (shareAmount_) = uint256_div(amountWithoutFeesPow_, sharePrice_)
-ff
+
     # mint share
     ERC1155Shares.mint(caller_, shareAmount_, sharePrice_, data_len, data)
     return ()
@@ -667,8 +667,7 @@ func __reedemTab{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     let (fee1, feeAssetManager1, feeDaoTreasury1, feeStackingVault1) = __get_fee(fund_, FeeConfig.MANAGEMENT_FEE, managementAmount_)
 
     let (remainingAmount1_ : Uint256) = uint256_sub(remainingAmount0_, fee1)
-    let (cumulativeFeeAssetManager1 : Uint256) = uint256_add(
-    .feeAssetManager0, feeAssetManager1)
+    let (cumulativeFeeAssetManager1 : Uint256) = uint256_add(feeAssetManager0, feeAssetManager1)
     let (cumulativeFeeStackingVault1 : Uint256) = uint256_add(feeStackingVault0, feeStackingVault1)
     let (cumulativeFeeDaoTreasury1 : Uint256) = uint256_add(feeDaoTreasury0, feeDaoTreasury1)
 
