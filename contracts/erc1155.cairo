@@ -3,9 +3,7 @@
 
 %lang starknet
 
-from starkware.starknet.common.syscalls import (
-    get_block_timestamp, get_contract_address, get_caller_address
-)
+from starkware.starknet.common.syscalls import get_caller_address
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.math import assert_not_zero, assert_not_equal
 from starkware.cairo.common.alloc import alloc

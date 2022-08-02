@@ -20,11 +20,20 @@ end
 
 @external
 func __setup__():
-    %{ context.VF_address = deploy_contract("./contracts/VaultFactory.cairo",[111]).contract_address %}
-    %{ context.mock_fuccount = deploy_contract("./contracts/Fuccount_mock.cairo",[8338,context.VF_address]).contract_address %}
-    %{ context.mock_fuccount = deploy_contract("./contracts/PolicyManager.cairo",[context.VF_address]).contract_address %}
-    %{ context.mock_fuccount = deploy_contract("./contracts/IntegrationManager.cairo",[context.VF_address]).contract_address %}
-    %{ context.mock_fuccount = deploy_contract("./contracts/FeeManager.cairo",[context.VF_address]).contract_address %}
+    %{ context.VF = deploy_contract("./contracts/VaultFactory.cairo",[111]).contract_address %}
+    %{ context.FU = deploy_contract("./contracts/Fuccount_mock.cairo",[8338,context.VF_address]).contract_address %}
+    %{ context.PM = deploy_contract("./contracts/PolicyManager.cairo",[context.VF_address]).contract_address %}
+    %{ context.IM = deploy_contract("./contracts/IntegrationManager.cairo",[context.VF_address]).contract_address %}
+    %{ context.FM = deploy_contract("./contracts/FeeManager.cairo",[context.VF_address]).contract_address %}
+    %{ context.OR = deploy_contract("./contracts/mock/EmpiricOracle.cairo",[context.VF_address]).contract_address %}
+    %{ context.ETH = deploy_contract("./contracts/mock/ERC20.cairo",[400,401, 18, 1000000000000000000, 0, 100, 1000]).contract_address %}
+    %{ context.BTC = deploy_contract("./contracts/mock/ERC20.cairo",[400,401, 18, 1000000000000000000, 0, 100, 1000]).contract_address %}
+    %{ context.DAI = deploy_contract("./contracts/mock/ERC20.cairo",[400,401, 6, 1000000, 0, 100, 1000]).contract_address %}
+    %{ context.VI = deploy_contract("./contracts/mock/ValueInterpreter.cairo",[context.VF_address, context.ETH]).contract_address %}
+
+
+    %{ context.mock_fuccount = deploy_contract("./contracts/mock/EmpiricOracle.cairo",[context.VF_address]).contract_address %}
+    %{ context.mock_fuccount = deploy_contract("./contracts/mock/EmpiricOracle.cairo",[context.VF_address]).contract_address %}
     %{ context.mock_fuccount = deploy_contract("./contracts/mock/EmpiricOracle.cairo",[context.VF_address]).contract_address %}
 
     %{ context.mock_fuccount = deploy_contract("./contracts/IntegrationManager.cairo",[context.VF_address]).contract_address %}
