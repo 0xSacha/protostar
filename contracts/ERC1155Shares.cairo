@@ -1,8 +1,15 @@
 %lang starknet
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
-from starkware.cairo.common.uint256 import Uint256
-from starkware.starknet.common.syscalls import get_caller_address
+from starkware.cairo.common.uint256 import (
+    Uint256,
+    uint256_sub,
+    uint256_check,
+    uint256_le,
+    uint256_eq,
+    uint256_add,
+    uint256_mul,
+)from starkware.starknet.common.syscalls import get_caller_address
 from starkware.cairo.common.math import assert_not_zero
 
 from openzeppelin.access.ownable.library import Ownable
@@ -300,10 +307,15 @@ func mint{
         data: felt*
     ):
     let (totalId_) = totalId.read()
-    ERC1155._mint(to, totalId_, sharesAmount, data_len, data)
     sharePricePurchased.write(totalId_, sharePricePurchased)
     let (currentTimesTamp_:felt) = get_block_timestamp()
     mintedBlockTimesTamp.write(totalId_, currentTimesTamp_)
+    let (currentTotalSupply_) = sharesTotalSupply.read()
+    let (newTotalSupply_) = uint256_add(currentTotalSupply_, sharesAmount )
+    sharesTotalSupply.write(newTotalSupply_)
+    let (newTotalId_,_) = uint256_add(totalId_, Uint256(1,0) )
+    totalId.write(newTotalId_)
+    ERC1155._mint(to, totalId_, sharesAmount, data_len, data)
     return ()
 end
 
@@ -318,6 +330,9 @@ func burn{
         assert_not_zero(caller)
     end
     ERC1155._burn(from_, id, amount)
+    let (currentTotalSupply_) = sharesTotalSupply.read()
+    let (newTotalSupply_) = uint256_sub(currentTotalSupply_, sharesAmount )
+    sharesTotalSupply.write(newTotalSupply_)
     return ()
 end
 

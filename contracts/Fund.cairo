@@ -100,14 +100,6 @@ func denominationAsset() -> (res : felt):
 end
 
 
-#
-# Events
-#
-
-@event
-func AssetWithdrawn(assetAddress: felt, targetAddress: felt, amount: Uint256):
-end
-
 
 
 namespace Fund:
@@ -144,11 +136,17 @@ namespace Fund:
         _uri: felt,
         _denominationAsset: felt,
         _managerAccount:felt,
+        _shareAmount:felt,
+        _sharePrice:felt,
+        data_len:felt,
+        data:felt*,
     ):
     onlyVaultFactory()
     ERC1155Shares.initializeShares(_fundName, _fundSymbol, _uri)
     denominationAsset.write(_denominationAsset)
     managerAccount.write(_managerAccount)
+    mint(_managerAccount, share_amount, share_price)
+    ERC1155Shares.mint(_managerAccount, _shareAmount, _sharePrice, data_len, data)
     return ()
     end
 
@@ -469,7 +467,7 @@ func sharePricePurchased{
     return (sharePricePurchased_)
 end
 
-func getMintedTimesTamp{
+func mintedTimesTamp{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
         range_check_ptr
@@ -531,46 +529,6 @@ end
 
 
 
-func getManagementFeeValue{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (res:Uint256):
-    alloc_locals
-    let (feeManager_:felt) = __getFeeManager()
-    let (fund_:felt) = get_contract_address()
-    let (current_timestamp) = get_block_timestamp()
-    let (claimed_timestamp) = IFeeManager.getClaimedTimestamp(feeManager_, fund_)
-    let (gav:Uint256) = calculGav()
-    let interval_stamps = current_timestamp - claimed_timestamp
-    let (interval_days:felt,_) = unsigned_div_rem(interval_stamps, 86400)
-    let (APY, _, _, _) = __get_fee(fund_,FeeConfig.MANAGEMENT_FEE, gav)
-    let (interval_days_uint256) = felt_to_uint256(interval_days)
-    let (temp_total, _) = uint256_mul(APY, interval_days_uint256)
-    let (claimAmount_) = uint256_div(temp_total, Uint256(360,0))
-    return(res=claimAmount_)
-end
-
-func claimManagementFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    _assets_len : felt, _assets : felt*, _percents_len:felt, _percents: felt*,
-):
-    alloc_locals
-    #To think, the fact the asset manager can claim management fees whenever he wants can be an issue, 
-    # If an investor buy shares and the asset manager claim these fees just after, it will reduce significantly the share price
-    assert_only_self()
-    let (fund_:felt) = get_contract_address()
-    with_attr error_message("claimManagementFee: tab size not equal"):
-        assert _percents_len = _assets_len
-    end
-    let (totalpercent:felt) = __calculTab100(_percents_len, _percents)
-    with_attr error_message("claimManagementFee: sum of percents tab not equal at 100%"):
-        assert totalpercent = 100
-    end
-    let (claimAmount_:Uint256) = getManagementFeeValue()
-    let (amounts_ : felt*) = alloc()
-    calc_amount_of_each_asset(claimAmount_, _assets_len, _assets, _percents, amounts_)
-    let (manager_:felt) = managerAccount.read()
-    __transferEachAssetMF(manager_, _assets_len, _assets, amounts_)
-    return ()
-end
-
-
 func mintFromVF{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_assetManager : felt, share_amount : Uint256, share_price : Uint256):
     onlyVaultFactory()
     mint(_assetManager, share_amount, share_price)
@@ -578,7 +536,7 @@ func mintFromVF{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_pt
 end
 
 func buyShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-     _amount: Uint256
+     _amount: Uint256, data_len: felt, data: felt*
 ):
     alloc_locals
     let (fund_:felt) = get_contract_address()
@@ -606,10 +564,7 @@ func buyShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}
     let (shareAmount_) = uint256_div(amountWithoutFeesPow_, sharePrice_)
 
     # mint share
-    mint(caller_, shareAmount_, sharePrice_)
-
-    ##event
-
+    ERC1155Shares.mint(caller_, shareAmount_, sharePrice_, data_len, data)
     return ()
 end
 
@@ -712,7 +667,8 @@ func __reedemTab{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     let (fee1, feeAssetManager1, feeDaoTreasury1, feeStackingVault1) = __get_fee(fund_, FeeConfig.MANAGEMENT_FEE, managementAmount_)
 
     let (remainingAmount1_ : Uint256) = uint256_sub(remainingAmount0_, fee1)
-    let (cumulativeFeeAssetManager1 : Uint256) = uint256_add(feeAssetManager0, feeAssetManager1)
+    let (cumulativeFeeAssetManager1 : Uint256) = uint256_add(
+    .feeAssetManager0, feeAssetManager1)
     let (cumulativeFeeStackingVault1 : Uint256) = uint256_add(feeStackingVault0, feeStackingVault1)
     let (cumulativeFeeDaoTreasury1 : Uint256) = uint256_add(feeDaoTreasury0, feeDaoTreasury1)
 
@@ -792,12 +748,16 @@ func __get_fee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     let (percent) = IFeeManager.getFeeConfig(feeManager_, _vault, config)
     let (percent_uint256) = felt_to_uint256(percent)
 
+    let (VF_) = getVaultFactory()
+    let (daoTreasuryFee_) = IVaultFactory.daoTreasuryFee(VF_)
+    let (stackingVaultFee_) = IVaultFactory.stackingVaultFee(VF_)
+    let sum_ = daoTreasuryFee_ + stackingVaultFee_
+    let assetManagerFee_ = 100 - sum_
+
     let (fee) = uint256_percent(amount, percent_uint256)
-    # 80% to the assetmanager, 16% to stacking vault, 4% to the DAOtreasury
-    # TODO: These value should be upgradable by the governance
-    let (fee_asset_manager) = uint256_percent(fee, Uint256(80,0))
-    let (fee_stacking_vault) = uint256_percent(fee, Uint256(16,0))
-    let (fee_treasury) = uint256_percent(fee, Uint256(4,0))
+    let (fee_asset_manager) = uint256_percent(fee, Uint256(assetManagerFee_,0))
+    let (fee_stacking_vault) = uint256_percent(fee, Uint256(stackingVaultFee_,0))
+    let (fee_treasury) = uint256_percent(fee, Uint256(daoTreasuryFee_,0))
 
     return (fee=fee, fee_asset_manager= fee_asset_manager,fee_treasury=fee_treasury, fee_stacking_vault=fee_stacking_vault)
 end

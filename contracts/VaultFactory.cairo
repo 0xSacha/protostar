@@ -588,9 +588,6 @@ func initializeFund{
 
     let (assetManager_: felt) = get_caller_address()
 
-    #Fuccount activater
-    IFuccount.activater(_fund, _fundName, _fundSymbol, assetManager_, _denominationAsset)
-
     #check allowed amount, min amount > decimal/1000 & share amount in [1, 100]
     let (decimals_:felt) = IERC20.decimals(_denominationAsset)
     let (minInitialAmount_:Uint256) = uint256_pow(Uint256(10,0), decimals_ - 3)
@@ -631,7 +628,10 @@ func initializeFund{
     let (sharePricePurchased_:Uint256) = uint256_div(amountPow18_ , _shareAmount)
     IFuccount.mintFromVF(_fund, assetManager_, _shareAmount, sharePricePurchased_)
     IERC20.transferFrom(_denominationAsset, assetManager_, _fund, _amount)
-    
+
+    #Fuccount activater
+    IFuccount.activater(_fund, _fundName, _fundSymbol, assetManager_, _denominationAsset, _shareAmount, sharePricePurchased_)
+
     #Set feeconfig for vault
     let entrance_fee = _feeConfig[0]
     let (is_entrance_fee_not_enabled) = __is_zero(entrance_fee)
