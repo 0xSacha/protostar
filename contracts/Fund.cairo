@@ -562,7 +562,7 @@ func buyShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}
     let (amountWithoutFeesPow_,_) = uint256_mul(amountWithoutFees_, decimalsPow_)
     let (sharePrice_) = getSharePrice()
     let (shareAmount_) = uint256_div(amountWithoutFeesPow_, sharePrice_)
-
+ff
     # mint share
     ERC1155Shares.mint(caller_, shareAmount_, sharePrice_, data_len, data)
     return ()
