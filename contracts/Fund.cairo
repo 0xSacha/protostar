@@ -622,7 +622,7 @@ func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     assets : felt*,
     percents_len : felt,
     percents : felt*,
-):
+) -> (callerAmount : Uint256*, managerAmount : Uint256*, stackingVaultAmount : Uint256*, daoTreasuryAmount : Uint256*):
     alloc_locals
     with_attr error_message("sell_share: percents tab and asset tab not same length"):
         assert assets_len = percents_len
@@ -634,16 +634,6 @@ func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     let (totalpercent:felt) = __calculTab100(percents_len, percents)
     with_attr error_message("sell_share: sum of percents tab not equal at 100%"):
         assert totalpercent = 100
-    end
-
-    #check timelock
-    let (policyManager_:felt) = getPolicyManager()
-    let (mintedBlockTimesTamp_:felt) = getMintedTimesTamp(token_id)
-    let (currentTimesTamp_:felt) = get_block_timestamp()
-    let (timelock_:felt) = IPolicyManager.getTimelock(policyManager_, fund_)
-    let diffTimesTamp_:felt = currentTimesTamp_ - mintedBlockTimesTamp_
-    with_attr error_message("sell_share: timelock not reached"):
-        assert_le(timelock_, diffTimesTamp_)
     end
 
     #shareprice retrun price of 10^18 shares 
@@ -685,19 +675,25 @@ func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     let diff_precision = diff * PRECISION
     let (durationPermillion_) = unsigned_div_rem(diff_precision, SECOND_YEAR)
 
-    # transfer token of each amount to the caller_
-    return __resultReedem(assets_len, assets, amounts, performancePermillion_, durationPermillion_)
+    let (local callerAmount : Uint256*) = alloc()
+    let (local managerAmount : Uint256*) = alloc()
+    let (local stackingVaultAmount : Uint256*) = alloc()
+    let (local daoTreasuryAmount : Uint256*) = alloc()
+
+    __reedemTab(assets_len, assets, amounts, performancePermillion_, durationPermillion_, fund_, 0, callerAmount, managerAmount, stackingVaultAmount, daoTreasuryAmount)
+
+
+    return(callerAmount, managerAmount, stackingVaultAmount, daoTreasuryAmount)
 end
 
 
-func __resultReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    len : felt, asset : felt*, amount : Uint256*, performancePermillion : Uint256, durationPermillion : felt,
-    callerAmount : Uint256*, feeManagerAmount : Uint256*, stackingVaultAmount : Uint256*, daoTreasuryAmount : Uint256*
-) -> ( len : felt, asset : felt*, amount : Uint256*, performancePermillion : Uint256, durationPermillion : felt,
-    callerAmount : Uint256*, feeManagerAmount : Uint256*, stackingVaultAmount : Uint256*, daoTreasuryAmount : Uint256*):
+func __reedemTab{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    len : felt, asset : felt*, amount : Uint256*, performancePermillion : Uint256, durationPermillion : felt, fund : felt,
+    tabLen : felt, callerAmount : Uint256*, managerAmount : Uint256*, stackingVaultAmount : Uint256*, daoTreasuryAmount : Uint256*
+) -> ():
     alloc_locals
     if len == 0:
-        return ( callerAmount : Uint256*, feeManagerAmount : Uint256*, stackingVaultAmount : Uint256*, daoTreasuryAmount : Uint256*)
+        return ()
     end
 
     let (amount_ : Uint256) = amounts[0]
@@ -705,74 +701,52 @@ func __resultReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
 
     #PERFORMANCE FEES
     let (millionTimePerf:Uint256) = uint256_mul_low(amount_, performancePermillion)
-    let (performanceAmount : Uint256) = uint256_div(millionTimePerf, PRECISION)
-    let (fee0, feeAssetManager0, feeDaoTreasury0, feeStackingVault0) = __get_fee(fund_, FeeConfig.PERFORMANCE_FEE, amount_)
+    let (performanceAmount_ : Uint256) = uint256_div(millionTimePerf, PRECISION)
+    let (fee0, feeAssetManager0, feeDaoTreasury0, feeStackingVault0) = __get_fee(fund_, FeeConfig.PERFORMANCE_FEE, performanceAmount_)
 
-    let (remainingAmount_ : Uint256) = uint256_sub(amount_, fee0)
+    let (remainingAmount0_ : Uint256) = uint256_sub(amount_, fee0)
 
     #MANAGEMENT FEES
     let (millionTimeDuration_:Uint256) = uint256_mul_low(remainingAmount_, durationPermillion)
-    let (managementAmount : Uint256) = uint256_div(millionTimeDuration_, PRECISION)
-    let (fee1, feeAssetManager1, feeDaoTreasury1, feeStackingVault1) = __get_fee(fund_, FeeConfig.MANAGEMENT_FEE, managementAmount)
+    let (managementAmount_ : Uint256) = uint256_div(millionTimeDuration_, PRECISION)
+    let (fee1, feeAssetManager1, feeDaoTreasury1, feeStackingVault1) = __get_fee(fund_, FeeConfig.MANAGEMENT_FEE, managementAmount_)
 
+    let (remainingAmount1_ : Uint256) = uint256_sub(remainingAmount0_, fee1)
+    let (cumulativeFeeAssetManager1 : Uint256) = uint256_add(feeAssetManager0, feeAssetManager1)
+    let (cumulativeFeeStackingVault1 : Uint256) = uint256_add(feeStackingVault0, feeStackingVault1)
+    let (cumulativeFeeDaoTreasury1 : Uint256) = uint256_add(feeDaoTreasury0, feeDaoTreasury1)
 
-
-    # transfer fee to asset maanger, fee_treasury, stacking_vault 
-    let (assetManager_:felt) = managerAccount.read()
-    let (treasury_:felt) = __getTreasury()
-    let (stackingVault_) = __getStackingVault()
-    __withdrawAssetTo(asset, fee_assset_manager, assetManager_)
-    __withdrawAssetTo(asset, fee_treasury, treasury_)
-    __withdrawAssetTo(asset, fee_stacking_vault, stackingVault_)
-
-    let (amount_without_performance_fee) = uint256_sub(amount, fee_perf)
     #EXIT FEES
-    let (fee_exit, fee_assset_manager, fee_treasury, fee_stacking_vault) = __get_fee(fund_, FeeConfig.EXIT_FEE, amount_without_performance_fee)
+    let (fee2, feeAssetManager2, feeDaoTreasury2, feeStackingVault2) = __get_fee(fund_, FeeConfig.EXIT_FEE, amount_)
+    let (remainingAmount2_ : Uint256) = uint256_sub(remainingAmount1_, fee2)
+    let (cumulativeFeeAssetManager2 : Uint256) = uint256_add(cumulativeFeeAssetManager1, feeAssetManager2)
+    let (cumulativeFeeStackingVault2 : Uint256) = uint256_add(cumulativeFeeStackingVault1, feeStackingVault2)
+    let (cumulativeFeeDaoTreasury2 : Uint256) = uint256_add(cumulativeFeeDaoTreasury1, feeDaoTreasury2)
 
-    # transfer fee to asset maanger, fee_treasury, stacking_vault 
-    __withdrawAssetTo(asset, fee_assset_manager, assetManager_)
-    __withdrawAssetTo(asset, fee_treasury, treasury_)
-    __withdrawAssetTo(asset, fee_stacking_vault, stackingVault_)
+    let newLen_ = len - 1 
+    let newAsset_ = [asset + 1]
+    let newAmount_ = [amount + Uint256.SIZE]
+    let newTabLen = tabLen + 1
+    assert [callerAmount + Uint256.SIZE*tabLen] = remainingAmount2_
+    assert [managerAmount + Uint256.SIZE*tabLen] = cumulativeFeeAssetManager2
+    assert [stackingVaultAmount + Uint256.SIZE*tabLen] = cumulativeFeeStackingVault2
+    assert [daoTreasuryAmount + Uint256.SIZE*tabLen] = cumulativeFeeDaoTreasury2
 
-
-    let (amount_without_fee) = uint256_sub(amount_without_performance_fee, fee_exit)
-
-    __withdrawAssetTo(assets[0], amount_without_fee, caller)
-    __transfer_each_asset(caller, len - 1, assets + 1, amounts + 1, perf)
-
-    return ()
+    return __reedemTab(newLen_, newAsset_, newAmount_, performancePermillion, durationPermillion, fund, newTabLen, callerAmount, managerAmount, stackingVaultAmount, daoTreasuryAmount)
 end
 
 
 func sellShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    token_id : Uint256,
-    share_amount : Uint256,
+    id : Uint256,
+    amount : Uint256,
     assets_len : felt,
     assets : felt*,
     percents_len : felt,
     percents : felt*,
 ):
     alloc_locals
-    let (fund_:felt) = get_contract_address()
-    let (denominationAsset_:felt) = denominationAsset.read()
-    let (caller_) = get_caller_address()
-    let (owner_) = getOwnerOf(token_id)
-    with_attr error_message("sell_share: not owner of shares"):
-        assert caller_ = owner_
-    end
-
-
-    let(_sharesAmount:Uint256) = sharesBalance(token_id)
-    let(_isLe:felt) = uint256_le(share_amount, _sharesAmount)
-    with_attr error_message("sell_share: shares amount requested exceed NFT's share amount"):
-        assert _isLe = 1
-    end
-
-    let (totalpercent:felt) = __calculTab100(percents_len, percents)
-    with_attr error_message("sell_share: sum of percents tab not equal at 100%"):
-        assert totalpercent = 100
-    end
-
+    let (callerAmount : Uint256*, managerAmount : Uint256*, stackingVaultAmount : Uint256*, daoTreasuryAmount : Uint256*) = previewReedem( id,amount,assets_len,assets,percents_len,percents)
+   
     #check timelock
     let (policyManager_:felt) = getPolicyManager()
     let (mintedBlockTimesTamp_:felt) = getMintedTimesTamp(token_id)
@@ -782,58 +756,16 @@ func sellShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     with_attr error_message("sell_share: timelock not reached"):
         assert_le(timelock_, diffTimesTamp_)
     end
-
-    ##shareprice retrun price of 10^18 shares 
-    let (share_price) = getSharePrice()
-    let (sharesValuePow_:Uint256,_) = uint256_mul(share_price, share_amount)
-    let (decimals_:felt) = IERC20.decimals(denominationAsset_)
-    let (decimalsPow_:Uint256) = uint256_pow(Uint256(10,0), decimals_)
-    let (sharesValue:Uint256,) = uint256_div(sharesValuePow_, decimalsPow_)
-
-    # calc value of each asset
-    with_attr error_message("sell_share: percents tab and asset tab not same length"):
-        assert assets_len = percents_len
-    end
-
-    #get amount tab according to share_value and the percents tab 
-    let (local amounts : Uint256*) = alloc()
-    calc_amount_of_each_asset(sharesValue, assets_len, assets, percents, amounts)
-
-    #calculate the performance 
-    let(previous_share_price_:Uint256) = getSharePricePurchased(token_id)
-    let(current_share_price_:Uint256) = getSharePrice()
-    let(has_performed_) = uint256_le(previous_share_price_, current_share_price_)
-    if has_performed_ == 1 :
-        let(diff_:Uint256) = SafeUint256.sub_le(current_share_price_, previous_share_price_)
-        let(diffperc_:Uint256,diffperc_h_) = uint256_mul(diff_, Uint256(100,0))
-        let(perfF_:Uint256)=uint256_div(diffperc_, current_share_price_)
-        tempvar perf_ = perfF_
-        tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr
-    else:
-        tempvar perf_ = Uint256(0,0)
-        tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr
-    end
-
-    let vaultPerformance = perf_
-    # transfer token of each amount to the caller_
-    __transfer_each_asset(caller_, assets_len, assets, amounts, vaultPerformance)
-
-    let (currentOwnerBalance:Uint256) = getBalanceOf(caller_)
     # burn share
     __burnShares(share_amount, token_id)
 
-     #event 
-    # let(newOwnerBalance:Uint256) = IVault.getBalanceOf(_vault, caller_)
-    # let (isEqual_:felt) = uint256_eq(currentOwnerBalance, newOwnerBalance)
-    # let (vaultFactory_:felt) = vaultFactory.read()
-    # if isEqual_ == 0 :
-    #     IVaultFactory.setNewBurn(vaultFactory_, _vault, caller_, token_id)
-    #     return ()
-    # end
+    #transferEachAsset
+    let (fund_ : felt) = get_contract_address()
+    let (caller : felt) = get_caller_address()
+    let (manager : felt) = getManagerAccount()
+    let (stackingVault_ : felt) = getStackingVault()
+    let (daoTreasury_ : felt) = getDaoTreasury()
+    __transferEachAsset(fund, caller, manager, stackingVault, daoTreasury, assets_len, assets, callerAmount, managerAmount, stackingVaultAmount, daoTreasuryAmount) 
     return ()
 end
 
@@ -906,76 +838,29 @@ func __is_zero{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
 end
 
 
-func __transferEachAssetMF{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    assetManager_ : felt, len : felt, assets : felt*, amounts : felt*,
+func __transferEachAsset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    fund : felt, caller : felt, manager : felt, stackingVault : felt, daoTreasury : felt, assets_len : felt, assets : felt*, callerAmount : Uint256*, managerAmount : Uint256*, stackingVaultAmount : Uint256*, daoTreasuryAmount : Uint256*
 ):
-    #for Management fee only
     alloc_locals
-    if len == 0:
+    if assets_len == 0:
         return ()
     end
-    let (fund_:felt) = get_contract_address()
+
     let asset = assets[0]
     let(amount_:Uint256) = felt_to_uint256(amounts[0])
     
-    let (assetManagerAmount) = uint256_percent(amount_, Uint256(80,0))
-    let (feeStackingVault) = uint256_percent(amount_, Uint256(16,0))
-    let (feeTreasury) = uint256_percent(amount_, Uint256(4,0))
+    let (callerAmount_) = [callerAmount]
+    let (managerAmount_) = [managerAmount]
+    let (stackingVaultAmount_) = [stackingVaultAmount]
+    let (daoTreasuryAmount_) = [daoTreasuryAmount]
 
-    let (treasury_) = __getTreasury()
-    let (stackingVault_) = __getStackingVault()
+    __withdrawAssetTo(asset, caller, callerAmount_)
+    __withdrawAssetTo(asset, manager, managerAmount_)
+    __withdrawAssetTo(asset, stackingVault, stackingVaultAmount_)
+    __withdrawAssetTo(asset, daoTreasury, daoTreasuryAmount_)
 
-    __withdrawAssetTo(asset, feeTreasury, treasury_)
-    __withdrawAssetTo(asset, feeStackingVault, stackingVault_)
-    __withdrawAssetTo(asset, assetManagerAmount, assetManager_)
-
-    __transferEachAssetMF(assetManager_, len - 1, assets + 1, amounts + 1)
-    return ()
+    return __transferEachAsset(fund, caller, manager, stackingVault, daoTreasury, assets_len - 1, assets + 1, callerAmount + Uint256.SIZE, managerAmount + Uint256.SIZE, stackingVaultAmount + Uint256.SIZE, daoTreasuryAmount + Uint256.SIZE)
 end
-
-func __transfer_each_asset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    caller : felt, len : felt, assets : felt*, amounts : felt*, perf : Uint256,
-):
-    alloc_locals
-    if len == 0:
-        return ()
-    end
-    let (fund_:felt) = get_contract_address()
-    let (amount) = felt_to_uint256(amounts[0])
-    let asset = assets[0]
-
-    #PERFORMANCE FEES
-    let(amount_:Uint256) = uint256_percent(amount, perf)
-    let (fee_perf, fee_assset_manager, fee_treasury, fee_stacking_vault) = __get_fee(fund_, FeeConfig.PERFORMANCE_FEE, amount_)
-
-    # transfer fee to asset maanger, fee_treasury, stacking_vault 
-    let (assetManager_:felt) = managerAccount.read()
-    let (treasury_:felt) = __getTreasury()
-    let (stackingVault_) = __getStackingVault()
-    __withdrawAssetTo(asset, fee_assset_manager, assetManager_)
-    __withdrawAssetTo(asset, fee_treasury, treasury_)
-    __withdrawAssetTo(asset, fee_stacking_vault, stackingVault_)
-
-    let (amount_without_performance_fee) = uint256_sub(amount, fee_perf)
-    #EXIT FEES
-    let (fee_exit, fee_assset_manager, fee_treasury, fee_stacking_vault) = __get_fee(fund_, FeeConfig.EXIT_FEE, amount_without_performance_fee)
-
-    # transfer fee to asset maanger, fee_treasury, stacking_vault 
-    __withdrawAssetTo(asset, fee_assset_manager, assetManager_)
-    __withdrawAssetTo(asset, fee_treasury, treasury_)
-    __withdrawAssetTo(asset, fee_stacking_vault, stackingVault_)
-
-
-    let (amount_without_fee) = uint256_sub(amount_without_performance_fee, fee_exit)
-
-    __withdrawAssetTo(assets[0], amount_without_fee, caller)
-    __transfer_each_asset(caller, len - 1, assets + 1, amounts + 1, perf)
-
-    return ()
-end
-
-
-
 
 
 func __calculGav1{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
