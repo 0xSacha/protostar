@@ -16,7 +16,7 @@ from starkware.cairo.common.math import (
 )
 
 
-from contracts.utils.utils import felt_to_uint256, uint256_div, uint256_percent, uint256_pow
+from contracts.utils.utils import felt_to_uint256, uint256_div, uint256_percent, uint256_pow, uint256_mul_low
 
 from starkware.cairo.common.bool import TRUE
 
@@ -25,7 +25,7 @@ from starkware.starknet.common.syscalls import get_block_timestamp
 from starkware.cairo.common.memcpy import memcpy
 
 from openzeppelin.token.erc20.IERC20 import IERC20
-lib/openzeppelin/token/erc20/IERC20.cairo
+
 from contracts.interfaces.IFeeManager import FeeConfig, IFeeManager
 from contracts.interfaces.IPolicyManager import IPolicyManager
 
@@ -52,7 +52,7 @@ from starkware.cairo.common.uint256 import (
 )
 
 
-from openzeppelin.security.safemath import SafeUint256
+from openzeppelin.security.safemath.library import SafeUint256
 
 
 from contracts.interfaces.IVault import (
@@ -145,7 +145,6 @@ namespace Fund:
     ERC1155Shares.initializeShares(_fundName, _fundSymbol, _uri)
     denominationAsset.write(_denominationAsset)
     managerAccount.write(_managerAccount)
-    mint(_managerAccount, share_amount, share_price)
     ERC1155Shares.mint(_managerAccount, _shareAmount, _sharePrice, data_len, data)
     return ()
     end
@@ -321,21 +320,21 @@ end
 # ERC1155 Getters 
 #
 
-func totalId{
+func getTotalId{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
-    }() -> (totalSupply_: Uint256):
-    let (totalSupply_: Uint256) = ERC1155Shares.totalId()
-    return (totalSupply_)
+    }() -> (res: Uint256):
+    let (totalId_: Uint256) = ERC1155Shares.getTotalId()
+    return (totalId_)
 end
 
 func sharesTotalSupply{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
-    }() -> (sharesTotalSupply_: Uint256):
-    let (sharesTotalSupply_: Uint256) =  ERC1155Shares.sharesTotalSupply()
+    }() -> (res: Uint256):
+    let (sharesTotalSupply_: Uint256) =  ERC1155Shares.getSharesTotalSupply()
     return (sharesTotalSupply_)
 end
 
@@ -344,7 +343,7 @@ func name{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }() -> (name_: felt):
-    let (name_) = ERC1155Shares.name()
+    let (name_) = ERC1155Shares.getName()
     return (name_)
 end
 
@@ -353,7 +352,7 @@ func symbol{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }() -> (symbol_: felt):
-    let (symbol_) = ERC1155Shares.symbol()
+    let (symbol_) = ERC1155Shares.getSymbol()
     return (symbol_)
 end
 
@@ -399,16 +398,6 @@ func isApprovedForAll{
     return (is_approved)
 end
 
-
-@external
-func setURI{
-        syscall_ptr: felt*,
-        pedersen_ptr: HashBuiltin*,
-        range_check_ptr
-    }(uri: felt):
-    ERC1155Shares.setURI(uri)
-    return ()
-end
 
 @external
 func setApprovalForAll{
@@ -462,17 +451,17 @@ func sharePricePurchased{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
         range_check_ptr
-    }(id: Uint256) -> (sharePricePurchased_: Uint256):
-    let (sharePricePurchased_: Uint256) = ERC1155Shares.sharePricePurchased(id)
+    }(id: Uint256) -> (res: Uint256):
+    let (sharePricePurchased_: Uint256) = ERC1155Shares.getSharePricePurchased(id)
     return (sharePricePurchased_)
 end
 
-func mintedTimesTamp{
+func mintedBlockTimesTamp{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
         range_check_ptr
-    }(id: Uint256) -> (mintedTimesTamp_: felt):
-    let (mintedTimesTamp_:felt) = ERC1155Shares.mintedBlockTimesTamp(id)
+    }(id: Uint256) -> (res: felt):
+    let (mintedTimesTamp_:felt) = ERC1155Shares.getMintedBlockTimesTamp(id)
     return (mintedTimesTamp_)
 end
 
@@ -527,13 +516,6 @@ func calculGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     return (res=gav)
 end
 
-
-
-func mintFromVF{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_assetManager : felt, share_amount : Uint256, share_price : Uint256):
-    onlyVaultFactory()
-    mint(_assetManager, share_amount, share_price)
-    return ()
-end
 
 func buyShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
      _amount: Uint256, data_len: felt, data: felt*
@@ -603,7 +585,7 @@ func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     calc_amount_of_each_asset(sharesValue, assets_len, assets, percents, amounts)
 
     #calculate the performance 
-    let(previous_share_price_:Uint256) = getSharePricePurchased(token_id)
+    let(previous_share_price_:Uint256) = sharePricePurchased(id)
     let(current_share_price_:Uint256) = getSharePrice()
     let(has_performed_) = uint256_le(previous_share_price_, current_share_price_)
     if has_performed_ == 1 :
@@ -624,7 +606,7 @@ func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
 
     #calculate the duration
 
-    let (mintedBlockTimesTamp_:felt) = ERC1155Shares.mintedBlockTimesTamp(id)
+    let (mintedBlockTimesTamp_:felt) = ERC1155Shares.getMintedBlockTimesTamp(id)
     let (currentTimesTamp_:felt) = get_block_timestamp()
     let diff = currentTimesTamp_ - mintedBlockTimesTamp_
     let diff_precision = diff * PRECISION
@@ -651,20 +633,20 @@ func __reedemTab{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
         return ()
     end
 
-    let (amount_ : Uint256) = amounts[0]
-    let (asset : felt) = assets[0]
+    let (amount_ : Uint256) = amount[0]
+    let (asset : felt) = asset[0]
 
     #PERFORMANCE FEES
     let (millionTimePerf:Uint256) = uint256_mul_low(amount_, performancePermillion)
     let (performanceAmount_ : Uint256) = uint256_div(millionTimePerf, PRECISION)
-    let (fee0, feeAssetManager0, feeDaoTreasury0, feeStackingVault0) = __get_fee(fund_, FeeConfig.PERFORMANCE_FEE, performanceAmount_)
+    let (fee0, feeAssetManager0, feeDaoTreasury0, feeStackingVault0) = __get_fee(fund, FeeConfig.PERFORMANCE_FEE, performanceAmount_)
 
     let (remainingAmount0_ : Uint256) = uint256_sub(amount_, fee0)
 
     #MANAGEMENT FEES
-    let (millionTimeDuration_:Uint256) = uint256_mul_low(remainingAmount_, durationPermillion)
+    let (millionTimeDuration_:Uint256) = uint256_mul_low(amount_, durationPermillion)
     let (managementAmount_ : Uint256) = uint256_div(millionTimeDuration_, PRECISION)
-    let (fee1, feeAssetManager1, feeDaoTreasury1, feeStackingVault1) = __get_fee(fund_, FeeConfig.MANAGEMENT_FEE, managementAmount_)
+    let (fee1, feeAssetManager1, feeDaoTreasury1, feeStackingVault1) = __get_fee(fund, FeeConfig.MANAGEMENT_FEE, managementAmount_)
 
     let (remainingAmount1_ : Uint256) = uint256_sub(remainingAmount0_, fee1)
     let (cumulativeFeeAssetManager1 : Uint256) = uint256_add(feeAssetManager0, feeAssetManager1)
@@ -672,7 +654,7 @@ func __reedemTab{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     let (cumulativeFeeDaoTreasury1 : Uint256) = uint256_add(feeDaoTreasury0, feeDaoTreasury1)
 
     #EXIT FEES
-    let (fee2, feeAssetManager2, feeDaoTreasury2, feeStackingVault2) = __get_fee(fund_, FeeConfig.EXIT_FEE, amount_)
+    let (fee2, feeAssetManager2, feeDaoTreasury2, feeStackingVault2) = __get_fee(fund, FeeConfig.EXIT_FEE, amount_)
     let (remainingAmount2_ : Uint256) = uint256_sub(remainingAmount1_, fee2)
     let (cumulativeFeeAssetManager2 : Uint256) = uint256_add(cumulativeFeeAssetManager1, feeAssetManager2)
     let (cumulativeFeeStackingVault2 : Uint256) = uint256_add(cumulativeFeeStackingVault1, feeStackingVault2)
@@ -704,7 +686,7 @@ func sellShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
    
     #check timelock
     let (policyManager_:felt) = getPolicyManager()
-    let (mintedBlockTimesTamp_:felt) = getMintedTimesTamp(token_id)
+    let (mintedBlockTimesTamp_:felt) = mintedBlockTimesTamp(id)
     let (currentTimesTamp_:felt) = get_block_timestamp()
     let (timelock_:felt) = IPolicyManager.getTimelock(policyManager_, fund_)
     let diffTimesTamp_:felt = currentTimesTamp_ - mintedBlockTimesTamp_
@@ -712,15 +694,17 @@ func sellShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
         assert_le(timelock_, diffTimesTamp_)
     end
     # burn share
-    __burnShares(share_amount, token_id)
+    ERC1155Shares.burn(amount, id)
+
+
 
     #transferEachAsset
     let (fund_ : felt) = get_contract_address()
     let (caller : felt) = get_caller_address()
     let (manager : felt) = getManagerAccount()
-    let (stackingVault_ : felt) = getStackingVault()
-    let (daoTreasury_ : felt) = getDaoTreasury()
-    __transferEachAsset(fund, caller, manager, stackingVault, daoTreasury, assets_len, assets, callerAmount, managerAmount, stackingVaultAmount, daoTreasuryAmount) 
+    let (stackingVault_ : felt) = __getStackingVault()
+    let (daoTreasury_ : felt) = __getDaoTreasury()
+    __transferEachAsset(fund_, caller, manager, stackingVault_, daoTreasury_, assets_len, assets, callerAmount, managerAmount, stackingVaultAmount, daoTreasuryAmount) 
     return ()
 end
 
@@ -748,8 +732,8 @@ func __get_fee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     let (percent_uint256) = felt_to_uint256(percent)
 
     let (VF_) = getVaultFactory()
-    let (daoTreasuryFee_) = IVaultFactory.daoTreasuryFee(VF_)
-    let (stackingVaultFee_) = IVaultFactory.stackingVaultFee(VF_)
+    let (daoTreasuryFee_) = __getDaoTreasury()
+    let (stackingVaultFee_) = __getStackingVault()
     let sum_ = daoTreasuryFee_ + stackingVaultFee_
     let assetManagerFee_ = 100 - sum_
 
@@ -805,9 +789,7 @@ func __transferEachAsset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range
         return ()
     end
 
-    let asset = assets[0]
-    let(amount_:Uint256) = felt_to_uint256(amounts[0])
-    
+    let asset = assets[0]    
     let (callerAmount_) = [callerAmount]
     let (managerAmount_) = [managerAmount]
     let (stackingVaultAmount_) = [stackingVaultAmount]
@@ -960,28 +942,6 @@ end
    #
 
 
-
-
-   func __burnShares{
-        pedersen_ptr: HashBuiltin*, 
-        syscall_ptr: felt*, 
-        range_check_ptr
-    }(
-        _amount: Uint256,
-        _tokenId:Uint256,
-    ):
-    alloc_locals
-    let(_sharesAmount:Uint256) = sharesBalance(_tokenId)
-    let (equal_) = uint256_eq(_sharesAmount, _amount)
-    if equal_ == TRUE:
-        burn(_tokenId)
-        return ()
-    else:
-        subShares(_tokenId, _amount)
-        return ()
-    end
-end
-
 func __withdrawAssetTo{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
@@ -995,8 +955,6 @@ func __withdrawAssetTo{
     with_attr error_message("__withdrawAssetTo: transfer didn't work"):
         assert_not_zero(_success)
     end
-
-    AssetWithdrawn.emit(_asset, _target, _amount)
     return ()
 end
     

@@ -57,7 +57,6 @@ namespace ERC1155Shares:
 # initialize
 #
 
-@external
 func initializeShares{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
@@ -98,7 +97,6 @@ func getMintedBlockTimesTamp{
 end
 
 
-@view
 func supportsInterface{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
@@ -107,7 +105,6 @@ func supportsInterface{
     return ERC165.supports_interface(interfaceId)
 end
 
-@view
 func uri{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
@@ -116,7 +113,6 @@ func uri{
     return ERC1155.uri()
 end
 
-@view
 func getSharesTotalSupply{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
@@ -126,7 +122,6 @@ func getSharesTotalSupply{
     return (totalSupply)
 end
 
-@view
 func getTotalId{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
@@ -243,17 +238,7 @@ end
 # Externals
 #
 
-@external
-func setURI{
-        syscall_ptr: felt*,
-        pedersen_ptr: HashBuiltin*,
-        range_check_ptr
-    }(uri: felt):
-    ERC1155._set_uri(uri)
-    return ()
-end
 
-@external
 func setApprovalForAll{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
@@ -263,7 +248,6 @@ func setApprovalForAll{
     return ()
 end
 
-@external
 func safeTransferFrom{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
@@ -281,7 +265,7 @@ func safeTransferFrom{
 end
 
 
-@external
+
 func safeBatchTransferFrom{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
