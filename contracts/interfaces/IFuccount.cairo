@@ -2,18 +2,50 @@
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 
 from starkware.cairo.common.uint256 import Uint256
+from contracts.Fund import AssetInfo
+
 
 @contract_interface
 namespace IFuccount:
 
-    # set comptroller only callable by fund deployer 
-    func activater(_fundName : felt, _fundSymbol : felt, _assetManager : felt, _denominationAsset : felt):
-    end   
+    # Setters
+    func activater(
+        _fundName: felt,
+        _fundSymbol: felt,
+        _uri: felt,
+        _denominationAsset: felt,
+        _managerAccount:felt,
+        _shareAmount:Uint256,
+        _sharePrice:Uint256,
+        data_len:felt,
+        data:felt*,
+    ):
+    end    
 
-    func mintFromVF(_assetManager : felt, share_amount : Uint256, share_price : Uint256):
-    end   
+    func set_public_key(new_public_key: felt):
+    end  
 
-    # Vault getters
+    
+
+    # Account getters
+
+    func get_public_key() -> (res: felt):
+    end
+
+    func get_nonce() -> (res: felt):
+    end
+
+    func is_valid_signature(
+        hash: felt,
+        signature_len: felt,
+        signature: felt*
+    ) -> (is_valid: felt):
+    end
+
+    func supportsInterface(interfaceId: felt) -> (success: felt):
+    end
+
+    # Fund getters
 
     func getManagerAccount() -> (res : felt):
     end
@@ -21,53 +53,82 @@ namespace IFuccount:
     func getDenominationAsset() -> (res : felt):
     end
 
+    func getAssetBalance(_asset: felt) -> (res: Uint256):
+    end
+
+    func getNotNulAssets() -> (notNulAssets_len:felt, notNulAssets: AssetInfo*):
+    end
+
+    func getNotNulPositions() -> (notNulPositions_len:felt, notNulPositition: felt*):
+    end
+
+    func getSharePrice() -> (price : Uint256):
+    end
+
+    func calculLiquidGav() -> (gav : Uint256):
+    end
+
+    func calculNotLiquidGav() -> (gav : Uint256):
+    end
+
+    func calculGav() -> (gav : Uint256):
+    end
+
+    # ERC1155 getters
+
+    func getName() -> (res : felt):
+    end
+
+    func getSymbol() -> (res : felt):
+    end
+
+    func getTotalId() -> (res : Uint256):
+    end
+
+    func getSharesTotalSupply() -> (res : Uint256):
+    end
+
+    func getBalanceOf(account: felt, id: Uint256) -> (balance: Uint256):
+    end
+
+    func getBalanceOfBatch(
+        accounts_len: felt,
+        accounts: felt*,
+        ids_len: felt,
+        ids: Uint256*
+    ) -> (balances_len: felt, balances: Uint256*):
+    end
+
+    func getIsApprovedForAll(account: felt, operator: felt) -> (isApproved: felt):
+    end
+
+    func ownerShares(account: felt) -> (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*):
+    end
+
+    func getSharePricePurchased(tokenId : Uint256) -> (res : Uint256):
+    end
+
+    func getMintedTimesTamp(tokenId : Uint256) -> (res : felt):
+    end
+end
+
+
+
+
+
+
     ## Business 
 
-    func getSharePrice() -> (res : felt):
+    func __execute__(
+            call_array_len: felt,
+            call_array: AccountCallArray*,
+            calldata_len: felt,
+            calldata: felt*,
+            nonce: felt
+        ) -> (response_len: felt, response: felt*):
     end
-
-    func calculLiquidGav() -> (res : felt):
-    end
-
-    func calculNotLiquidGav() -> (res : felt):
-    end
-
-    func calculGav() -> (res : felt):
-    end
-
     
 
 
 
-    # NFT getters
-
-    func getName() -> (name : felt):
-    end
-
-    func getSymbol() -> (symbol : felt):
-    end
-
-    func getTotalSupply() -> (totalSupply : Uint256):
-    end
-
-    func getSharesTotalSupply() -> (sharesTotalSupply : Uint256):
-    end
-
-    func getSharesBalance(token_id : Uint256) -> (sharesBalance : Uint256):
-    end
-
-    func getBalanceOf(owner : felt) -> (balance : Uint256):
-    end
-
-    func getTokenOfOwnerByIndex(owner: felt, index: Uint256) -> (tokenId: Uint256):
-    end
-
-    func getOwnerOf(tokenId : Uint256) -> (owner : felt):
-    end
-
-    func getSharePricePurchased(tokenId : Uint256) -> (sharePricePurchased : Uint256):
-    end
-
-    func getMintedTimesTamp(tokenId : Uint256) -> (mintedBlock : felt):
-    end
-end
+    

@@ -82,18 +82,18 @@ func getSharePricePurchased{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
         range_check_ptr
-    }(tokenId: Uint256) -> (sharePricePurchased: Uint256):
-    let (sharePricePurchased: Uint256) = sharePricePurchased.read(tokenId)
-    return (sharePricePurchased)
+    }(tokenId: Uint256) -> (res: Uint256):
+    let (sharePricePurchased_: Uint256) = sharePricePurchased.read(tokenId)
+    return (sharePricePurchased_)
 end
 
 func getMintedBlockTimesTamp{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
         range_check_ptr
-    }(tokenId: Uint256) -> (mintedBlockTimesTamp: felt):
-    let (mintedBlockTimesTamp: felt) = mintedBlockTimesTamp.read(tokenId)
-    return (mintedBlockTimesTamp)
+    }(tokenId: Uint256) -> (res: felt):
+    let (mintedBlockTimesTamp_: felt) = mintedBlockTimesTamp.read(tokenId)
+    return (mintedBlockTimesTamp_)
 end
 
 
@@ -148,7 +148,7 @@ func ownerShares{
     let (totalId_:Uint256) = totalId.read()
     let (local assetId : Uint256*) = alloc()
     let (local assetAmount : Uint256*) = alloc()
-    let (tabSize_:felt) = completeMultiAssetTab(totalId, 0, assetId, 0, assetAmount, account)    
+    let (tabSize_:felt) = completeMultiAssetTab(totalId_, 0, assetId, 0, assetAmount, account)    
     return (tabSize_, assetId, tabSize_, assetAmount)
 end
 
@@ -167,8 +167,8 @@ func completeMultiAssetTab{
     if isZero_ == 0:
         let newAssetId_len:felt = assetId_len + 1
         let newAssetAmount_len:felt = assetAmount_len + 1
-        assert assetId[assetId_len*Uint256.SIZE].address = newTotalId_
-        assert assetAmount[assetId_len*Uint256.SIZE].amount = balance_
+        assert assetId[assetId_len*Uint256.SIZE] = newTotalId_
+        assert assetAmount[assetId_len*Uint256.SIZE] = balance_
          return completeMultiAssetTab(
         totalId= newTotalId_,
         assetId_len=newAssetId_len,
@@ -292,16 +292,16 @@ func mint{
     }(
         to: felt, 
         sharesAmount: Uint256, 
-        sharePricePurchased:Uint256,
+        _sharePricePurchased:Uint256,
         data_len: felt,
         data: felt*
     ):
     let (totalId_) = totalId.read()
-    sharePricePurchased.write(totalId_, sharePricePurchased)
+    sharePricePurchased.write(totalId_, _sharePricePurchased)
     let (currentTimesTamp_:felt) = get_block_timestamp()
     mintedBlockTimesTamp.write(totalId_, currentTimesTamp_)
     let (currentTotalSupply_) = sharesTotalSupply.read()
-    let (newTotalSupply_) = uint256_add(currentTotalSupply_, sharesAmount )
+    let (newTotalSupply_,_) = uint256_add(currentTotalSupply_, sharesAmount )
     sharesTotalSupply.write(newTotalSupply_)
     let (newTotalId_,_) = uint256_add(totalId_, Uint256(1,0) )
     totalId.write(newTotalId_)
@@ -325,5 +325,15 @@ func burn{
     sharesTotalSupply.write(newTotalSupply_)
     return ()
 end
+
+    func __is_zero{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(x : felt) -> (
+    res : felt
+):
+    if x == 0:
+        return (res=1)
+    end
+    return (res=0)
+end
+
 end
 

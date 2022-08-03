@@ -5,8 +5,6 @@
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin, SignatureBuiltin, BitwiseBuiltin
 
-from openzeppelin.account.library import Account, AccountCallArray
-
 from openzeppelin.introspection.erc165.library import ERC165
 
 from contracts.Account_Lib import Account, AccountCallArray
@@ -90,7 +88,7 @@ func getAssetBalance{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }(_asset: felt) -> (assetBalance_: Uint256):
+    }(_asset: felt) -> (res: Uint256):
     let (assetBalance_:Uint256) = Fund.getAssetBalance(_asset)
     return (assetBalance_)
 end
@@ -121,8 +119,8 @@ func getName{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-    }() -> (name_: felt):
-    let (name_) = Fund.getName()
+    }() -> (res: felt):
+    let (name_) = Fund.name()
     return (name_)
 end
 
@@ -130,17 +128,17 @@ func getSymbol{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-    }() -> (symbol_: felt):
-    let (symbol_) = Fund.getSymbol()
+    }() -> (res: felt):
+    let (symbol_) = Fund.symbol()
     return (symbol_)
 end
 
-func getTotalSupply{
+func getTotalId{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
-    }() -> (totalSupply_: Uint256):
-    let (totalSupply_: Uint256) = Fund.getTotalSupply()
+    }() -> (res: Uint256):
+    let (totalSupply_: Uint256) = Fund.getTotalId()
     return (totalSupply_)
 end
 
@@ -148,8 +146,8 @@ func getSharesTotalSupply{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
-    }() -> (sharesTotalSupply_: Uint256):
-    let (sharesTotalSupply_: Uint256) = Fund.getSharesTotalSupply()
+    }() -> (res: Uint256):
+    let (sharesTotalSupply_: Uint256) = Fund.sharesTotalSupply()
     return (sharesTotalSupply_)
 end
 
@@ -158,36 +156,26 @@ func getBalanceOf{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-    }(owner: felt) -> (balance: Uint256):
-    let (balance: Uint256) = Fund.getBalanceOf(owner)
+    }(account: felt, id: Uint256) -> (balance: Uint256):
+    let (balance: Uint256) = Fund.balanceOf(account, id)
     return (balance)
 end
 
-
-func getOwnerOf{
+func ownerShares{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-    }(tokenId: Uint256) -> (owner: felt):
-    let (owner: felt) = Fund.getOwnerOf(tokenId)
-    return (owner)
-end
-
-func getSharesBalance{
-        syscall_ptr : felt*, 
-        pedersen_ptr : HashBuiltin*,
-        range_check_ptr
-    }(tokenId: Uint256) -> (sharesBalance_: Uint256):
-    let (sharesBalance_: Uint256) = Fund.getSharesBalance(tokenId)
-    return (sharesBalance_)
+    }(account: felt) -> (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*):
+    let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = Fund.ownerShares(account)
+    return (assetId_len, assetId, assetAmount_len,assetAmount)
 end
 
 func getSharePricePurchased{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
         range_check_ptr
-    }(tokenId: Uint256) -> (sharePricePurchased_: Uint256):
-    let (sharePricePurchased_: Uint256) =  Fund.getSharePricePurchased(tokenId)
+    }(tokenId: Uint256) -> (res: Uint256):
+    let (sharePricePurchased_: Uint256) =  Fund.sharePricePurchased(tokenId)
     return (sharePricePurchased_)
 end
 
@@ -195,10 +183,37 @@ func getMintedTimesTamp{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
         range_check_ptr
-    }(tokenId: Uint256) -> (mintedTimesTamp_: felt):
-    let (mintedTimesTamp_: felt) = Fund.getMintedTimesTamp(tokenId)
+    }(tokenId: Uint256) -> (res: felt):
+    let (mintedTimesTamp_: felt) = Fund.mintedBlockTimesTamp(tokenId)
     return (mintedTimesTamp_)
 end
+
+
+@view
+func getBalanceOfBatch{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(
+        accounts_len: felt,
+        accounts: felt*,
+        ids_len: felt,
+        ids: Uint256*
+    ) -> (balances_len: felt, balances: Uint256*):
+    let (balances_len, balances) =  Fund.balanceOfBatch(accounts_len, accounts, ids_len, ids)
+    return (balances_len, balances)
+end
+
+@view
+func getIsApprovedForAll{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(account: felt, operator: felt) -> (isApproved: felt):
+    let (is_approved) = Fund.isApprovedForAll(account, operator)
+    return (is_approved)
+end
+
 
 
 
@@ -232,11 +247,6 @@ func calculGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     return (gav=gav)
 end
 
-func getManagementFeeValue{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (res:Uint256):
-    let (claimAmount_) = Fund.getManagementFeeValue()
-    return(res=claimAmount_)
-end
-
 
 #
 # Setters
@@ -250,10 +260,23 @@ func activater{
     }(
         _fundName: felt,
         _fundSymbol: felt,
+        _uri: felt,
         _denominationAsset: felt,
         _managerAccount:felt,
+        _shareAmount:Uint256,
+        _sharePrice:Uint256,
+        data_len:felt,
+        data:felt*,
     ):
-    Fund.activater(_fundName, _fundSymbol, _denominationAsset, _managerAccount)
+    Fund.activater( _fundName,
+        _fundSymbol,
+        _uri,
+        _denominationAsset,
+        _managerAccount,
+        _shareAmount,
+        _sharePrice,
+        data_len,
+        data)
     return ()
 end
 
@@ -314,7 +337,7 @@ end
 func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
       _amount: Uint256, data_len: felt, data: felt*
 ):
-   Fund.deposit(_amount)
+   Fund.deposit(_amount, data_len, data)
     return ()
 end
 

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# OpenZeppelin Contracts for Cairo v0.2.1 (account/library.cairo)
+
 %lang starknet
 
 from starkware.cairo.common.registers import get_fp_and_pc
@@ -11,13 +14,13 @@ from starkware.cairo.common.math import split_felt
 from starkware.cairo.common.bool import TRUE
 from starkware.starknet.common.syscalls import call_contract, get_caller_address, get_tx_info
 from starkware.cairo.common.cairo_secp.signature import verify_eth_signature_uint256
-from openzeppelin.introspection.ERC165 import ERC165
-from contracts.interfaces.IVaultFactory import IVaultFactory
-# from contracts.interfaces.IPolicyManager import IPolicyManager
+from openzeppelin.introspection.erc165.library import ERC165
 from contracts.interfaces.IIntegrationManager import IIntegrationManager
+from contracts.interfaces.IVaultFactory import IVaultFactory
 from contracts.interfaces.IPreLogic import IPreLogic
+from openzeppelin.utils.constants.library import IACCOUNT_ID
 
-from openzeppelin.utils.constants import IACCOUNT_ID
+
 
 #
 # Storage
@@ -28,11 +31,11 @@ func Account_current_nonce() -> (res: felt):
 end
 
 @storage_var
-func vaultFactory() -> (res: felt):
+func Account_public_key() -> (res: felt):
 end
 
 @storage_var
-func Account_public_key() -> (res: felt):
+func vaultFactory() -> (res: felt):
 end
 
 #
@@ -65,7 +68,7 @@ namespace Account:
             syscall_ptr : felt*,
             pedersen_ptr : HashBuiltin*,
             range_check_ptr
-        }(_public_key: felt, _vaultFactory:felt):
+        }(_public_key: felt, _vaultFactory: felt):
         Account_public_key.write(_public_key)
         vaultFactory.write(_vaultFactory)
         ERC165.register_interface(IACCOUNT_ID)
@@ -152,7 +155,7 @@ namespace Account:
         return (is_valid=TRUE)
     end
 
- func is_valid_eth_signature{
+    func is_valid_eth_signature{
             syscall_ptr : felt*,
             pedersen_ptr : HashBuiltin*,
             bitwise_ptr: BitwiseBuiltin*,
@@ -168,14 +171,14 @@ namespace Account:
 
         # This interface expects a signature pointer and length to make
         # no assumption about signature validation schemes.
-        # But this implementation does, and it expects a the sig_v, sig_r, 
+        # But this implementation does, and it expects a the sig_v, sig_r,
         # sig_s, and hash elements.
         let sig_v : felt = signature[0]
         let sig_r : Uint256 = Uint256(low=signature[1], high=signature[2])
         let sig_s : Uint256 = Uint256(low=signature[3], high=signature[4])
         let (high, low) = split_felt(hash)
         let msg_hash : Uint256 = Uint256(low=low, high=high)
-        
+
         let (local keccak_ptr : felt*) = alloc()
 
         with keccak_ptr:
@@ -184,7 +187,7 @@ namespace Account:
                 r=sig_r,
                 s=sig_s,
                 v=sig_v,
-                eth_address=_public_key)                        
+                eth_address=_public_key)
         end
 
         return (is_valid=TRUE)
@@ -194,6 +197,7 @@ namespace Account:
             syscall_ptr : felt*,
             pedersen_ptr : HashBuiltin*,
             range_check_ptr,
+            ecdsa_ptr: SignatureBuiltin*,
             bitwise_ptr: BitwiseBuiltin*
         }(
             call_array_len: felt,
@@ -206,14 +210,12 @@ namespace Account:
 
         let (__fp__, _) = get_fp_and_pc()
         let (tx_info) = get_tx_info()
-        let (local ecdsa_ptr : SignatureBuiltin*) = alloc()
-        with ecdsa_ptr:
-            # validate transaction
-            with_attr error_message("Account: invalid signature"):
-                let (is_valid) = is_valid_signature(tx_info.transaction_hash, tx_info.signature_len, tx_info.signature)
-                assert is_valid = TRUE
-            end
-        end        
+
+        # validate transaction
+        with_attr error_message("Account: invalid signature"):
+            let (is_valid) = is_valid_signature(tx_info.transaction_hash, tx_info.signature_len, tx_info.signature)
+            assert is_valid = TRUE
+        end
 
         return _unsafe_execute(call_array_len, call_array, calldata_len, calldata, nonce)
     end
@@ -222,6 +224,7 @@ namespace Account:
             syscall_ptr : felt*,
             pedersen_ptr : HashBuiltin*,
             range_check_ptr,
+            ecdsa_ptr: SignatureBuiltin*,
             bitwise_ptr: BitwiseBuiltin*
         }(
             call_array_len: felt,
@@ -235,12 +238,12 @@ namespace Account:
         let (__fp__, _) = get_fp_and_pc()
         let (tx_info) = get_tx_info()
 
-        # validate transaction        
+        # validate transaction
         with_attr error_message("Account: invalid secp256k1 signature"):
             let (is_valid) = is_valid_eth_signature(tx_info.transaction_hash, tx_info.signature_len, tx_info.signature)
             assert is_valid = TRUE
         end
-                
+
         return _unsafe_execute(call_array_len, call_array, calldata_len, calldata, nonce)
     end
 
@@ -248,16 +251,17 @@ namespace Account:
             syscall_ptr : felt*,
             pedersen_ptr : HashBuiltin*,
             range_check_ptr,
+            ecdsa_ptr: SignatureBuiltin*,
             bitwise_ptr: BitwiseBuiltin*
         }(
             call_array_len: felt,
             call_array: AccountCallArray*,
             calldata_len: felt,
-            calldata: felt*, 
+            calldata: felt*,
             nonce: felt
         ) -> (response_len: felt, response: felt*):
         alloc_locals
-        
+
         let (caller) = get_caller_address()
         with_attr error_message("Account: no reentrant call"):
             assert caller = 0
@@ -266,7 +270,7 @@ namespace Account:
         # validate nonce
 
         let (_current_nonce) = Account_current_nonce.read()
-        
+
         with_attr error_message("Account: nonce is invalid"):
             assert _current_nonce = nonce
         end
@@ -286,16 +290,18 @@ namespace Account:
         return (response_len=response_len, response=response)
     end
 
-    func _execute_list{syscall_ptr: felt*,  pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    func _execute_list{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
             calls_len: felt,
             calls: Call*,
             response: felt*
         ) -> (response_len: felt):
         alloc_locals
+
         # if no more calls
         if calls_len == 0:
            return (0)
         end
+
         # do the current call
         let this_call: Call = [calls]
         _checkCall(this_call.to, this_call.selector, this_call.calldata_len, this_call.calldata)
@@ -311,27 +317,6 @@ namespace Account:
         let (response_len) = _execute_list(calls_len - 1, calls + Call.SIZE, response + res.retdata_size)
         return (response_len + res.retdata_size)
     end
-
-    func _checkCall{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _contract: felt, _selector: felt, _callData_len: felt, _callData: felt*):
-    alloc_locals
-    #check if allowed call
-    let (vaultFactory_:felt) = vaultFactory.read()
-    let (integrationManager_:felt) = IVaultFactory.getIntegrationManager(vaultFactory_)
-    let (isAllowedCall_) = IIntegrationManager.checkIsIntegrationAvailable(integrationManager_, _contract, _selector)
-    with_attr error_message("the operation is now allowed on Magnety"):
-        assert isAllowedCall_ = 1
-    end
-    #perform pre-call logic if necessary
-    let (preLogicContract:felt) = IIntegrationManager.getIntegration(integrationManager_, _contract, _selector)
-    let (isPreLogicNonRequired:felt) = __is_zero(preLogicContract)
-    let (contractAddress_:felt) = get_contract_address()
-    if isPreLogicNonRequired ==  0:
-        IPreLogic.runPreLogic(preLogicContract, contractAddress_, _callData_len, _callData)
-        return ()
-    end
-    return ()
-end
 
     func _from_call_array_to_call{syscall_ptr: felt*}(
             call_array_len: felt,
@@ -356,6 +341,29 @@ end
         return ()
     end
 
+end
+
+func _checkCall{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        _contract: felt, _selector: felt, _callData_len: felt, _callData: felt*):
+    alloc_locals
+    #check if allowed call
+    let (vaultFactory_:felt) = vaultFactory.read()
+    let (integrationManager_:felt) = IVaultFactory.getIntegrationManager(vaultFactory_)
+    let (isAllowedCall_) = IIntegrationManager.checkIsIntegrationAvailable(integrationManager_, _contract, _selector)
+    with_attr error_message("the operation is now allowed on Magnety"):
+        assert isAllowedCall_ = 1
+    end
+    #perform pre-call logic if necessary
+    let (preLogicContract:felt) = IIntegrationManager.getIntegration(integrationManager_, _contract, _selector)
+    let (isPreLogicNonRequired:felt) = __is_zero(preLogicContract)
+    let (contractAddress_:felt) = get_contract_address()
+    if isPreLogicNonRequired ==  0:
+        IPreLogic.runPreLogic(preLogicContract, contractAddress_, _callData_len, _callData)
+        return ()
+    end
+    return ()
+end
+
     func __is_zero{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(x : felt) -> (
     res : felt
 ):
@@ -363,7 +371,4 @@ end
         return (res=1)
     end
     return (res=0)
-end
-
-    
 end
