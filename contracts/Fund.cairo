@@ -517,7 +517,7 @@ func calculGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
 end
 
 
-func buyShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
      _amount: Uint256, data_len: felt, data: felt*
 ):
     alloc_locals
@@ -673,7 +673,7 @@ func __reedemTab{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
 end
 
 
-func sellShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+func reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     id : Uint256,
     amount : Uint256,
     assets_len : felt,

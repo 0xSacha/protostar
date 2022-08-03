@@ -1,13 +1,9 @@
-# SPDX-License-Identifier: MIT
-# OpenZeppelin Contracts for Cairo v0.2.1 (account/presets/Account.cairo)
-
 %lang starknet
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin, SignatureBuiltin, BitwiseBuiltin
 
-from openzeppelin.account.library import Account, AccountCallArray
 
-from openzeppelin.introspection.erc165.library import ERC165
+from openzeppelin.introspection.ERC165 import ERC165
 
 from contracts.Account_Lib import Account, AccountCallArray
 from contracts.Fund import Fund, AssetInfo, PositionInfo
@@ -31,9 +27,12 @@ func constructor{
     return ()
 end
 
+
 #
 # Getters
 #
+
+## Account
 
 @view
 func get_public_key{
@@ -47,7 +46,7 @@ end
 
 @view
 func get_nonce{
-        syscall_ptr : felt*,
+        syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }() -> (res: felt):
@@ -56,8 +55,8 @@ func get_nonce{
 end
 
 @view
-func supportsInterface{
-        syscall_ptr: felt*,
+func supportsInterfaceFuccount{
+        syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
     } (interfaceId: felt) -> (success: felt):
@@ -237,11 +236,22 @@ func getManagementFeeValue{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ran
     return(res=claimAmount_)
 end
 
-
 #
 # Setters
 #
 
+## Account
+@external
+func set_public_key{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    }(new_public_key: felt):
+    Account.set_public_key(new_public_key)
+    return ()
+end
+
+## Fund
 @external
 func activater{
         syscall_ptr : felt*,
@@ -254,16 +264,6 @@ func activater{
         _managerAccount:felt,
     ):
     Fund.activater(_fundName, _fundSymbol, _denominationAsset, _managerAccount)
-    return ()
-end
-
-@external
-func set_public_key{
-        syscall_ptr : felt*,
-        pedersen_ptr : HashBuiltin*,
-        range_check_ptr
-    }(new_public_key: felt):
-    Account.set_public_key(new_public_key)
     return ()
 end
 
@@ -310,17 +310,30 @@ func __execute__{
     return (response_len=response_len, response=response)
 end
 
-@external
-func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-      _amount: Uint256, data_len: felt, data: felt*
+
+func claimManagementFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    _assets_len : felt, _assets : felt*, _percents_len:felt, _percents: felt*,
 ):
-   Fund.deposit(_amount)
+    Fund.claimManagementFee( _assets_len, _assets, _percents_len, _percents)
+    return ()
+end
+
+
+func mintFromVF{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_assetManager : felt, share_amount : Uint256, share_price : Uint256):
+    Fund.mintFromVF(_assetManager, share_amount, share_price)
+    return ()
+end
+
+func buyShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+     _amount: Uint256
+):
+   Fund.buyShare(_amount)
     return ()
 end
 
 
 @external
-func reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+func sellShares{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     token_id : Uint256,
     share_amount : Uint256,
     assets_len : felt,
@@ -328,6 +341,6 @@ func reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     percents_len : felt,
     percents : felt*,
 ):
-    Fund.reedem(token_id, share_amount, assets_len, assets, percents_len, percents)
+    Fund.sellShare(token_id, share_amount, assets_len, assets, percents_len, percents)
     return ()
 end
