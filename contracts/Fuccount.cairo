@@ -63,6 +63,8 @@ func supportsInterface{
     return (success)
 end
 
+
+
 ## Fund
 @view
 func getManagerAccount{
@@ -112,8 +114,46 @@ func getNotNulPositions{
     return(notNulPositions_len, notNulPositition)
 end
 
+func getSharePrice{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
+     price : Uint256
+):
+    let (price : Uint256) = Fund.getSharePrice()
+    return (price=price)
+end
+
+func calculLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
+    gav : Uint256
+):
+    let (gav) = Fund.calculLiquidGav()
+    return (gav=gav)
+end
+
+func calculNotLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
+    gav : Uint256
+):
+    let (gav) = Fund.calculNotLiquidGav()
+    return (gav=gav)
+end
+
+func calculGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
+    gav : Uint256
+):
+    let (gav) = Fund.calculGav()
+    return (gav=gav)
+end
+
 
 ## Shares
+
+@view
+func uri{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }() -> (uri: felt):
+    return Fund.uri()
+end
+
 
 func getName{
         syscall_ptr : felt*,
@@ -133,7 +173,7 @@ func getSymbol{
     return (symbol_)
 end
 
-func getTotalId{
+func totalId{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
@@ -142,7 +182,7 @@ func getTotalId{
     return (totalSupply_)
 end
 
-func getSharesTotalSupply{
+func sharesTotalSupply{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
@@ -152,7 +192,7 @@ func getSharesTotalSupply{
 end
 
 
-func getBalanceOf{
+func balanceOf{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
@@ -190,7 +230,7 @@ end
 
 
 @view
-func getBalanceOfBatch{
+func balanceOfBatch{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -205,7 +245,7 @@ func getBalanceOfBatch{
 end
 
 @view
-func getIsApprovedForAll{
+func isApprovedForAll{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -214,38 +254,6 @@ func getIsApprovedForAll{
     return (is_approved)
 end
 
-
-
-
-## Business 
-
-func getSharePrice{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
-     price : Uint256
-):
-    let (price : Uint256) = Fund.getSharePrice()
-    return (price=price)
-end
-
-func calculLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
-    gav : Uint256
-):
-    let (gav) = Fund.calculLiquidGav()
-    return (gav=gav)
-end
-
-func calculNotLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
-    gav : Uint256
-):
-    let (gav) = Fund.calculNotLiquidGav()
-    return (gav=gav)
-end
-
-func calculGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
-    gav : Uint256
-):
-    let (gav) = Fund.calculGav()
-    return (gav=gav)
-end
 
 
 #
@@ -294,6 +302,8 @@ end
 # Business logic
 #
 
+#Account
+
 @view
 func is_valid_signature{
         syscall_ptr : felt*,
@@ -333,6 +343,8 @@ func __execute__{
     return (response_len=response_len, response=response)
 end
 
+#Fund
+
 @external
 func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
       _amount: Uint256, data_len: felt, data: felt*
@@ -352,5 +364,83 @@ func reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     percents : felt*,
 ):
     Fund.reedem(token_id, share_amount, assets_len, assets, percents_len, percents)
+    return ()
+end
+
+
+#Shares
+
+@external
+func setApprovalForAll{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(operator: felt, approved: felt):
+    Fund.setApprovalForAll(operator, approved)
+    return ()
+end
+
+@external
+func safeTransferFrom{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(
+        from_: felt,
+        to: felt,
+        id: Uint256,
+        amount: Uint256,
+        data_len: felt,
+        data: felt*
+    ):
+    Fund.safeTransferFrom(from_, to, id, amount, data_len, data)
+    return ()
+end
+
+
+@external
+func safeBatchTransferFrom{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(
+        from_: felt,
+        to: felt,
+        ids_len: felt,
+        ids: Uint256*,
+        amounts_len: felt,
+        amounts: Uint256*,
+        data_len: felt,
+        data: felt*
+    ):
+    Fund.safeBatchTransferFrom(
+        from_, to, ids_len, ids, amounts_len, amounts, data_len, data)
+    return ()
+end
+
+
+@external
+func burn{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(from_: felt, id: Uint256, amount: Uint256):
+    Fund.burn(from_, id, amount)
+    return ()
+end
+
+@external
+func burnBatch{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(
+        from_: felt,
+        ids_len: felt,
+        ids: Uint256*,
+        amounts_len: felt,
+        amounts: Uint256*
+    ):
+    Fund.burnBatch(from_, ids_len, ids, amounts_len, amounts)
     return ()
 end

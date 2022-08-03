@@ -188,7 +188,7 @@ func completeMultiAssetTab{
         )
 end
 
-@view
+
 func getName{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
@@ -198,7 +198,6 @@ func getName{
     return (name_)
 end
 
-@view
 func getSymbol{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
@@ -208,7 +207,6 @@ func getSymbol{
     return (symbol_)
 end
 
-@view
 func balanceOfBatch{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
@@ -223,7 +221,6 @@ func balanceOfBatch{
     return (balances_len, balances)
 end
 
-@view
 func isApprovedForAll{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
@@ -325,6 +322,49 @@ func burn{
     sharesTotalSupply.write(newTotalSupply_)
     return ()
 end
+
+func burnBatch{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(
+        from_: felt,
+        ids_len: felt,
+        ids: Uint256*,
+        amounts_len: felt,
+        amounts: Uint256*
+    ):
+    ERC1155.assert_owner_or_approved(owner=from_)
+    let (caller) = get_caller_address()
+    with_attr error_message("ERC1155: called from zero address"):
+        assert_not_zero(caller)
+    end
+    ERC1155._burn_batch(from_, ids_len, ids, amounts_len, amounts)
+    reduceSupplyBatch(amounts_len, amounts)
+    return ()
+end
+
+
+func reduceSupplyBatch{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(
+        amounts_len: felt,
+        amounts: Uint256*
+    ):
+
+        if amounts_len == 0 :
+    return()
+end
+    let (currentTotalSupply_) = sharesTotalSupply.read()
+    let (newTotalSupply_) = uint256_sub(currentTotalSupply_, amounts[amounts_len* Uint256.SIZE - Uint256.SIZE] )
+    sharesTotalSupply.write(newTotalSupply_)    
+    return reduceSupplyBatch(
+        amounts_len= amounts_len - 1,
+        amounts=amounts)
+end
+
 
     func __is_zero{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(x : felt) -> (
     res : felt

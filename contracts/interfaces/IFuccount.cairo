@@ -74,7 +74,7 @@ namespace IFuccount:
     func calculGav() -> (gav : Uint256):
     end
 
-    # ERC1155 getters
+    # ERC1155-like getters
 
     func getName() -> (res : felt):
     end
@@ -82,16 +82,19 @@ namespace IFuccount:
     func getSymbol() -> (res : felt):
     end
 
-    func getTotalId() -> (res : Uint256):
+    func uri() -> (uri: felt):
     end
 
-    func getSharesTotalSupply() -> (res : Uint256):
+    func totalId() -> (res : Uint256):
     end
 
-    func getBalanceOf(account: felt, id: Uint256) -> (balance: Uint256):
+    func sharesTotalSupply() -> (res : Uint256):
     end
 
-    func getBalanceOfBatch(
+    func balanceOf(account: felt, id: Uint256) -> (balance: Uint256):
+    end
+
+    func balanceOfBatch(
         accounts_len: felt,
         accounts: felt*,
         ids_len: felt,
@@ -99,7 +102,7 @@ namespace IFuccount:
     ) -> (balances_len: felt, balances: Uint256*):
     end
 
-    func getIsApprovedForAll(account: felt, operator: felt) -> (isApproved: felt):
+    func isApprovedForAll(account: felt, operator: felt) -> (isApproved: felt):
     end
 
     func ownerShares(account: felt) -> (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*):
@@ -119,6 +122,8 @@ end
 
     ## Business 
 
+    #Account
+
     func __execute__(
             call_array_len: felt,
             call_array: AccountCallArray*,
@@ -127,7 +132,63 @@ end
             nonce: felt
         ) -> (response_len: felt, response: felt*):
     end
-    
+
+
+    #Fund
+
+    func deposit(_amount: Uint256, data_len: felt, data: felt*):
+    end 
+
+    func reedem(
+    token_id : Uint256,
+    share_amount : Uint256,
+    assets_len : felt,
+    assets : felt*,
+    percents_len : felt,
+    percents : felt*,
+    ):
+    end 
+
+    #Shares
+
+    func setApprovalForAll(operator: felt, approved: felt):
+    end  
+
+    func safeTransferFrom(
+        from_: felt,
+        to: felt,
+        id: Uint256,
+        amount: Uint256,
+        data_len: felt,
+        data: felt*
+    ):
+    end  
+
+    func safeBatchTransferFrom(
+        from_: felt,
+        to: felt,
+        ids_len: felt,
+        ids: Uint256*,
+        amounts_len: felt,
+        amounts: Uint256*,
+        data_len: felt,
+        data: felt*
+    ):
+    end  
+
+    func burn(from_: felt, id: Uint256, amount: Uint256):
+    end  
+
+    func burnBatch(
+        from_: felt,
+        ids_len: felt,
+        ids: Uint256*,
+        amounts_len: felt,
+        amounts: Uint256*
+    ):
+    end  
+
+
 
 
 

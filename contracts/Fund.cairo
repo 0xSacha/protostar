@@ -320,6 +320,15 @@ end
 # ERC1155 Getters 
 #
 
+
+func uri{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }() -> (uri: felt):
+    return ERC1155Shares.uri()
+end
+
 func getTotalId{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
@@ -399,7 +408,6 @@ func isApprovedForAll{
 end
 
 
-@external
 func setApprovalForAll{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
@@ -409,7 +417,7 @@ func setApprovalForAll{
     return ()
 end
 
-@external
+
 func safeTransferFrom{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
@@ -427,7 +435,6 @@ func safeTransferFrom{
 end
 
 
-@external
 func safeBatchTransferFrom{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
@@ -446,6 +453,32 @@ func safeBatchTransferFrom{
         from_, to, ids_len, ids, amounts_len, amounts, data_len, data)
     return ()
 end
+
+func burn{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(from_: felt, id: Uint256, amount: Uint256):
+    ERC1155Shares.burn(from_, id, amount)
+    return ()
+end
+
+func burnBatch{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(
+        from_: felt,
+        ids_len: felt,
+        ids: Uint256*,
+        amounts_len: felt,
+        amounts: Uint256*
+    ):
+    ERC1155Shares.burnBatch(from_, ids_len, ids, amounts_len, amounts)
+    return ()
+end
+
+
 
 func sharePricePurchased{
         syscall_ptr: felt*, 
@@ -697,8 +730,6 @@ func reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     end
     # burn share
     ERC1155Shares.burn(caller_, id, amount)
-
-
 
     #transferEachAsset
     let (fund_ : felt) = get_contract_address()
