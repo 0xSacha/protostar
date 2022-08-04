@@ -592,7 +592,7 @@ func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     assets : felt*,
     percents_len : felt,
     percents : felt*,
-) -> (callerAmount_len : felt, callerAmount : Uint256*,managerAmount_len : felt, managerAmount : Uint256*,stackingVaultAmount_len : felt, stackingVaultAmount : Uint256*,daoTreasuryAmount_len : felt, daoTreasuryAmount : Uint256*):
+) -> (callerAmount : Uint256*, managerAmount : Uint256*, stackingVaultAmount : Uint256*, daoTreasuryAmount : Uint256*):
     alloc_locals
     with_attr error_message("sell_share: percents tab and asset tab not same length"):
         assert assets_len = percents_len
@@ -653,7 +653,7 @@ func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     __reedemTab(assets_len, assets, amounts, performancePermillion_, durationPermillion_, fund_, 0, callerAmount, managerAmount, stackingVaultAmount, daoTreasuryAmount)
 
 
-    return(assets_len,callerAmount, assets_len,managerAmount,assets_len, stackingVaultAmount, assets_len,daoTreasuryAmount)
+    return(callerAmount, managerAmount, stackingVaultAmount, daoTreasuryAmount)
 end
 
 
@@ -715,7 +715,7 @@ func reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     percents : felt*,
 ):
     alloc_locals
-    let (_,callerAmount : Uint256*,_, managerAmount : Uint256*,_, stackingVaultAmount : Uint256*,_, daoTreasuryAmount : Uint256*) = previewReedem( id,amount,assets_len,assets,percents_len,percents)
+    let (callerAmount : Uint256*, managerAmount : Uint256*, stackingVaultAmount : Uint256*, daoTreasuryAmount : Uint256*) = previewReedem( id,amount,assets_len,assets,percents_len,percents)
    
     #check timelock
     let (caller_:felt) = get_caller_address()

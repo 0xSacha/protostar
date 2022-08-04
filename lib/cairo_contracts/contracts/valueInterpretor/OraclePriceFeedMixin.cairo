@@ -17,15 +17,15 @@ from starkware.cairo.common.uint256 import (
     uint256_mul,
     uint256_unsigned_div_rem,
 )
-from openzeppelin.token.erc20.IERC20 import IERC20
+from openzeppelin.token.erc20.interfaces.IERC20 import IERC20
 
 from contracts.utils.utils import felt_to_uint256, uint256_div, uint256_percent, uint256_mul_low, uint256_pow
 from starkware.cairo.common.uint256 import Uint256, uint256_lt
 from starkware.cairo.common.alloc import alloc
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
-from contracts.interfaces.IEmpiricOracle import IEmpiricOracle
-from contracts.interfaces.IVaultFactory import IVaultFactory
+from interfaces.IEmpiricOracle import IEmpiricOracle
+from interfaces.IVaultFactory import IVaultFactory
 
 
 @storage_var

@@ -83,7 +83,7 @@ namespace IFuccount:
     assets : felt*,
     percents_len : felt,
     percents : felt*,
-) -> (callerAmount_len, callerAmount : Uint256*, managerAmount_len, managerAmount : Uint256*, stackingVaultAmount_len, stackingVaultAmount : Uint256*,daoTreasuryAmount_len, daoTreasuryAmount : Uint256*):
+) -> (callerAmount : Uint256*, managerAmount : Uint256*, stackingVaultAmount : Uint256*, daoTreasuryAmount : Uint256*):
     end
 
     # ERC1155-like getters

@@ -22,10 +22,4 @@ namespace IFeeManager:
     end
     func getFeeConfig(vault : felt, key : felt) -> (value : felt):
     end
-
-    func setClaimedTimestamp(vault: felt, timestamp : felt):
-    end
-
-    func getClaimedTimestamp(vault: felt) -> (timestamp : felt):
-    end
 end

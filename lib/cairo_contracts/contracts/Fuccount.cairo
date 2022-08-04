@@ -320,7 +320,7 @@ func is_valid_signature{
 end
 
 @external
-func execute{
+func __execute__{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr,
@@ -333,7 +333,7 @@ func execute{
         calldata: felt*,
         nonce: felt
     ) -> (response_len: felt, response: felt*):
-    let (response_len, response) = Account._unsafe_execute(
+    let (response_len, response) = Account.execute(
         call_array_len,
         call_array,
         calldata_len,

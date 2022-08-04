@@ -12,7 +12,7 @@ from starkware.cairo.common.bool import TRUE
 
 from openzeppelin.introspection.erc165.IERC165 import IERC165
 from openzeppelin.introspection.erc165.library import ERC165
-from contracts.interfaces.IERC1155Receiver import IERC1155_Receiver
+from interfaces.IERC1155Receiver import IERC1155_Receiver
 from openzeppelin.security.safemath.library import SafeUint256
 
 

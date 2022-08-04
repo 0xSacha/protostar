@@ -1,13 +1,7 @@
 %lang starknet
 
 from starkware.cairo.common.uint256 import Uint256
-
-struct Integration:
-    member contract : felt
-    member selector : felt
-    member integration: felt
-end
-#
+from contract.VaultFactory import Integration
 @contract_interface
 namespace IVaultFactory:
 
