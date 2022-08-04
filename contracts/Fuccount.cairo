@@ -109,7 +109,7 @@ func getNotNulPositions{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }() -> (notNulPositions_len:felt, notNulPosititions: felt*):
+    }() -> (notNulPositions_len:felt, notNulPositions: felt*):
     let (notNulPositions_len:felt, notNulPositions:AssetInfo*) = Fund.getNotNulAssets()
     return(notNulPositions_len, notNulPositions)
 end

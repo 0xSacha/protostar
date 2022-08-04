@@ -613,15 +613,25 @@ func initializeFund{
     idToVault.write(currentVaultAmount, _fund)
 
 
-    ##add integration so other funds can buy/sell shares from it
-    let _integrationList_len:felt = 2   
+
+    let _integrationList_len:felt = 2
     let (_integrationList:Integration*) = alloc()
-    assert _integrationList[0].contract = _fund
-    assert _integrationList[0].selector = BUYSHARE_SELECTOR
-    assert _integrationList[0].integration = 0
-    assert _integrationList[Integration.SIZE].contract = _fund
-    assert _integrationList[Integration.SIZE].selector = SELLSHARE_SELECTOR
-    assert _integrationList[Integration.SIZE].integration = 0
+    assert _integrationList[0] = Integration(_fund, BUYSHARE_SELECTOR, 0)
+    assert _integrationList[1] = Integration(_fund, SELLSHARE_SELECTOR, 0)
+   
+    # assert _integrationList[Integration.SIZE].contract = _fund
+    # assert _integrationList[Integration.SIZE].selector = SELLSHARE_SELECTOR
+    # assert _integrationList[Integration.SIZE].integration = 0
+    
+    # ##add integration so other funds can buy/sell shares from it
+    # let _integrationList_len:felt = 2   
+    # let (_integrationList:Integration*) = alloc()
+    # assert _integrationList[0].contract = _fund
+    # assert _integrationList[0].selector = BUYSHARE_SELECTOR
+    # assert _integrationList[0].integration = 0
+    # assert _integrationList[Integration.SIZE].contract = _fund
+    # assert _integrationList[Integration.SIZE].selector = SELLSHARE_SELECTOR
+    # assert _integrationList[Integration.SIZE].integration = 0
      __addGlobalAllowedIntegration(_integrationList_len, _integrationList, integrationManager_)
      
     ##register the position

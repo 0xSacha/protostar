@@ -125,7 +125,7 @@ namespace IFuccount:
 
     func getMintedTimesTamp(tokenId : Uint256) -> (res : felt):
     end
-end
+
 
 
 
@@ -199,6 +199,7 @@ end
         amounts: Uint256*
     ):
     end  
+    end
 
 
 

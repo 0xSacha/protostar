@@ -95,7 +95,7 @@ func getAssetBalance{
     return (assetBalance_)
 end
 
-
+@view
 func getNotNulAssets{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
@@ -105,15 +105,17 @@ func getNotNulAssets{
     return(notNulAssets_len, notNulAssets)
 end
 
+@view
 func getNotNulPositions{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }() -> (notNulPositions_len:felt, notNulPosititions: felt*):
+    }() -> (notNulPositions_len:felt, notNulPositions: felt*):
     let (notNulPositions_len:felt, notNulPositions:AssetInfo*) = Fund.getNotNulAssets()
     return(notNulPositions_len, notNulPositions)
 end
 
+@view
 func getSharePrice{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
      price : Uint256
 ):
@@ -121,6 +123,7 @@ func getSharePrice{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     return (price=price)
 end
 
+@view
 func calculLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
     gav : Uint256
 ):
@@ -128,6 +131,7 @@ func calculLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
     return (gav=gav)
 end
 
+@view
 func calculNotLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
     gav : Uint256
 ):
@@ -135,11 +139,30 @@ func calculNotLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_
     return (gav=gav)
 end
 
+@view
 func calculGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
     gav : Uint256
 ):
     let (gav) = Fund.calculGav()
     return (gav=gav)
+end
+
+@view
+func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    id : Uint256,
+    amount : Uint256,
+    assets_len : felt,
+    assets : felt*,
+    percents_len : felt,
+    percents : felt*,
+) -> (callerAmount_len : felt, callerAmount : Uint256*,managerAmount_len : felt, managerAmount : Uint256*,stackingVaultAmount_len : felt, stackingVaultAmount : Uint256*,daoTreasuryAmount_len : felt, daoTreasuryAmount : Uint256*):
+    let (callerAmount_len : felt, callerAmount : Uint256*,managerAmount_len : felt, managerAmount : Uint256*,stackingVaultAmount_len : felt, stackingVaultAmount : Uint256*,daoTreasuryAmount_len : felt, daoTreasuryAmount : Uint256*) = Fund.previewReedem(    id ,
+    amount ,
+    assets_len ,
+    assets,
+    percents_len,
+    percents)
+    return(callerAmount_len, callerAmount,managerAmount_len, managerAmount,stackingVaultAmount_len, stackingVaultAmount ,daoTreasuryAmount_len, daoTreasuryAmount)
 end
 
 
@@ -154,7 +177,7 @@ func uri{
     return Fund.uri()
 end
 
-
+@view
 func getName{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
@@ -164,6 +187,7 @@ func getName{
     return (name_)
 end
 
+@view
 func getSymbol{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
@@ -173,6 +197,7 @@ func getSymbol{
     return (symbol_)
 end
 
+@view
 func totalId{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
@@ -182,6 +207,7 @@ func totalId{
     return (totalSupply_)
 end
 
+@view
 func sharesTotalSupply{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
@@ -191,7 +217,7 @@ func sharesTotalSupply{
     return (sharesTotalSupply_)
 end
 
-
+@view
 func balanceOf{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
@@ -201,6 +227,7 @@ func balanceOf{
     return (balance)
 end
 
+@view
 func ownerShares{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
@@ -210,6 +237,7 @@ func ownerShares{
     return (assetId_len, assetId, assetAmount_len,assetAmount)
 end
 
+@view
 func getSharePricePurchased{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
@@ -219,6 +247,7 @@ func getSharePricePurchased{
     return (sharePricePurchased_)
 end
 
+@view
 func getMintedTimesTamp{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
@@ -342,6 +371,7 @@ func execute{
     )
     return (response_len=response_len, response=response)
 end
+
 
 #Fund
 

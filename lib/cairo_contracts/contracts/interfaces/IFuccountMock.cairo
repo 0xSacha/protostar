@@ -8,7 +8,7 @@ from contracts.Account_Lib import AccountCallArray
 
 
 @contract_interface
-namespace IFuccount:
+namespace IFuccountMock:
 
     # Setters
     func activater(
@@ -131,16 +131,17 @@ namespace IFuccount:
 
 
 
+
     ## Business 
 
     #Account
 
-    func __execute__(
+    func execute(
             call_array_len: felt,
             call_array: AccountCallArray*,
             calldata_len: felt,
             calldata: felt*,
-            nonce: felt
+            nonce: felt,
         ) -> (response_len: felt, response: felt*):
     end
 
@@ -199,9 +200,10 @@ namespace IFuccount:
     ):
     end  
 
+    end
 
 
 
-end
+
 
     
