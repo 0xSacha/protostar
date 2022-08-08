@@ -8,7 +8,7 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin, SignatureBuiltin,
 from openzeppelin.introspection.erc165.library import ERC165
 
 from contracts.Account_Lib import Account, AccountCallArray
-from contracts.Fund import Fund, AssetInfo, PositionInfo
+from contracts.Fund import Fund, AssetInfo, PositionInfo, ShareWithdraw
 
 from starkware.cairo.common.uint256 import (
     Uint256,
@@ -110,7 +110,7 @@ func getNotNulPositions{
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
     }() -> (notNulPositions_len:felt, notNulPositions: felt*):
-    let (notNulPositions_len:felt, notNulPositions:AssetInfo*) = Fund.getNotNulAssets()
+    let (notNulPositions_len:felt, notNulPositions:AssetInfo*) = Fund.getNotNulPositions()
     return(notNulPositions_len, notNulPositions)
 end
 
@@ -147,16 +147,25 @@ func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     amount : Uint256,
     assets_len : felt,
     assets : felt*,
-    percents_len : felt,
-    percents : felt*,
-) -> (callerAmount_len : felt, callerAmount : Uint256*,managerAmount_len : felt, managerAmount : Uint256*,stackingVaultAmount_len : felt, stackingVaultAmount : Uint256*,daoTreasuryAmount_len : felt, daoTreasuryAmount : Uint256*):
-    let (callerAmount_len : felt, callerAmount : Uint256*,managerAmount_len : felt, managerAmount : Uint256*,stackingVaultAmount_len : felt, stackingVaultAmount : Uint256*,daoTreasuryAmount_len : felt, daoTreasuryAmount : Uint256*) = Fund.previewReedem(    id ,
-    amount ,
-    assets_len ,
+    percentsAsset_len : felt,
+    percentsAsset : felt*,
+    shares_len : felt,
+    shares : ShareWithdraw*,
+    percentsShare_len : felt,
+    percentsShare : felt*,
+) -> (assetCallerAmount_len: felt,assetCallerAmount:Uint256*, assetManagerAmount_len: felt,assetManagerAmount:Uint256*,assetStackingVaultAmount_len: felt, assetStackingVaultAmount:Uint256*, assetDaoTreasuryAmount_len: felt,assetDaoTreasuryAmount:Uint256*, shareCallerAmount_len: felt, shareCallerAmount:Uint256*, shareManagerAmount_len: felt, shareManagerAmount:Uint256*, shareStackingVaultAmount_len: felt, shareStackingVaultAmount:Uint256*, shareDaoTreasuryAmount_len: felt, shareDaoTreasuryAmount:Uint256*):
+    let (assetCallerAmount_len: felt,assetCallerAmount:Uint256*, assetManagerAmount_len: felt,assetManagerAmount:Uint256*,assetStackingVaultAmount_len: felt, assetStackingVaultAmount:Uint256*, assetDaoTreasuryAmount_len: felt,assetDaoTreasuryAmount:Uint256*, shareCallerAmount_len: felt, shareCallerAmount:Uint256*, shareManagerAmount_len: felt, shareManagerAmount:Uint256*, shareStackingVaultAmount_len: felt, shareStackingVaultAmount:Uint256*, shareDaoTreasuryAmount_len: felt, shareDaoTreasuryAmount:Uint256*) = Fund.previewReedem(id,
+    amount,
+    assets_len,
     assets,
-    percents_len,
-    percents)
-    return(callerAmount_len, callerAmount,managerAmount_len, managerAmount,stackingVaultAmount_len, stackingVaultAmount ,daoTreasuryAmount_len, daoTreasuryAmount)
+    percentsAsset_len,
+    percentsAsset,
+    shares_len,
+    shares,
+    percentsShare_len,
+    percentsShare,
+    )
+    return(assetCallerAmount_len,assetCallerAmount, assetManagerAmount_len,assetManagerAmount,assetStackingVaultAmount_len, assetStackingVaultAmount, assetDaoTreasuryAmount_len,assetDaoTreasuryAmount, shareCallerAmount_len, shareCallerAmount, shareManagerAmount_len, shareManagerAmount, shareStackingVaultAmount_len, shareStackingVaultAmount, shareDaoTreasuryAmount_len, shareDaoTreasuryAmount)
 end
 
 
@@ -286,6 +295,7 @@ func activater{
         _fundName: felt,
         _fundSymbol: felt,
         _uri: felt,
+        _fundLevel: felt,
         _denominationAsset: felt,
         _managerAccount:felt,
         _shareAmount:Uint256,
@@ -302,6 +312,7 @@ func activater{
         _sharePrice,
         data_len,
         data)
+    Account.setFundLevel(_fundLevel)
     return ()
 end
 
@@ -373,14 +384,18 @@ end
 
 @external
 func reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    token_id : Uint256,
-    share_amount : Uint256,
+    id : Uint256,
+    amount : Uint256,
     assets_len : felt,
     assets : felt*,
-    percents_len : felt,
-    percents : felt*,
+    percentsAsset_len : felt,
+    percentsAsset : felt*,
+    shares_len : felt,
+    shares : ShareWithdraw*,
+    percentsShare_len : felt,
+    percentsShare : felt*,
 ):
-    Fund.reedem(token_id, share_amount, assets_len, assets, percents_len, percents)
+    Fund.reedem(id, amount, assets_len, assets, percentsAsset_len, percentsAsset, shares_len, shares, percentsShare_len, percentsShare)
     return ()
 end
 

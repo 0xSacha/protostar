@@ -2,11 +2,18 @@
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 
 from starkware.cairo.common.uint256 import Uint256
-from contracts.Fund import AssetInfo
 from contracts.Account_Lib import AccountCallArray
 
+struct AssetInfo:
+    member address : felt
+    member amount : Uint256
+    member valueInDeno : Uint256
+end
 
-
+struct ShareWithdraw:
+    member address : felt
+    member id : Uint256
+end
 @contract_interface
 namespace IFuccountMock:
 
@@ -15,6 +22,7 @@ namespace IFuccountMock:
         _fundName: felt,
         _fundSymbol: felt,
         _uri: felt,
+        _fundLevel: felt,
         _denominationAsset: felt,
         _managerAccount:felt,
         _shareAmount:Uint256,
@@ -81,9 +89,13 @@ namespace IFuccountMock:
     amount : Uint256,
     assets_len : felt,
     assets : felt*,
-    percents_len : felt,
-    percents : felt*,
-) -> (callerAmount_len, callerAmount : Uint256*, managerAmount_len, managerAmount : Uint256*, stackingVaultAmount_len, stackingVaultAmount : Uint256*,daoTreasuryAmount_len, daoTreasuryAmount : Uint256*):
+    percentsAsset_len : felt,
+    percentsAsset : felt*,
+    shares_len : felt,
+    shares : ShareWithdraw*,
+    percentsShare_len : felt,
+    percentsShare : felt*,
+) -> (assetCallerAmount_len: felt,assetCallerAmount:Uint256*, assetManagerAmount_len: felt,assetManagerAmount:Uint256*,assetStackingVaultAmount_len: felt, assetStackingVaultAmount:Uint256*, assetDaoTreasuryAmount_len: felt,assetDaoTreasuryAmount:Uint256*, shareCallerAmount_len: felt, shareCallerAmount:Uint256*, shareManagerAmount_len: felt, shareManagerAmount:Uint256*, shareStackingVaultAmount_len: felt, shareStackingVaultAmount:Uint256*, shareDaoTreasuryAmount_len: felt, shareDaoTreasuryAmount:Uint256*):
     end
 
     # ERC1155-like getters
@@ -140,7 +152,7 @@ namespace IFuccountMock:
             call_array: AccountCallArray*,
             calldata_len: felt,
             calldata: felt*,
-            nonce: felt,
+            nonce: felt
         ) -> (response_len: felt, response: felt*):
     end
 
@@ -151,12 +163,16 @@ namespace IFuccountMock:
     end 
 
     func reedem(
-    token_id : Uint256,
-    share_amount : Uint256,
+    id : Uint256,
+    amount : Uint256,
     assets_len : felt,
     assets : felt*,
-    percents_len : felt,
-    percents : felt*,
+    percentsAsset_len : felt,
+    percentsAsset : felt*,
+    shares_len : felt,
+    shares : ShareWithdraw*,
+    percentsShare_len : felt,
+    percentsShare : felt*,
     ):
     end 
 

@@ -8,6 +8,8 @@ struct integration:
     member selector : felt
 end
 
+
+
 @contract_interface
 namespace IIntegrationManager:
 
@@ -17,7 +19,7 @@ namespace IIntegrationManager:
     func setAvailableExternalPosition(_asset: felt):
     end
 
-    func setAvailableIntegration(_contract: felt, _selector: felt, _integration:felt):
+    func setAvailableIntegration(_contract: felt, _selector: felt, _integration:felt, _level:felt):
     end
 
  
@@ -33,13 +35,22 @@ namespace IIntegrationManager:
     func checkIsExternalPositionAvailable(_externalPosition:felt) -> (res: felt): 
     end
 
+    func checkIsShareAvailable(_share: felt) -> (res: felt): 
+    end
+
     func getIntegration(_contract: felt, _selector: felt) -> (res: felt):
+    end
+
+    func getIntegrationRequiredLevel(_contract: felt, _selector: felt) -> (res: felt):
     end
 
     func getAvailableExternalPositions () -> (availableAssets_len : felt,  availableAssets:felt*):
     end
 
     func getAvailableAssets() -> (availableAssets_len :felt,  availableAssets:felt*):
+    end
+
+    func getAvailableShares() -> (availableShares_len: felt, availableShares:felt*):
     end
 
     func getAvailableIntegrations() -> (availableIntegrations_len:felt, availableIntegrations: integration*): 

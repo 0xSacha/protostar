@@ -8,7 +8,7 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin, SignatureBuiltin,
 from openzeppelin.introspection.erc165.library import ERC165
 
 from contracts.Account_Lib import Account, AccountCallArray
-from contracts.Fund import Fund, AssetInfo, PositionInfo
+from contracts.Fund import Fund, AssetInfo, PositionInfo, ShareWithdraw
 
 from starkware.cairo.common.uint256 import (
     Uint256,
@@ -95,7 +95,7 @@ func getAssetBalance{
     return (assetBalance_)
 end
 
-@view
+
 func getNotNulAssets{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
@@ -105,17 +105,15 @@ func getNotNulAssets{
     return(notNulAssets_len, notNulAssets)
 end
 
-@view
 func getNotNulPositions{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
     }() -> (notNulPositions_len:felt, notNulPositions: felt*):
-    let (notNulPositions_len:felt, notNulPositions:AssetInfo*) = Fund.getNotNulAssets()
+    let (notNulPositions_len:felt, notNulPositions:AssetInfo*) = Fund.getNotNulPositions()
     return(notNulPositions_len, notNulPositions)
 end
 
-@view
 func getSharePrice{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
      price : Uint256
 ):
@@ -123,7 +121,6 @@ func getSharePrice{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     return (price=price)
 end
 
-@view
 func calculLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
     gav : Uint256
 ):
@@ -131,7 +128,6 @@ func calculLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
     return (gav=gav)
 end
 
-@view
 func calculNotLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
     gav : Uint256
 ):
@@ -139,7 +135,6 @@ func calculNotLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_
     return (gav=gav)
 end
 
-@view
 func calculGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
     gav : Uint256
 ):
@@ -147,22 +142,30 @@ func calculGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     return (gav=gav)
 end
 
-@view
 func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     id : Uint256,
     amount : Uint256,
     assets_len : felt,
     assets : felt*,
-    percents_len : felt,
-    percents : felt*,
-) -> (callerAmount_len : felt, callerAmount : Uint256*,managerAmount_len : felt, managerAmount : Uint256*,stackingVaultAmount_len : felt, stackingVaultAmount : Uint256*,daoTreasuryAmount_len : felt, daoTreasuryAmount : Uint256*):
-    let (callerAmount_len : felt, callerAmount : Uint256*,managerAmount_len : felt, managerAmount : Uint256*,stackingVaultAmount_len : felt, stackingVaultAmount : Uint256*,daoTreasuryAmount_len : felt, daoTreasuryAmount : Uint256*) = Fund.previewReedem(    id ,
-    amount ,
-    assets_len ,
+    percentsAsset_len : felt,
+    percentsAsset : felt*,
+    shares_len : felt,
+    shares : ShareWithdraw*,
+    percentsShare_len : felt,
+    percentsShare : felt*,
+) -> (assetCallerAmount_len: felt,assetCallerAmount:Uint256*, assetManagerAmount_len: felt,assetManagerAmount:Uint256*,assetStackingVaultAmount_len: felt, assetStackingVaultAmount:Uint256*, assetDaoTreasuryAmount_len: felt,assetDaoTreasuryAmount:Uint256*, shareCallerAmount_len: felt, shareCallerAmount:Uint256*, shareManagerAmount_len: felt, shareManagerAmount:Uint256*, shareStackingVaultAmount_len: felt, shareStackingVaultAmount:Uint256*, shareDaoTreasuryAmount_len: felt, shareDaoTreasuryAmount:Uint256*):
+    let (assetCallerAmount_len: felt,assetCallerAmount:Uint256*, assetManagerAmount_len: felt,assetManagerAmount:Uint256*,assetStackingVaultAmount_len: felt, assetStackingVaultAmount:Uint256*, assetDaoTreasuryAmount_len: felt,assetDaoTreasuryAmount:Uint256*, shareCallerAmount_len: felt, shareCallerAmount:Uint256*, shareManagerAmount_len: felt, shareManagerAmount:Uint256*, shareStackingVaultAmount_len: felt, shareStackingVaultAmount:Uint256*, shareDaoTreasuryAmount_len: felt, shareDaoTreasuryAmount:Uint256*) = Fund.previewReedem(id,
+    amount,
+    assets_len,
     assets,
-    percents_len,
-    percents)
-    return(callerAmount_len, callerAmount,managerAmount_len, managerAmount,stackingVaultAmount_len, stackingVaultAmount ,daoTreasuryAmount_len, daoTreasuryAmount)
+    percentsAsset_len,
+    percentsAsset,
+    shares_len,
+    shares,
+    percentsShare_len,
+    percentsShare,
+    )
+    return(assetCallerAmount_len,assetCallerAmount, assetManagerAmount_len,assetManagerAmount,assetStackingVaultAmount_len, assetStackingVaultAmount, assetDaoTreasuryAmount_len,assetDaoTreasuryAmount, shareCallerAmount_len, shareCallerAmount, shareManagerAmount_len, shareManagerAmount, shareStackingVaultAmount_len, shareStackingVaultAmount, shareDaoTreasuryAmount_len, shareDaoTreasuryAmount)
 end
 
 
@@ -177,7 +180,7 @@ func uri{
     return Fund.uri()
 end
 
-@view
+
 func getName{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
@@ -187,7 +190,6 @@ func getName{
     return (name_)
 end
 
-@view
 func getSymbol{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
@@ -197,7 +199,6 @@ func getSymbol{
     return (symbol_)
 end
 
-@view
 func totalId{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
@@ -207,7 +208,6 @@ func totalId{
     return (totalSupply_)
 end
 
-@view
 func sharesTotalSupply{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
@@ -217,7 +217,7 @@ func sharesTotalSupply{
     return (sharesTotalSupply_)
 end
 
-@view
+
 func balanceOf{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
@@ -227,7 +227,6 @@ func balanceOf{
     return (balance)
 end
 
-@view
 func ownerShares{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
@@ -237,7 +236,6 @@ func ownerShares{
     return (assetId_len, assetId, assetAmount_len,assetAmount)
 end
 
-@view
 func getSharePricePurchased{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
@@ -247,7 +245,6 @@ func getSharePricePurchased{
     return (sharePricePurchased_)
 end
 
-@view
 func getMintedTimesTamp{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
@@ -298,6 +295,7 @@ func activater{
         _fundName: felt,
         _fundSymbol: felt,
         _uri: felt,
+        _fundLevel: felt,
         _denominationAsset: felt,
         _managerAccount:felt,
         _shareAmount:Uint256,
@@ -314,6 +312,7 @@ func activater{
         _sharePrice,
         data_len,
         data)
+    Account.setFundLevel(_fundLevel)
     return ()
 end
 
@@ -372,7 +371,6 @@ func execute{
     return (response_len=response_len, response=response)
 end
 
-
 #Fund
 
 @external
@@ -386,14 +384,18 @@ end
 
 @external
 func reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    token_id : Uint256,
-    share_amount : Uint256,
+    id : Uint256,
+    amount : Uint256,
     assets_len : felt,
     assets : felt*,
-    percents_len : felt,
-    percents : felt*,
+    percentsAsset_len : felt,
+    percentsAsset : felt*,
+    shares_len : felt,
+    shares : ShareWithdraw*,
+    percentsShare_len : felt,
+    percentsShare : felt*,
 ):
-    Fund.reedem(token_id, share_amount, assets_len, assets, percents_len, percents)
+    Fund.reedem(id, amount, assets_len, assets, percentsAsset_len, percentsAsset, shares_len, shares, percentsShare_len, percentsShare)
     return ()
 end
 

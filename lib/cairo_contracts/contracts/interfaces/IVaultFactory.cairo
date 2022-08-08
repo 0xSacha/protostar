@@ -1,7 +1,13 @@
 %lang starknet
 
 from starkware.cairo.common.uint256 import Uint256
-from contract.VaultFactory import Integration
+
+struct Integration:
+    member contract : felt
+    member selector : felt
+    member integration: felt
+end
+#
 @contract_interface
 namespace IVaultFactory:
 
@@ -30,6 +36,12 @@ namespace IVaultFactory:
     end
 
     func getStackingVault() -> (res : felt):
+    end
+
+    func getDaoTreasuryFee() -> (res : felt):
+    end
+
+    func getStackingVaultFee() -> (res : felt):
     end
 
     ##Business
@@ -93,6 +105,12 @@ namespace IVaultFactory:
     end
 
     func setDaoTreasury(_daoTreasury:felt):
+    end
+
+    func setStackingVaultFee(_stackingVault:felt):
+    end
+
+    func setDaoTreasuryFee(_daoTreasury:felt):
     end
 
     

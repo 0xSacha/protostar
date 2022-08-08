@@ -38,6 +38,12 @@ namespace IVaultFactory:
     func getStackingVault() -> (res : felt):
     end
 
+    func getDaoTreasuryFee() -> (res : felt):
+    end
+
+    func getStackingVaultFee() -> (res : felt):
+    end
+
     ##Business
 
     func initializeFund(
@@ -99,6 +105,12 @@ namespace IVaultFactory:
     end
 
     func setDaoTreasury(_daoTreasury:felt):
+    end
+
+    func setStackingVaultFee(_stackingVault:felt):
+    end
+
+    func setDaoTreasuryFee(_daoTreasury:felt):
     end
 
     
