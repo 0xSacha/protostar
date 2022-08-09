@@ -288,10 +288,10 @@ func getNotNulShares{
     alloc_locals
     let (IM_:felt) = __getIntegrationManager()
     let (selfAddress) = get_contract_address()
+    let (denominationAsset_) = getDenominationAsset()
     let (availableAShares_len: felt, availableShares:felt*) = IIntegrationManager.getAvailableShares(IM_)
     let (local notNulShares : ShareInfo*) = alloc()
-
-    let (notNulShares_len:felt) = completeNotNulSharesTab(availableAShares_len, availableShares, 0, notNulShares, selfAddress)    
+    let (notNulShares_len:felt) = completeNotNulSharesTab(availableAShares_len, availableShares, 0, notNulShares, selfAddress, denominationAsset_)    
     return(notNulShares_len, notNulShares)
 end
 
@@ -338,18 +338,18 @@ func completeShareInfo{
     if len == 0:
         return (shareInfo_len)
     end
-    assert assetAmount[shareInfo_len].address = fundAddress
-    assert assetAmount[shareInfo_len].id = assetId[len -1]
-    assert assetAmount[shareInfo_len].amount = assetAmount[len - 1]
-    let (valueInDeno_) = getShareValue(fundAddress, Uint256(assetAmount[shareInfo_len - 1].low, assetId[shareInfo_len -1].low))
-    assert assetAmount[shareInfo_len].valueInDeno = valueInDeno_
+    assert shareInfo[shareInfo_len].address = fundAddress
+    assert shareInfo[shareInfo_len].id = assetId[len -1]
+    assert shareInfo[shareInfo_len].amount = assetAmount[len - 1]
+    let (valueInDeno_) = getShareValue(fundAddress, Uint256(assetAmount[shareInfo_len - 1].low, assetId[shareInfo_len -1].low), denominationAsset_)
+    assert shareInfo[shareInfo_len].valueInDeno = valueInDeno_
     return completeShareInfo(
         len=len -1,
         fundAddress= fundAddress,
         assetId=assetId,
         assetAmount=assetAmount,
         shareInfo_len=shareInfo_len + 1,
-        ShareInfo=ShareInfo,
+        shareInfo=shareInfo,
         denominationAsset_=denominationAsset_,
         )
 end
@@ -632,8 +632,11 @@ func calculLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
     res : Uint256
 ):
     alloc_locals
-    let (assets_len : felt, assets : AssetInfo*) = getNotNulAssets()
-    let (gav) = __calculGav1(assets_len, assets)
+    let (assets_len: felt, assets: AssetInfo*) = getNotNulAssets()
+    let (gavAsset_) = __calculGavAsset(assets_len, assets)
+    let (shares_len:felt, shares: ShareInfo*) = getNotNulShares()
+    let (gavShare_) = __calculGavShare(shares_len, shares)
+    let (gav,_) = uint256_add(gavAsset_, gavShare_)
     return (res=gav)
 end
 
@@ -642,7 +645,7 @@ func calculNotLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_
 ):
     alloc_locals
     let (externalPosition_len: felt, externalPosition: PositionInfo*) = getNotNulPositions()
-    let (gav) = __calculGav2(externalPosition_len, externalPosition)
+    let (gav) = __calculGavPosition(externalPosition_len, externalPosition)
     return (res=gav)
 end
 
@@ -1005,7 +1008,7 @@ func __transferEachShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range
 end
 
 
-func __calculGav1{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+func __calculGavAsset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     assets_len : felt, assets : AssetInfo*
 ) -> (gav : Uint256):
     #Tracked assets GAV 
@@ -1014,12 +1017,26 @@ func __calculGav1{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
         return (gav=Uint256(0, 0))
     end
     let asset_value:Uint256 = assets[assets_len - 1].valueInDeno
-    let (gavOfRest) = __calculGav1(assets_len=assets_len - 1, assets=assets)
+    let (gavOfRest) = __calculGavAsset(assets_len=assets_len - 1, assets=assets)
     let (gav, _) = uint256_add(asset_value, gavOfRest)
     return (gav=gav)
 end
 
-func __calculGav2{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+func __calculGavShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    shares_len : felt, shares : ShareInfo*
+) -> (gav : Uint256):
+    #Tracked assets GAV 
+    alloc_locals
+    if shares_len == 0:
+        return (gav=Uint256(0, 0))
+    end
+    let share_value:Uint256 = shares[shares_len - 1].valueInDeno
+    let (gavOfRest) = __calculGavShare(shares_len=shares_len - 1, shares=shares)
+    let (gav, _) = uint256_add(share_value, gavOfRest)
+    return (gav=gav)
+end
+
+func __calculGavPosition{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     externalPositions_len : felt, externalPositions : PositionInfo*
 ) -> (gav : Uint256):
     #External position GAV 
@@ -1028,7 +1045,7 @@ func __calculGav2{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
         return (gav=Uint256(0, 0))
     end
     let asset_value:Uint256 = externalPositions[externalPositions_len - 1 ].valueInDeno
-    let (gavOfRest) = __calculGav2(externalPositions_len=externalPositions_len - 1, externalPositions=externalPositions)
+    let (gavOfRest) = __calculGavPosition(externalPositions_len=externalPositions_len - 1, externalPositions=externalPositions)
     let (gav, _) = uint256_add(asset_value, gavOfRest)
     return (gav=gav)
 end
