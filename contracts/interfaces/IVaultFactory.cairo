@@ -48,6 +48,7 @@ namespace IVaultFactory:
 
     func initializeFund(
     _fund: felt,
+    _fundLevel: felt,
     _fundName:felt,
     _fundSymbol:felt,
     _uri:felt,
@@ -111,6 +112,9 @@ namespace IVaultFactory:
     end
 
     func setDaoTreasuryFee(_daoTreasury:felt):
+    end
+
+    func setMaxFundLevel(_maxFundLevel:felt):
     end
 
     

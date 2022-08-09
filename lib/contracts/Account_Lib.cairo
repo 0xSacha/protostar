@@ -10,7 +10,7 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin, SignatureBuiltin,
 from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.uint256 import Uint256
 from starkware.cairo.common.memcpy import memcpy
-from starkware.cairo.common.math import split_felt
+from starkware.cairo.common.math import split_felt, assert_le
 from starkware.cairo.common.bool import TRUE
 from starkware.starknet.common.syscalls import call_contract, get_caller_address, get_tx_info
 from starkware.cairo.common.cairo_secp.signature import verify_eth_signature_uint256
@@ -36,6 +36,10 @@ end
 
 @storage_var
 func vaultFactory() -> (res: felt):
+end
+
+@storage_var
+func fundLevel() -> (res: felt):
 end
 
 #
@@ -88,6 +92,15 @@ namespace Account:
         return ()
     end
 
+    func onlyVaultFactory{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}():
+    let (vaultFactory_) = vaultFactory.read()
+    let (caller_) = get_caller_address()
+    with_attr error_message("Account: only callable by the vaultFactory"):
+        assert (vaultFactory_ - caller_) = 0
+    end
+    return ()
+    end
+
     #
     # Getters
     #
@@ -110,6 +123,15 @@ namespace Account:
         return (res=res)
     end
 
+    func getFundLevel{
+            syscall_ptr : felt*,
+            pedersen_ptr : HashBuiltin*,
+            range_check_ptr
+        }() -> (res: felt):
+        let (res) = fundLevel.read()
+        return (res=res)
+    end
+
     #
     # Setters
     #
@@ -121,6 +143,16 @@ namespace Account:
         }(new_public_key: felt):
         assert_only_self()
         Account_public_key.write(new_public_key)
+        return ()
+    end
+
+    func setFundLevel{
+            syscall_ptr : felt*,
+            pedersen_ptr : HashBuiltin*,
+            range_check_ptr
+        }(_fundLevel: felt):
+        onlyVaultFactory()
+        fundLevel.write(_fundLevel)
         return ()
     end
 
@@ -341,7 +373,6 @@ namespace Account:
         return ()
     end
 
-end
 
 func _checkCall{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         _contract: felt, _selector: felt, _callData_len: felt, _callData: felt*):
@@ -349,10 +380,17 @@ func _checkCall{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_pt
     #check if allowed call
     let (vaultFactory_:felt) = vaultFactory.read()
     let (integrationManager_:felt) = IVaultFactory.getIntegrationManager(vaultFactory_)
-    let (isAllowedCall_) = IIntegrationManager.checkIsIntegrationAvailable(integrationManager_, _contract, _selector)
-    with_attr error_message("the operation is now allowed on Magnety"):
-        assert isAllowedCall_ = 1
+    let (isIntegrationAvailable_) = IIntegrationManager.checkIsIntegrationAvailable(integrationManager_, _contract, _selector)
+    with_attr error_message("the operation is not allowed on Magnety"):
+        assert isIntegrationAvailable_ = 1
     end
+
+    let (fundLevel_) = getFundLevel()
+    let (integrationLevel_) = IIntegrationManager.getIntegrationRequiredLevel(integrationManager_, _contract, _selector)
+    with_attr error_message("the operation is not allowed for this fund"):
+        assert_le(integrationLevel_, fundLevel_)
+    end
+
     #perform pre-call logic if necessary
     let (preLogicContract:felt) = IIntegrationManager.getIntegration(integrationManager_, _contract, _selector)
     let (isPreLogicNonRequired:felt) = __is_zero(preLogicContract)
@@ -371,4 +409,7 @@ end
         return (res=1)
     end
     return (res=0)
+end
+
+
 end

@@ -15,7 +15,7 @@ struct ShareWithdraw:
     member id : Uint256
 end
 @contract_interface
-namespace IFuccount:
+namespace IFuccountMock:
 
     # Setters
     func activater(

@@ -12,7 +12,7 @@ from starkware.cairo.common.bool import TRUE
 
 from openzeppelin.introspection.erc165.IERC165 import IERC165
 from openzeppelin.introspection.erc165.library import ERC165
-from interfaces.IERC1155Receiver import IERC1155_Receiver
+from contracts.interfaces.IERC1155Receiver import IERC1155_Receiver
 from openzeppelin.security.safemath.library import SafeUint256
 
 
@@ -269,15 +269,15 @@ namespace ERC1155:
             id,
             amount
         )
-        _do_safe_transfer_acceptance_check(
-            operator,
-            from_,
-            to,
-            id,
-            amount,
-            data_len,
-            data
-        )
+        # _do_safe_transfer_acceptance_check(
+        #     operator,
+        #     from_,
+        #     to,
+        #     id,
+        #     amount,
+        #     data_len,
+        #     data
+        # )
         return ()
     end
 
@@ -371,15 +371,15 @@ namespace ERC1155:
             id=id,
             value=amount
         )
-        _do_safe_transfer_acceptance_check(
-            operator=operator,
-            from_=0,
-            to=to,
-            id=id,
-            amount=amount,
-            data_len=data_len,
-            data=data
-        )
+        # _do_safe_transfer_acceptance_check(
+        #     operator=operator,
+        #     from_=0,
+        #     to=to,
+        #     id=id,
+        #     amount=amount,
+        #     data_len=data_len,
+        #     data=data
+        # )
         return ()
     end
 

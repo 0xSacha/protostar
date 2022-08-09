@@ -19,6 +19,9 @@ end
 func vaultFactory() -> (res: felt):
 end
 
+
+## External Position
+
 @storage_var
 func externalPositionAvailableLength() -> (res: felt):
 end
@@ -31,25 +34,14 @@ end
 func isExternalPositionAvailable(externalPositionAddress: felt) -> (res: felt):
 end
 
-@storage_var
-func assetAvailableLength() -> (res: felt):
-end
+## Integration
 
 @storage_var
 func integrationAvailableLength() -> (res: felt):
 end
 
 @storage_var
-func idToAssetAvailable(id: felt) -> (res: felt):
-end
-
-@storage_var
 func idToIntegrationAvailable(id: felt) -> (res: integration):
-end
-
-
-@storage_var
-func isAssetAvailable(assetAddress: felt) -> (res: felt):
 end
 
 @storage_var
@@ -57,12 +49,47 @@ func isIntegrationAvailable(_integration: integration) -> (res: felt):
 end
 
 @storage_var
-func isContractIntergrated(_contract: felt) -> (res: felt):
+func integrationContract(_integration: integration) -> (res: felt):
+end
+
+@storage_var
+func integrationRequiredLevel(_integration: integration) -> (res: felt):
 end
 
 
 @storage_var
-func integrationContract(_integration: integration) -> (res: felt):
+func isContractIntergrated(_contract: felt) -> (res: felt):
+end
+
+
+
+## Asset
+
+@storage_var
+func assetAvailableLength() -> (res: felt):
+end
+
+@storage_var
+func idToAssetAvailable(id: felt) -> (res: felt):
+end
+
+@storage_var
+func isAssetAvailable(assetAddress: felt) -> (res: felt):
+end
+
+
+## Shares
+
+@storage_var
+func shareAvailableLength() -> (res: felt):
+end
+
+@storage_var
+func idToShareAvailable(id: felt) -> (res: felt):
+end
+
+@storage_var
+func isShareAvailable(assetAddress: felt) -> (res: felt):
 end
 
 
@@ -99,6 +126,11 @@ end
 # Getters
 #
 
+@view
+func checkIsShareAvailable{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_asset: felt) -> (res: felt): 
+    let (res) = isAssetAvailable.read(_asset)
+    return (res=res)
+end
 
 @view
 func checkIsAssetAvailable{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_asset: felt) -> (res: felt): 
@@ -121,6 +153,12 @@ end
 @view
 func getIntegration{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_contract: felt, _selector:felt) -> (res: felt): 
     let (res) = integrationContract.read(integration(_contract, _selector))
+    return (res=res)
+end
+
+@view
+func getIntegrationRequiredLevel{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_contract: felt, _selector:felt) -> (res: felt): 
+    let (res) = integrationRequiredLevel.read(integration(_contract, _selector))
     return (res=res)
 end
 
@@ -224,6 +262,32 @@ func __completeIntegrationTab{
 end
 
 
+@view
+func getAvailableShares{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (availableShares_len: felt, availableShares:felt*): 
+    alloc_locals
+    let (availableShares_len:felt) = shareAvailableLength.read()
+    let (local availableShares : felt*) = alloc()
+    __completeShareTab(availableShares_len, availableShares)
+    return(availableShares_len, availableShares)
+end
+
+func __completeShareTab{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(_availableShares_len:felt, _availableShares:felt*) -> ():
+    if _availableShares_len == 0:
+        return ()
+    end
+    let (share_:felt) = idToShareAvailable.read(_availableShares_len - 1)
+    assert _availableShares[_availableShares_len] = share_
+
+    return __completeShareTab(
+        _availableShares_len=_availableShares_len - 1,
+        _availableShares= _availableShares,
+    )
+end
+
 #
 # Setters
 #
@@ -240,6 +304,22 @@ func setAvailableAsset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_c
     let (currentAssetAvailableLength_:felt) = assetAvailableLength.read()
     idToAssetAvailable.write(currentAssetAvailableLength_, _asset)
     assetAvailableLength.write(currentAssetAvailableLength_ + 1)
+    return ()
+    end
+end
+
+@external
+func setAvailableShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        _share: felt):
+    onlyVaultFactory()
+    let (isShareAvailable_:felt) = isShareAvailable.read(_share)
+    if isShareAvailable_ == 1:
+    return()
+    else:
+    isShareAvailable.write(_share, 1)
+    let (currentShareAvailableLength_:felt) = shareAvailableLength.read()
+    idToShareAvailable.write(currentShareAvailableLength_, _share)
+    shareAvailableLength.write(currentShareAvailableLength_ + 1)
     return ()
     end
 end
@@ -262,7 +342,7 @@ end
 
 @external
 func setAvailableIntegration{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _contract: felt, _selector: felt, _integration: felt):
+        _contract: felt, _selector: felt, _integration: felt, _level: felt):
     onlyVaultFactory()
     let (isIntegrationAvailable_:felt) = isIntegrationAvailable.read(integration(_contract, _selector))
     if isIntegrationAvailable_ == 1:
@@ -274,6 +354,7 @@ func setAvailableIntegration{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, r
     let (currentIntegrationAvailableLength_:felt) = integrationAvailableLength.read()
     idToIntegrationAvailable.write(currentIntegrationAvailableLength_, integration(_contract, _selector))
     integrationAvailableLength.write(currentIntegrationAvailableLength_ + 1)
+    integrationRequiredLevel.write(integration(_contract, _selector), _level)
     return ()
     end
 end

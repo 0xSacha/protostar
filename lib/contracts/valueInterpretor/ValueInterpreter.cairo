@@ -20,11 +20,11 @@ from starkware.cairo.common.uint256 import (
 from contracts.utils.utils import felt_to_uint256, uint256_div, uint256_percent, uint256_mul_low, uint256_pow
 from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.cairo_builtins import HashBuiltin
-from interfaces.IPontisPriceFeedMixin import IPontisPriceFeedMixin
-from interfaces.IVaultFactory import IVaultFactory
-from interfaces.IDerivativePriceFeed import IDerivativePriceFeed
-from interfaces.IExternalPositionPriceFeed import IExternalPositionPriceFeed
-from interfaces.IERC20 import IERC20
+from contracts.interfaces.IOraclePriceFeedMixin import IOraclePriceFeedMixin
+from contracts.interfaces.IVaultFactory import IVaultFactory
+from contracts.interfaces.IDerivativePriceFeed import IDerivativePriceFeed
+from contracts.interfaces.IExternalPositionPriceFeed import IExternalPositionPriceFeed
+from contracts.interfaces.IERC20 import IERC20
 
 from starkware.cairo.common.math import assert_not_zero
 
@@ -76,7 +76,7 @@ func onlyAuthorized{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_chec
     let (caller_) = get_caller_address()
     let (owner_) = IVaultFactory.getOwner(vaultFactory_)
     with_attr error_message("onlyAuthorized: only callable by the owner or VF"):
-        assert (owner_ - caller_) * (vaultFactory_ - caller) = 0
+        assert (owner_ - caller_) * (vaultFactory_ - caller_) = 0
     end
     return ()
 end
@@ -101,7 +101,7 @@ func calculAssetValue{
 
     let (vaultFactory_:felt) = vaultFactory.read()
     let (primitivePriceFeed_:felt) = IVaultFactory.getPrimitivePriceFeed(vaultFactory_)
-    let (isSupportedPrimitiveDenominationAsset_:felt) = IPontisPriceFeedMixin.checkIsSupportedPrimitiveAsset(primitivePriceFeed_, _denominationAsset)
+    let (isSupportedPrimitiveDenominationAsset_:felt) = IOraclePriceFeedMixin.checkIsSupportedPrimitiveAsset(primitivePriceFeed_, _denominationAsset)
     if isSupportedPrimitiveDenominationAsset_ == 1:
         let (res:Uint256) = __calculAssetValue(_baseAsset, _amount, _denominationAsset)
         return(res=res)
@@ -144,7 +144,7 @@ func checkIsSupportedDerivativeAsset{
 end
 
 @view
-func getIsSupportedExternalPositionPriceFeed{
+func getExternalPositionPriceFeed{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
@@ -222,10 +222,10 @@ func __calculAssetValue{
     end
     let (vaultFactory_:felt) = vaultFactory.read()
     let (primitivePriceFeed_:felt) = IVaultFactory.getPrimitivePriceFeed(vaultFactory_)
-    let (isSupportedPrimitiveAsset_) = IPontisPriceFeedMixin.checkIsSupportedPrimitiveAsset(primitivePriceFeed_, _baseAsset)
+    let (isSupportedPrimitiveAsset_) = IOraclePriceFeedMixin.checkIsSupportedPrimitiveAsset(primitivePriceFeed_, _baseAsset)
 
     if isSupportedPrimitiveAsset_ == 1:
-        let (res:Uint256) = IPontisPriceFeedMixin.calcAssetValueBmToDeno(primitivePriceFeed_, _baseAsset, _amount, _denominationAsset)
+        let (res:Uint256) = IOraclePriceFeedMixin.calcAssetValueBmToDeno(primitivePriceFeed_, _baseAsset, _amount, _denominationAsset)
         return(res=res)
     else:
         let (isSupportedDerivativeAsset_) = isSupportedDerivativeAsset.read(_baseAsset)

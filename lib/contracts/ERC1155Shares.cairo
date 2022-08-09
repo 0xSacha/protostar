@@ -165,16 +165,16 @@ func completeMultiAssetTab{
     let (balance_) = balanceOf(account, newTotalId_)
     let (isZero_) = __is_zero(balance_.low)
     if isZero_ == 0:
-        let newAssetId_len:felt = assetId_len + 1
-        let newAssetAmount_len:felt = assetAmount_len + 1
-        assert assetId[assetId_len*Uint256.SIZE] = newTotalId_
-        assert assetAmount[assetId_len*Uint256.SIZE] = balance_
+        # assert assetId[assetId_len*Uint256.SIZE] = newTotalId_
+        # assert assetAmount[assetId_len*Uint256.SIZE] = balance_
+        assert assetId[assetId_len] = newTotalId_
+        assert assetAmount[assetId_len] = balance_
          return completeMultiAssetTab(
         totalId= newTotalId_,
-        assetId_len=newAssetId_len,
-        assetId= assetId,
-        assetAmount_len=newAssetAmount_len,
-        assetAmount=assetAmount,
+        assetId_len=assetId_len+1,
+        assetId= assetId ,
+        assetAmount_len=assetAmount_len+1,
+        assetAmount=assetAmount ,
         account=account,
         )
     end

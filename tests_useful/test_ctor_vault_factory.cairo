@@ -306,45 +306,10 @@ alloc_locals
 
     %}
 
-    let (sharePrice_) = IFuccountMock.getSharePrice(f1_contract)
-
-    let (liquidGav) = IFuccountMock.calculLiquidGav(f1_contract)
-
-    let (notLiquidGav) = IFuccountMock.calculNotLiquidGav(f1_contract)
-
-    let (gav) = IFuccountMock.calculGav(f1_contract)
-
-        %{
-        print('fund info')
-        print(ids.sharePrice_.low)
-        print(ids.liquidGav.low)
-        print(ids.gav.low)
-        print(ids.notLiquidGav.low)
-    %}
-
-
     %{ stop_prank = start_prank(ids.ADMIN, ids.dai_contract) %}
     IERC20.transfer(dai_contract, f1_contract, Uint256(10,0))
     %{ stop_prank()  %}
     let (notNulAssets_len:felt, notNulAssets: AssetInfo*) = IFuccountMock.getNotNulAssets(f1_contract)
-
-   
-    let (sharePrice2_) = IFuccountMock.getSharePrice(f1_contract)
-
-    let (liquidGav2) = IFuccountMock.calculLiquidGav(f1_contract)
-
-    let (notLiquidGav2) = IFuccountMock.calculNotLiquidGav(f1_contract)
-
-    let (gav2) = IFuccountMock.calculGav(f1_contract)
-
-        %{
-        print('fund info')
-        print(ids.sharePrice2_.low)
-        print(ids.liquidGav2.low)
-        print(ids.gav2.low)
-        print(ids.notLiquidGav2.low)
-    %}
-
 
 
     # let (totalId_:Uint256) = IFuccountMock.totalId(f1_contract)
@@ -382,7 +347,22 @@ alloc_locals
     # assert totalId_.low = 2
     # assert sharesTotalSupply.low = 19000000000000000000
 
+   
+    # let (sharePrice_) = IFuccountMock.getSharePrice(f1_contract)
 
+    # let (liquidGav) = IFuccountMock.calculLiquidGav(f1_contract)
+
+    # let (notLiquidGav) = IFuccountMock.calculNotLiquidGav(f1_contract)
+
+    # let (gav) = IFuccountMock.calculGav(f1_contract)
+
+    #     %{
+    #     print('fund info')
+    #     print(ids.sharePrice_.low)
+    #     print(ids.liquidGav.low)
+    #     print(ids.gav.low)
+    #     print(ids.notLiquidGav.low)
+    # %}
 
 
 

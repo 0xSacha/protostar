@@ -70,8 +70,8 @@ func FuccountActivated(fuccountAddress: felt):
 end
 
 const APPROVE_SELECTOR = 949021990203918389843157787496164629863144228991510976554585288817234167820
-const BUYSHARE_SELECTOR = 1739160585925371971880668508720131927045855609588612196644536989289532392537
-const SELLSHARE_SELECTOR = 481719463807444873104482035153189208627524278231225222947146558976722465517
+const DEPOSIT_SELECTOR = 352040181584456735608515580760888541466059565068553383579463728554843487745
+const REEDEM_SELECTOR = 481719463807444873104482035153189208627524278231225222947146558976722465517
 
 const POW18 = 1000000000000000000
 const POW20 = 100000000000000000000
@@ -80,6 +80,7 @@ struct Integration:
     member contract : felt
     member selector : felt
     member integration: felt
+    member level: felt
 end
 #
 # Storage
@@ -149,6 +150,18 @@ end
 func daoTreasury() -> (res : felt):
 end
 
+@storage_var
+func daoTreasuryFee() -> (res : felt):
+end
+
+@storage_var
+func stackingVaultFee() -> (res : felt):
+end
+
+@storage_var
+func maxFundLevel() -> (res : felt):
+end
+
 #
 # Constructor 
 #
@@ -204,7 +217,8 @@ func areDependenciesSet{
     let (valueInterpretor_:felt) = getValueInterpretor()
     let (primitivePriceFeed_:felt) = getPrimitivePriceFeed()
     let (approvePreLogic_:felt) = getApprovePreLogic()
-    let  mul_:felt = approvePreLogic_  * oracle_ * feeManager_ * policyManager_ * integrationManager_ * valueInterpretor_ * primitivePriceFeed_
+    let (maxFundLevel_:felt) = getMaxFundLevel()
+    let  mul_:felt = approvePreLogic_  * oracle_ * feeManager_ * policyManager_ * integrationManager_ * valueInterpretor_ * primitivePriceFeed_ * maxFundLevel_
     let (isZero_:felt) = __is_zero(mul_)
     if isZero_ == 1:
         return (res = 0)
@@ -323,6 +337,36 @@ func getStackingVault{
         range_check_ptr
     }() -> (res: felt):
     let (res:felt) = stackingVault.read()
+    return(res)
+end
+
+@view
+func getStackingVaultFee{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }() -> (res: felt):
+    let (res:felt) = stackingVaultFee.read()
+    return(res)
+end
+
+@view
+func getDaoTreasuryFee{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }() -> (res: felt):
+    let (res:felt) = daoTreasuryFee.read()
+    return(res)
+end
+
+@view
+func getMaxFundLevel{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }() -> (res: felt):
+    let (res:felt) = maxFundLevel.read()
     return(res)
 end
 
@@ -478,6 +522,29 @@ func setDaoTreasury{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
     return ()
 end
 
+@external
+func setStackingVaultFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        _stackingVaultFee : felt):
+    Ownable.assert_only_owner()
+    stackingVaultFee.write(_stackingVaultFee)
+    return ()
+end
+
+@external
+func setDaoTreasuryFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        _daoTreasuryFee : felt):
+    Ownable.assert_only_owner()
+    daoTreasuryFee.write(_daoTreasuryFee)
+    return ()
+end
+
+@external
+func setMaxFundLevel{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        _maxFundLevel : felt):
+    Ownable.assert_only_owner()
+    maxFundLevel.write(_maxFundLevel)
+    return ()
+end
 
 @external
 func addGlobalAllowedAsset{
@@ -551,6 +618,7 @@ func initializeFund{
     }(
     #vault initializer
     _fund: felt,
+    _fundLevel: felt,
     _fundName:felt,
     _fundSymbol:felt,
     _uri:felt,
@@ -612,21 +680,18 @@ func initializeFund{
     vaultAmount.write(currentVaultAmount + 1)
     idToVault.write(currentVaultAmount, _fund)
 
-
-    ##add integration so other funds can buy/sell shares from it
-    let _integrationList_len:felt = 2   
+    
+    # ##add integration so other funds can buy/sell shares from it
+    let _integrationList_len:felt = 2
     let (_integrationList:Integration*) = alloc()
-    assert _integrationList[0].contract = _fund
-    assert _integrationList[0].selector = BUYSHARE_SELECTOR
-    assert _integrationList[0].integration = 0
-    assert _integrationList[Integration.SIZE].contract = _fund
-    assert _integrationList[Integration.SIZE].selector = SELLSHARE_SELECTOR
-    assert _integrationList[Integration.SIZE].integration = 0
+    assert _integrationList[0] = Integration(_fund, DEPOSIT_SELECTOR, 0, _fundLevel)
+    assert _integrationList[1] = Integration(_fund, REEDEM_SELECTOR, 0, _fundLevel)
+
      __addGlobalAllowedIntegration(_integrationList_len, _integrationList, integrationManager_)
      
     ##register the position
     let (sharePriceFeed_:felt) = getSharePriceFeed()
-    IValueInterpretor.addExternalPosition(valueInterpretor_, _fund, sharePriceFeed_)
+    IValueInterpretor.addDerivative(valueInterpretor_, _fund, sharePriceFeed_)
 
 
     # shares have 18 decimals
@@ -634,7 +699,7 @@ func initializeFund{
     let (sharePricePurchased_:Uint256) = uint256_div(amountPow18_ , _shareAmount)
 
     #Fuccount activater
-    IFuccount.activater(_fund, _fundName, _fundSymbol, _uri, _denominationAsset, assetManager_, _shareAmount, sharePricePurchased_, data_len, data)
+    IFuccount.activater(_fund, _fundName, _fundSymbol, _uri, _fundLevel, _denominationAsset, assetManager_, _shareAmount, sharePricePurchased_, data_len, data)
     IERC20.transferFrom(_denominationAsset, assetManager_, _fund, _amount)
 
     #Set feeconfig for vault
@@ -724,7 +789,7 @@ func __addGlobalAllowedAsset{
     
     let (approvePreLogic_:felt) = getApprovePreLogic()
     IIntegrationManager.setAvailableAsset(_integrationManager, asset_)
-    IIntegrationManager.setAvailableIntegration(_integrationManager, asset_, APPROVE_SELECTOR, approvePreLogic_)
+    IIntegrationManager.setAvailableIntegration(_integrationManager, asset_, APPROVE_SELECTOR, approvePreLogic_, 1)
 
     let newAssetList_len:felt = _assetList_len -1
     let newAssetList:felt* = _assetList + 1
@@ -776,14 +841,11 @@ func __addGlobalAllowedIntegration{
     end
 
     let integration_:Integration = [_integrationList]
-    IIntegrationManager.setAvailableIntegration(_integrationManager, integration_.contract, integration_.selector, integration_.integration)
-
-    let newIntegrationList_len:felt = _integrationList_len -1
-    let newIntegrationList:Integration* = _integrationList + 3
+    IIntegrationManager.setAvailableIntegration(_integrationManager, integration_.contract, integration_.selector, integration_.integration, integration_.level)
 
     return __addGlobalAllowedIntegration(
-        _integrationList_len= newIntegrationList_len,
-        _integrationList= newIntegrationList,
+        _integrationList_len= _integrationList_len - 1,
+        _integrationList= _integrationList + Integration.SIZE,
         _integrationManager=_integrationManager
         )
 end
