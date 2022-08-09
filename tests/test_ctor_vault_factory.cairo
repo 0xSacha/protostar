@@ -324,10 +324,18 @@ alloc_locals
 
 
     %{ stop_prank = start_prank(ids.ADMIN, ids.dai_contract) %}
-    IERC20.transfer(dai_contract, f1_contract, Uint256(10,0))
+    IERC20.transfer(dai_contract, f1_contract, Uint256(10000000,0))
     %{ stop_prank()  %}
     let (notNulAssets_len:felt, notNulAssets: AssetInfo*) = IFuccountMock.getNotNulAssets(f1_contract)
 
+    let secondAsset = notNulAssets[0]
+    %{
+        print(ids.notNulAssets_len)
+        print(ids.secondAsset.address)
+        print(ids.secondAsset.valueInDeno.low)
+        print(ids.secondAsset.amount.low)
+
+    %}
    
     let (sharePrice2_) = IFuccountMock.getSharePrice(f1_contract)
 

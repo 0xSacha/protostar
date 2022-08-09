@@ -619,13 +619,13 @@ func getShareValue{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     return (res=value_)
 end
 
-func getUserAllocationPer10000{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    _asset: felt, _amount: Uint256, _denominationAsset: felt
-) -> (res: Uint256):
-    let (valueInterpretor_:felt) = __getValueInterpretor()
-    let (value_:Uint256) = IValueInterpretor.calculAssetValue(valueInterpretor_, _asset, _amount, _denominationAsset)
-    return (res=value_)
-end
+# func getUserAllocationPer10000{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+#     _user: felt, _amount: Uint256, _denominationAsset: felt
+# ) -> (res: Uint256):
+#     let (valueInterpretor_:felt) = __getValueInterpretor()
+#     let (value_:Uint256) = IValueInterpretor.calculAssetValue(valueInterpretor_, _asset, _amount, _denominationAsset)
+#     return (res=value_)
+# end
 
 
 func calculLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
@@ -1013,7 +1013,7 @@ func __calculGav1{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
     if assets_len == 0:
         return (gav=Uint256(0, 0))
     end
-    let asset_value:Uint256 = assets[(assets_len - 1 ) *AssetInfo.SIZE].valueInDeno
+    let asset_value:Uint256 = assets[assets_len - 1].valueInDeno
     let (gavOfRest) = __calculGav1(assets_len=assets_len - 1, assets=assets)
     let (gav, _) = uint256_add(asset_value, gavOfRest)
     return (gav=gav)
@@ -1027,7 +1027,7 @@ func __calculGav2{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
     if externalPositions_len == 0:
         return (gav=Uint256(0, 0))
     end
-    let asset_value:Uint256 = externalPositions[(externalPositions_len - 1 ) *PositionInfo.SIZE].valueInDeno
+    let asset_value:Uint256 = externalPositions[externalPositions_len - 1 ].valueInDeno
     let (gavOfRest) = __calculGav2(externalPositions_len=externalPositions_len - 1, externalPositions=externalPositions)
     let (gav, _) = uint256_add(asset_value, gavOfRest)
     return (gav=gav)
