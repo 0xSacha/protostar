@@ -54,6 +54,11 @@ struct AssetInfo:
     member valueInDeno : Uint256
 end
 
+struct ShareWithdraw:
+    member address : felt
+    member id : Uint256
+end
+
 @view
 func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
     alloc_locals
@@ -340,7 +345,7 @@ alloc_locals
 
     ##Check Multi Asset 
     %{ stop_prank = start_prank(ids.ADMIN, ids.dai_contract) %}
-    IERC20.transfer(dai_contract, f1_contract, Uint256(200000000,0))
+    IERC20.transfer(dai_contract, f1_contract, Uint256(3800000000,0))
     %{ stop_prank()  %}
 
     #New holding 
@@ -351,7 +356,7 @@ alloc_locals
     let (gav2) = IFuccountMock.calculGav(f1_contract_bis)
     let daiAsset = notNulAssets[0]
     assert daiAsset.address = dai_contract
-    assert daiAsset.amount.low = 200000000
+    assert daiAsset.amount.low = 3800000000
     assert daiAsset.valueInDeno.low = 100000000000000000
 
     let (sharePrice_) = IFuccountMock.getSharePrice(f1_contract)
@@ -366,37 +371,41 @@ alloc_locals
         print(ids.notLiquidGav.low)
     %}
 
+    ## Preview Reedem newShare
 
+    let (local assetsToReedem : felt*) = alloc()
+    assert assetsToReedem[0] = eth_contract
+    assert assetsToReedem[1] = dai_contract
+    let (local percentsAsset : felt*) = alloc()
+    assert percentsAsset[0] = 95
+    assert percentsAsset[1] = 5
+    let (local sharesToReedem : ShareWithdraw*) = alloc()
+    let (local percentsShare : ShareWithdraw*) = alloc()
 
-    # let (mintedBlockTimesTamp_:felt) =  IFuccountMock.getMintedTimesTamp(f1_contract, id2 )
-    # let (sharePricePurchased_:Uint256) = IFuccountMock.getSharePricePurchased(f1_contract, id2)
-    # let (totalId_:Uint256) = IFuccountMock.totalId(f1_contract)
-    # let (sharesTotalSupply:Uint256) = IFuccountMock.sharesTotalSupply(f1_contract)
     
-    # assert mintedBlockTimesTamp_ = 0
-    # assert sharePricePurchased_.low = 100000000000000000
-    # assert totalId_.low = 2
-    # assert sharesTotalSupply.low = 19000000000000000000
 
-   
-    # let (sharePrice_) = IFuccountMock.getSharePrice(f1_contract)
+    let (assetCallerAmount_len: felt,assetCallerAmount:Uint256*, assetManagerAmount_len: felt,
+    assetManagerAmount:Uint256*,assetStackingVaultAmount_len: felt, assetStackingVaultAmount:Uint256*, 
+    assetDaoTreasuryAmount_len: felt,assetDaoTreasuryAmount:Uint256*, shareCallerAmount_len: felt, 
+    shareCallerAmount:Uint256*, shareManagerAmount_len: felt, shareManagerAmount:Uint256*, 
+    shareStackingVaultAmount_len: felt, shareStackingVaultAmount:Uint256*, shareDaoTreasuryAmount_len: felt, 
+    shareDaoTreasuryAmount:Uint256*) = previewReedem(
+    Uint256(1,0),
+    Uint256(9000000000000000000,0),
+    2,
+    assetsToReedem,
+    2,
+    percentsAsset,
+    0,
+    sharesToReedem,
+    0,
+    percentsShare,
+)
+    
 
-    # let (liquidGav) = IFuccountMock.calculLiquidGav(f1_contract)
-
-    # let (notLiquidGav) = IFuccountMock.calculNotLiquidGav(f1_contract)
-
-    # let (gav) = IFuccountMock.calculGav(f1_contract)
-
-    #     %{
-    #     print('fund info')
-    #     print(ids.sharePrice_.low)
-    #     print(ids.liquidGav.low)
-    #     print(ids.gav.low)
-    #     print(ids.notLiquidGav.low)
-    # %}
-
-
-
+    %{ stop_prank = start_prank(ids.ADMIN, ids.f1_contract) %}
+        IERC20.transfer(dai_contract, f1_contract, Uint256(200000000,0))
+    %{ stop_prank()  %}
     return ()
 end
 
