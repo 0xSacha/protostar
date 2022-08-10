@@ -48,7 +48,7 @@ func deposit_to_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, 
     let (balance_user) = user_to_share.read(caller_addr,token_id)
     let(contract_address) = get_contract_address()
     IFuccount.safeTransferFrom(caller_addr,contract_address,token_id,amount_to_deposit,0,0)
-    user_to_share.write(caller_addr,token_id,amount_to_deposit)
+    user_to_share.write(caller_addr,token_id,amount_to_deposit + balance_user)
     return()
 end
 
@@ -59,7 +59,7 @@ func withdraw_to_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
     if vault_status == TRUE:
         return()
     end
-    
+
     let (balance_user) = user_to_share.read(caller_addr,token_id)
     let(contract_address) = get_contract_address()
     IFuccount.safeTransferFrom(contract_address,caller_addr,token_id,amount_to_withdraw,0,0)
@@ -88,15 +88,14 @@ func report_fund_balance_rec (assetId_len:felt, assetId:Uint256*, assetAmount_le
     return(assetId_len = assetId_len - 1, assetId = assetId + assetId.SIZE, assetAmount_len = assetAmount_len - 1, assetAmount = assetAmount + assetAmount.SIZE, balance = balance, token_id = token_id)
 end
 
-func dispute_start{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(vault_address: felt,vault_token_id: Uint256) -> (bool : felt):
+func dispute_start{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(vault_address: felt) -> (bool : felt):
     if is_fund_disputed(vault_token_id) == TRUE:
         return(TRUE)
     end
 
-    # How to get account list of poeple you lock their shares
     let account : felt* = 0
-    let (balance_complains_user) = get_complainer_balance(token_id,account,3,0)
-    let (percent) = uint256_percent( IFuccount.sharesTotalSupply(),balance_complains_user) 
+    let (balance_complains_user) = report_fund_balance.read(vault_address)
+    let (percent) = uint256_percent(IFuccount.sharesTotalSupply(),balance_complains_user) 
     if is_le(5,percent) == 1:
         is_fund_disputed.write(vault_address,1)
         return(TRUE)
