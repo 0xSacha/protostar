@@ -14,6 +14,7 @@ struct ShareWithdraw:
     member address : felt
     member id : Uint256
 end
+
 @contract_interface
 namespace IFuccount:
 
@@ -138,11 +139,6 @@ namespace IFuccount:
     func getMintedTimesTamp(tokenId : Uint256) -> (res : felt):
     end
 
-
-
-
-
-
     ## Business 
 
     #Account
@@ -215,9 +211,4 @@ namespace IFuccount:
     ):
     end  
 
-
-
-
 end
-
-    
