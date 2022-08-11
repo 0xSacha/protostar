@@ -1,5 +1,10 @@
 %lang starknet
 %builtins pedersen range_check
+
+
+# @title Voting Escrow
+# @author Mesh Finance
+# @license MIT
 # @notice Votes have a weight depending on time, so that users are
 #         committed to the future of (whatever they are voting for)
 # @dev Vote weight decays linearly over time. Lock time cannot be
@@ -174,8 +179,6 @@ end
 # @param name Token full name
 # @param symbol Token symbol
 # @param initial_admin Initial admin of the token
-# @param current_timestamp Replacement for block.timestamp, will be removed soon
-# @param current_block Replacement for block.number, will be removed soon
 @constructor
 func constructor{
         syscall_ptr : felt*, 
@@ -185,7 +188,7 @@ func constructor{
         token: felt,
         name: felt,
         symbol: felt,
-        initial_admin: felt,
+        initial_admin: felt
     ):
     _token.write(token)
     _name.write(name)
@@ -194,10 +197,14 @@ func constructor{
     assert_not_zero(initial_admin)
     _admin.write(initial_admin)
 
-    let (currentTimesTamp_) = get_block_timestamp()
-    let (currentBlock_) = get_block_number()
-    let initial_point = Point(bias=0, slope=0, ts=currentTimesTamp_, blk=currentBlock_) 
+    let (current_block) = get_block_number()
+    let (current_timestamp) = get_block_timestamp()
+    
+    let initial_point = Point(bias=0, slope=0, ts=current_timestamp, blk=current_block)  ## TODO, remove
     _point_history.write(0, initial_point)
+
+    _reentrancy_locked.write(0)
+    
     return ()
 end
 
@@ -333,29 +340,6 @@ func decimals{
     return (decimals)
 end
 
-# @notice Contract that checks for whitelisted contracts
-# @return address
-@view
-func smart_wallet_checker{
-        syscall_ptr : felt*, 
-        pedersen_ptr : HashBuiltin*,
-        range_check_ptr
-    }() -> (address: felt):
-    let (address) = _smart_wallet_checker.read()
-    return (address)
-end
-
-# @notice Updated Contract that checks for whitelisted contracts
-# @return address
-@view
-func future_smart_wallet_checker{
-        syscall_ptr : felt*, 
-        pedersen_ptr : HashBuiltin*,
-        range_check_ptr
-    }() -> (address: felt):
-    let (address) = _future_smart_wallet_checker.read()
-    return (address)
-end
 
 # @notice Token Admin
 # @return address of the admin
@@ -423,6 +407,10 @@ func locked__end{
 end
 
 
+# The following view ERC20/minime-compatible methods are not real balanceOf and supply!
+# They measure the weights for the purpose of voting, so they don't represent
+# real coins.
+
 # @notice Get the voting power for `caller` at timestamp `_t`
 # @dev Adheres to the ERC20 `balanceOf` interface for compatibility
 # @param address Address of the user wallet
@@ -456,8 +444,6 @@ end
 # @dev Adheres to the Minime `balanceOfAt` interface for compatibility
 # @param address Address of the user wallet
 # @param _block Block to calculate the voting power at
-# @param current_block Replacement for block.number, will be removed soon
-# @param current_timestamp Replacement for block.timestamp, will be removed soon
 # @return bias User voting power
 @view
 func balanceOfAt{
@@ -466,8 +452,10 @@ func balanceOfAt{
         range_check_ptr
     }(address: felt, _block: felt) -> (bias: felt):
     alloc_locals
+
     let (current_block) = get_block_number()
     let (current_timestamp) = get_block_timestamp()
+    
     assert_le(_block, current_block)
     let (max_uepoch) = _user_point_epoch.read(address)
     let (uepoch) = _binary_search_user_point_block_epoch(0, 0, max_uepoch, address, _block)
@@ -535,16 +523,18 @@ end
 # @notice Calculate total voting power at some point in the past
 # @dev _block Block to calculate the total voting power at
 # @param t Epoch time to return voting power at
-# @param current_block Replacement for block.number, will be removed soon
-# @param current_timestamp Replacement for block.timestamp, will be removed soon
 # @return bias Total voting power at `_block`
 @view
 func totalSupplyAt{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-    }(_block: felt, current_block: felt, current_timestamp: felt) -> (bias: felt):
+    }(_block: felt) -> (bias: felt):
     alloc_locals
+    
+    let (current_block) = get_block_number()
+    let (current_timestamp) = get_block_timestamp()
+    
     assert_le(_block, current_block)
     let (epoch) = _epoch.read()
     let (target_epoch) = _find_block_epoch(_block, epoch)
@@ -604,32 +594,6 @@ func apply_transfer_ownership{
     return ()
 end
 
-# @notice Set an external contract to check for approved smart contract wallets
-# @dev Needs to be applied later, to finalize the change
-# @param future_admin Address of Smart contract checker
-@external
-func commit_smart_wallet_checker{
-        syscall_ptr : felt*, 
-        pedersen_ptr : HashBuiltin*,
-        range_check_ptr
-    }(future_smart_wallet_checker: felt):
-    _only_admin()
-    _future_smart_wallet_checker.write(future_smart_wallet_checker)
-    return ()
-end
-
-# @notice Apply setting external contract to check approved smart contract wallets
-@external
-func apply_smart_wallet_checker{
-        syscall_ptr : felt*, 
-        pedersen_ptr : HashBuiltin*,
-        range_check_ptr
-    }():
-    _only_admin()
-    let (future_smart_wallet_checker) = _future_smart_wallet_checker.read()
-    _smart_wallet_checker.write(future_smart_wallet_checker)
-    return ()
-end
 
 # @notice Record global data to checkpoint
 @external
@@ -648,14 +612,16 @@ end
 #      cannot extend their locktime and deposit for a brand new user
 # @param address User's wallet address
 # @param value Amount to add to user's lock
-# @param current_timestamp Replacement for block.timestamp, will be removed soon
 @external
 func deposit_for{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-    }(address: felt, value: Uint256, current_timestamp: felt):
+    }(address: felt, value: Uint256):
     alloc_locals
+    
+    let (current_timestamp) = get_block_timestamp()
+    
     _check_and_lock_reentrancy()
     let (local locked: LockedBalance) = _locked.read(address)
     let (is_value_greater_than_zero) =  uint256_lt(Uint256(0, 0), value)
@@ -672,17 +638,18 @@ end
 # @notice Deposit `value` tokens for `caller` and lock until `unlock_time`
 # @param value Amount to deposit
 # @param _unlock_time Epoch time when tokens unlock, rounded down to whole weeks
-# @param current_timestamp Replacement for block.timestamp, will be removed soon
 @external
 func create_lock{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-    }(value: Uint256, _unlock_time: felt, current_timestamp: felt):
+    }(value: Uint256, _unlock_time: felt):
     alloc_locals
+
+    let (current_timestamp) = get_block_timestamp()
+
     _check_and_lock_reentrancy()
     let(local caller) = get_caller_address()
-    _assert_not_contract(caller)
     let (q, r) = unsigned_div_rem(_unlock_time, WEEK)
     let unlock_time = q * WEEK  # Locktime is rounded down to weeks
     let (local locked: LockedBalance) = _locked.read(caller)
@@ -700,17 +667,18 @@ end
 
 # @notice Deposit `value` additional tokens for `caller` without modifying the unlock time
 # @param value Amount of tokens to deposit and add to the lock
-# @param current_timestamp Replacement for block.timestamp, will be removed soon
 @external
 func increase_amount{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-    }(value: Uint256, current_timestamp: felt):
+    }(value: Uint256):
     alloc_locals
+
+    let (current_timestamp) = get_block_timestamp()
+
     _check_and_lock_reentrancy()
     let(local caller) = get_caller_address()
-    _assert_not_contract(caller)
     let (local locked: LockedBalance) = _locked.read(caller)
     let (is_value_greater_than_zero) =  uint256_lt(Uint256(0, 0), value)
     assert_not_zero(is_value_greater_than_zero)
@@ -732,11 +700,13 @@ func increase_unlock_time{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-    }(_unlock_time: felt, current_timestamp: felt):
+    }(_unlock_time: felt):
     alloc_locals
+
+    let (current_timestamp) = get_block_timestamp()
+
     _check_and_lock_reentrancy()
     let(local caller) = get_caller_address()
-    _assert_not_contract(caller)
     let (q, r) = unsigned_div_rem(_unlock_time, WEEK)
     let unlock_time = q * WEEK  # Locktime is rounded down to weeks
     let (local locked: LockedBalance) = _locked.read(caller)
@@ -759,8 +729,9 @@ func withdraw{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-    }(current_timestamp: felt):
+    }():
     alloc_locals
+    let (current_timestamp) = get_block_timestamp()
     _check_and_lock_reentrancy()
     let(local caller) = get_caller_address()
     let (local locked: LockedBalance) = _locked.read(caller)
@@ -783,9 +754,6 @@ func withdraw{
     return ()
 end
 
-
-
-
 # @dev Record global and per-user data to checkpoint
 # @param address User's wallet address. No user checkpoint if 0x0
 # @param old_locked Pevious locked amount / end lock time for the user
@@ -799,14 +767,13 @@ func _checkpoint{
     
     let (current_block) = get_block_number()
     let (current_timestamp) = get_block_timestamp()
-
     # TODO: Check how empty Structs are defined, is this correct?
     let u_old = Point(bias=0, slope=0, ts=current_timestamp, blk=current_block)
     let u_new = Point(bias=0, slope=0, ts=current_timestamp, blk=current_block)
-    local old_dslope
-    local new_dslope
 
-    let (epoch: felt) = _epoch.read()
+
+    local old_dslope
+    local new_dslope    
 
     if address != 0:
         # Calculate slopes and biases
@@ -815,23 +782,40 @@ func _checkpoint{
         let (is_old_locked_end_greater_than_current_timestamp) = is_le(current_timestamp, old_locked.end_ts)
         let (is_old_locked_amount_greater_than_zero) =  uint256_lt(Uint256(0, 0), old_locked.amount)
 
-        local range_check_ptr2 = range_check_ptr
         if is_old_locked_end_greater_than_current_timestamp * is_old_locked_amount_greater_than_zero == 1:
             # TODO: Is accessing low correct here??
-            let (u_old_slope: felt, _) =  unsigned_div_rem(old_locked.amount.low, MAXTIME)
+            let (u_old_slope, _) =  unsigned_div_rem(old_locked.amount.low, MAXTIME)
             u_old.slope = u_old_slope
-            assert u_old.bias = u_old.slope * (old_locked.end_ts - current_timestamp)
+            tempvar delta = old_locked.end_ts  - current_timestamp
+            u_old.bias = delta * u_old_slope
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+        else:
+         tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
         end
 
-        let (is_new_locked_end_greater_than_current_timestamp) = is_le{range_check_ptr=range_check_ptr2}(current_timestamp, new_locked.end_ts)
+        let (is_new_locked_end_greater_than_current_timestamp) = is_le(current_timestamp, new_locked.end_ts)
         let (is_new_locked_amount_greater_than_zero) =  uint256_lt(Uint256(0, 0), new_locked.amount)
 
         # if is_new_locked_greater_than_current == 1 && is_new_locked_amount_greater_than_zero == 1:
         if is_new_locked_end_greater_than_current_timestamp * is_new_locked_amount_greater_than_zero == 1:
+
             # TODO: Is accessing low correct here??
             let (u_new_slope: felt, _) =  unsigned_div_rem(new_locked.amount.low, MAXTIME)
             u_new.slope = u_new_slope
-            assert u_new.bias = u_new.slope * (new_locked.end_ts - current_timestamp)
+            tempvar delta = new_locked.end_ts - current_timestamp
+            u_new.bias = u_new.slope * delta
+
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+        else:
+         tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
         end
 
         # Read values of scheduled changes in the slope
@@ -841,38 +825,66 @@ func _checkpoint{
         if new_locked.end_ts != 0:
             if new_locked.end_ts == old_locked.end_ts:
                 assert new_dslope = old_dslope
+                tempvar syscall_ptr = syscall_ptr
+                tempvar pedersen_ptr = pedersen_ptr
+                tempvar range_check_ptr = range_check_ptr
             else:
                 let (new_dslope_temp) = _slope_changes.read(new_locked.end_ts)
                 assert new_dslope = new_dslope_temp
+                tempvar syscall_ptr = syscall_ptr
+                tempvar pedersen_ptr = pedersen_ptr
+                tempvar range_check_ptr = range_check_ptr
             end
+
+            tempvar syscall_ptr = syscall_ptr
+            tempvar pedersen_ptr = pedersen_ptr
+            tempvar range_check_ptr = range_check_ptr
+        else:
+            tempvar syscall_ptr = syscall_ptr
+            tempvar pedersen_ptr = pedersen_ptr
+            tempvar range_check_ptr = range_check_ptr
         end
+
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+    else:
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
     end
 
-    let last_point = Point(bias=0, slope=0, ts=current_timestamp, blk=current_block)
-    # TODO: Resolve the is_le error
+
+
+    let (epoch: felt) = _epoch.read()
     let (is_epoch_greater_than_zero) = is_le(0, epoch)
     # Checking epoch greater than zero
+
+
+
+    let last_point = Point(bias=0.bias, slope=0, ts=current_timestamp, blk=current_block)
+
     if is_epoch_greater_than_zero == 1:
         let (last_point_temp: Point) = _point_history.read(epoch)
-        assert last_point = last_point_temp
-        # assert last_point = Point(bias=last_point.bias, slope=last_point.slope, ts=last_point.ts, blk=last_point.blk)
+        last_point = last_point_temp
     end
 
-    # TODO: Check whether here conversion to Uint256 is needed or not
-    let last_checkpoint = last_point.ts
+
+
+
+    let last_checkpoint : felt = last_point.ts
     # initial_last_point is used for extrapolation to calculate block number
     # (approximately, for *At methods) and save them
     # as we cannot figure that out exactly from inside the contract
-    # let (initial_bias: felt) = last_point.bias
     let initial_last_point = Point(bias=last_point.bias, slope=last_point.slope, ts=last_point.ts, blk=last_point.blk)
+    
     let block_slope = Uint256(0,0)
     let (is_current_block_timestamp_greater_than_last_point_ts) = is_le(last_point.ts, current_block)
     if is_current_block_timestamp_greater_than_last_point_ts == 1:
-        let block_diff = current_block - last_point.blk
-        let timestamp_diff = current_timestamp - last_point.ts
-        let diff_division = signed_div_rem(block_diff, timestamp_diff, MULTIPLIER)
-
-        let block_slope_temp = MULTIPLIER * diff_division
+        tempvar block_diff = current_block - last_point.blk
+        tempvar block_diff_prevision = MULTIPLIER * block_diff
+        tempvar timestamp_diff = current_timestamp - last_point.ts
+        let (block_slope_temp) = unsigned_div_rem(block_diff, timestamp_diff)
         assert block_slope = block_slope_temp
     end
     # If last point is already recorded in this block, slope=0
@@ -881,18 +893,19 @@ func _checkpoint{
     # # Go over weeks to fill history and calculate what the current point is
     let (q_i, r_i) = unsigned_div_rem(last_checkpoint, WEEK)
     let t_i = q_i * WEEK
-    # # TODO: Complete for loop in recursive fashion
-    let (last_point, required_epoch) = _calculate_current_point(0, t_i, last_point, initial_last_point, last_checkpoint, block_slope)
+    let (last_point, required_epoch) = _calculate_current_point(0, t_i, last_point, initial_last_point, last_checkpoint, block_slope, epoch)
     assert epoch = required_epoch
     _epoch.write(epoch)
     # Now point_history is filled until t=now
     if address != 0:
         # If last point was in this block, the slope change has been applied already
         # But in such case we have 0 slope(s)
-        let (required_slope) = last_point.slope + (u_new.slope - u_old.slope)
+        let u_slope_diff = u_new.slope - u_old.slope
+        let required_slope = last_point.slope + u_slope_diff
         assert last_point.slope = required_slope
-        let (required_bias) = last_point.bias + (u_new.bias - u_old.bias)
-        assert last_point.bias = required_slope
+        let u_bias_diff = u_new.slope - u_old.slope
+        let required_bias = last_point.bias + u_bias_diff
+        assert last_point.bias = required_bias
         
         let (is_last_point_slope_greater_than_equal_to_0) = is_le(0, last_point.slope)
         if is_last_point_slope_greater_than_equal_to_0 != 1:
@@ -917,11 +930,11 @@ func _checkpoint{
         let (is_old_locked_end_less_than_equal_to_current_timestamp) = is_le(old_locked.end_ts, current_timestamp)
         if is_old_locked_end_less_than_equal_to_current_timestamp != 1:
             # old_dslope was <something> - u_old.slope, so we cancel that
-            let (old_dslope_new) = old_dslope + u_old.slope
+            let old_dslope_new = old_dslope + u_old.slope
             assert old_dslope = old_dslope_new
             if new_locked.end_ts == old_locked.end_ts:
                 # It was a new deposit, not extension
-                let (old_dslope_new) = old_dslope - u_new.slope
+                let old_dslope_new = old_dslope - u_new.slope
                 assert old_dslope = old_dslope_new
             end
             _slope_changes.write(old_locked.end_ts, old_dslope)
@@ -933,7 +946,7 @@ func _checkpoint{
             let (is_new_locked_end_less_than_equal_to_old_locked_end) = is_le(new_locked.end_ts, old_locked.end_ts)
             if is_new_locked_end_less_than_equal_to_old_locked_end != 1:
                 # old slope disappeared at this point
-                let (new_dslope_new) = new_dslope - u_new.slope
+                let new_dslope_new = new_dslope - u_new.slope
                 assert new_dslope = new_dslope_new
                 _slope_changes.write(new_locked.end_ts, new_dslope)
             end
@@ -941,7 +954,7 @@ func _checkpoint{
         end
         # Now handle user history
         # TODO: Check conversion from felt to Uint256
-        let (user_epoch) = _user_point_epoch.read(address) + 1
+        let user_epoch = _user_point_epoch.read(address) + 1
 
         tempvar current_timestamp = get_block_timestamp()
         tempvar current_number = get_block_number()
@@ -955,7 +968,7 @@ func _checkpoint{
 end
 
 # Go over weeks to fill history and calculate what the current point is
-# TODO: Returns epoch currently, verify the return value to be epoch or Point?
+# Returns both last_point and epoch
 func _calculate_current_point{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
@@ -963,7 +976,7 @@ func _calculate_current_point{
     }(current_index: felt, t_i: felt, last_point: Point, initial_last_point: Point, last_checkpoint: felt, block_slope: Uint256, epoch: felt) -> (new_point: Point, new_epoch: felt):
     alloc_locals
     if current_index == 255:
-        return (last_point.bias)
+        return (last_point, epoch)
     end
     let new_t_i = t_i + WEEK
     let (current_timestamp) = get_block_timestamp()
@@ -984,8 +997,7 @@ func _calculate_current_point{
         tempvar pedersen_ptr = pedersen_ptr
         tempvar range_check_ptr = range_check_ptr
     end
-    let required_last_point_bias = last_point.bias - (last_point.slope * (new_t_i - last_checkpoint))
-    let new_bias = required_last_point_bias
+    let new_bias = last_point.bias - (last_point.slope * (new_t_i - last_checkpoint))
     let new_slope = last_point.slope + d_slope
 
     let (is_last_point_bias_less_than_0) = is_le(last_point.bias, 0)
@@ -1044,7 +1056,6 @@ func _deposit_for{
     let new_locked_balance = LockedBalance(amount=new_locked_amount, end_ts=new_unlock_time)
     _locked.write(address, new_locked_balance)
     
-
     # Possibilities:
     # Both old_locked.end_ts could be current or expired (>/< block.timestamp)
     # value == 0 (extend lock) or value > 0 (add to lock or extend lock)
@@ -1198,17 +1209,6 @@ func _search_time_bias{
     return _search_time_bias(current_index + 1, new_t_i, new_point, t)
 end
 
-
-# @dev Check if the call is from a whitelisted smart contract, revert if not
-# @param address Address to be checked
-func _assert_not_contract{
-        syscall_ptr : felt*, 
-        pedersen_ptr : HashBuiltin*,
-        range_check_ptr
-    }(address: felt):
-    # TODO
-    return ()
-end
 
 func _only_admin{
         syscall_ptr : felt*, 

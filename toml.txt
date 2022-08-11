@@ -23,3 +23,14 @@ ERC4626PriceFeed = [
     "contracts/valueInterpretor/derivativePriceFeed/ERC4626_priceFeed.cairo",
 ]
 
+
+                                                                     ^*******************^
+Cairo traceback (most recent call last):
+contracts/VaultFactory.cairo:547:6: (pc=0:3243)
+func initializeFund{
+     ^************^
+contracts/VaultFactory.cairo:625:6: (pc=0:2943)
+     __addGlobalAllowedIntegration(_integrationList_len, _integrationList, integrationManager_)
+     ^****************************************************************************************^
+contracts/VaultFactory.cairo:784:12: (pc=0:3395)
+    return __addGlobalAllowedIntegration(

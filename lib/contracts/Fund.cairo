@@ -620,7 +620,7 @@ func getShareValue{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
 end
 
 func getUserAllocationPer10000{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    _asset: felt, _amount: Uint256, _denominationAsset: felt
+    _user: felt, _amount: Uint256, _denominationAsset: felt
 ) -> (res: Uint256):
     let (valueInterpretor_:felt) = __getValueInterpretor()
     let (value_:Uint256) = IValueInterpretor.calculAssetValue(valueInterpretor_, _asset, _amount, _denominationAsset)

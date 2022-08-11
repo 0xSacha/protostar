@@ -54,11 +54,6 @@ struct AssetInfo:
     member valueInDeno : Uint256
 end
 
-struct ShareWithdraw:
-    member address : felt
-    member id : Uint256
-end
-
 @view
 func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
     alloc_locals
@@ -198,8 +193,6 @@ alloc_locals
     let (fm_contract) = fm_instance.deployed()
     let (im_contract) = im_instance.deployed()
 
-
-    ##  Initialize F1
     %{ stop_prank = start_prank(ids.ADMIN, ids.eth_contract) %}
      IERC20.approve(eth_contract, vf_contract, Uint256(10000000000000000000,0))
     %{ stop_prank() %}
@@ -216,7 +209,6 @@ alloc_locals
     vf_contract, f1_contract, 1, 420, 42, 24, eth_contract, Uint256(1000000000000000000,0), Uint256(10000000000000000000,0), 0, data, 4, feeConfig, Uint256(100000000000000000000,0), Uint256(10000000000000000,0), 100, 1)
     %{ stop_prank()  %}
 
-    ## check Fees
     let (entranceFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.ENTRANCE_FEE)
     let (exitFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.EXIT_FEE)
     let (managementFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.MANAGEMENT_FEE)
@@ -226,7 +218,7 @@ alloc_locals
     assert managementFee = 10
     assert performanceFee = 10
 
-    ## Check fund register to general integration
+
     let (availableIntegrations_len:felt, availableIntegrations: integration*) = IIntegrationManager.getAvailableIntegrations(im_contract)
     assert availableIntegrations_len = 5
     let integr_:integration = availableIntegrations[3]
@@ -238,24 +230,28 @@ alloc_locals
     assert integr_.contract = f1_contract
     assert integr_.selector = REEDEM_SELECTOR
 
-    ## Check Owner Share
+    # %{ stop_prank = start_prank(ids.ADMIN, ids.f1_contract_bis) %}
+    # %{ stop_prank()  %}
+
     let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = IFuccountMock.ownerShares(f1_contract,ADMIN)
     assert assetId_len = 1
     let id = assetId[0]
     let amount = assetAmount[0]
-    # %{
-    #     print('owner shares')
-    #     print(ids.id.low)
-    #     print(ids.amount.low)
-    # %}
-
-    assert id.low = 0
-    assert amount.low = 10000000000000000000
+    %{
+        print('owner shares')
+        print(ids.id.low)
+        print(ids.amount.low)
+    %}
 
     let (mintedBlockTimesTamp_:felt) =  IFuccountMock.getMintedTimesTamp(f1_contract, id )
     let (sharePricePurchased_:Uint256) = IFuccountMock.getSharePricePurchased(f1_contract, id)
     let (totalId_:Uint256) = IFuccountMock.totalId(f1_contract)
     let (sharesTotalSupply:Uint256) = IFuccountMock.sharesTotalSupply(f1_contract)
+    
+    # assert mintedBlockTimesTamp_ = 0
+    # assert sharePricePurchased_.low = 100000000000000000
+    # assert totalId_.low = 1
+    # assert sharesTotalSupply.low = 10000000000000000000
 
     # %{
     #     print('shares info')
@@ -264,22 +260,19 @@ alloc_locals
     #     print(ids.totalId_.low)
     #     print(ids.sharesTotalSupply.low)
     # %}
-    
-    assert mintedBlockTimesTamp_ = 0
-    assert sharePricePurchased_.low = 100000000000000000
-    assert totalId_.low = 1
-    assert sharesTotalSupply.low = 10000000000000000000
 
-
-    ## Check holdings
-    let (notNulAssets_len:felt, notNulAssets: AssetInfo*) = IFuccountMock.getNotNulAssets(f1_contract_bis)
-    let (notNulPositions_len:felt, notNulPositions: felt*) = IFuccountMock.getNotNulPositions(f1_contract_bis)
-    let (sharePrice_) = IFuccountMock.getSharePrice(f1_contract_bis)
-    let (liquidGav) = IFuccountMock.calculLiquidGav(f1_contract_bis)
-    let (notLiquidGav) = IFuccountMock.calculNotLiquidGav(f1_contract_bis)
-    let (gav) = IFuccountMock.calculGav(f1_contract_bis)
-
-    # %{
+    # let (notNulAssets_len:felt, notNulAssets: AssetInfo*) = IFuccountMock.getNotNulAssets(f1_contract_bis)
+    # let (notNulPositions_len:felt, notNulPositions: felt*) = IFuccountMock.getNotNulPositions(f1_contract_bis)
+    # let (sharePrice_) = IFuccountMock.getSharePrice(f1_contract_bis)
+    # let (liquidGav) = IFuccountMock.calculLiquidGav(f1_contract_bis)
+    # let (notLiquidGav) = IFuccountMock.calculNotLiquidGav(f1_contract_bis)
+    # let (gav) = IFuccountMock.calculGav(f1_contract_bis)
+    # assert notNulAssets_len = 1
+    # assert notNulPositions_len = 0
+    # let notNulAssets1 =  notNulAssets[0]
+    # # let notNulPosition__ = notNulPositions[0]
+    # assert notNulPositions_len = 0
+    #     %{
     #     print('fund info')
     #     print(ids.notNulAssets1.address)
     #     print(ids.notNulAssets1.amount.low)
@@ -289,21 +282,10 @@ alloc_locals
     #     print(ids.gav.low)
     #     print(ids.notLiquidGav.low)
     # %}
-
-    assert notNulAssets_len = 1
-    assert notNulPositions_len = 0
-    let notNulAssets1 =  notNulAssets[0]
-    assert notNulAssets1.address = eth_address
-    assert notNulAssets1.amount.low = 1000000000000000000
-    assert notNulAssets1.valueInDeno.low = 1000000000000000000
-    assert sharePrice_.low = 100000000000000000
-    assert liquidGav.low = 1000000000000000000
-    assert gav.low = 1000000000000000000
-    assert notLiquidGav.low = 0
-
+    # let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = IFuccountMock.ownerShares(f1_contract,ADMIN)
 
     
-     ## Check deposit
+
     let (local data2 : felt*) = alloc()
     %{ stop_prank = start_prank(ids.ADMIN, ids.eth_contract) %}
      IERC20.approve(eth_contract, f1_contract, Uint256(10000000000000000000,0))
@@ -313,57 +295,26 @@ alloc_locals
     IFuccountMock.deposit(f1_contract, Uint256(1000000000000000000,0),0, data2)
     %{ stop_prank()  %}
 
-    ## Check new Owner shares 
-
-    let (assetId1_len:felt, assetId1:Uint256*, assetAmount1_len:felt,assetAmount1:Uint256*) = IFuccountMock.ownerShares(f1_contract,ADMIN)
-
-    assert assetId1_len = 2
-    let id1 = assetId1[0]
-    let amount1 = assetAmount1[0]
-    let id2 = assetId1[1]
-    let amount2 = assetAmount1[1]
-
-    assert id1.low = 1
-    assert amount1.low = 9000000000000000000
-    assert id2.low = 0
-    assert amount2.low = 10000000000000000000
-
-    ## Check Fees 
-    let (assetManagerBalance_: Uint256) = IERC20.balanceOf(eth_contract, ADMIN)
-    let (stackingVaultBalance_: Uint256) = IERC20.balanceOf(eth_contract, STACKINGVAULT)
-    let (daoTreasuryBalance_: Uint256) = IERC20.balanceOf(eth_contract, DAOTREASURY)
-    assert assetManagerBalance_.low = 8080000000000000000
-    assert stackingVaultBalance_.low = 16000000000000000
-    assert daoTreasuryBalance_.low = 4000000000000000
-
-    ## Check holding 
-    let (notNulAssets1_len:felt, notNulAssets1: AssetInfo*) = IFuccountMock.getNotNulAssets(f1_contract)
+    let (notNulAssets_len:felt, notNulAssets: AssetInfo*) = IFuccountMock.getNotNulAssets(f1_contract)
+    let (notNulPositions_len:felt, notNulPositions: felt*) = IFuccountMock.getNotNulPositions(f1_contract)
     let firstAsset = notNulAssets[0]
-    assert notNulAssets1.address = eth_address
-    assert notNulAssets1.amount.low = 1900000000000000000
-    assert notNulAssets1.valueInDeno.low = 1900000000000000000
+    %{
+        print(ids.notNulAssets_len)
+        print(ids.firstAsset.address)
+        print(ids.firstAsset.valueInDeno.low)
+        print(ids.firstAsset.amount.low)
 
-    ##Check Multi Asset 
-    %{ stop_prank = start_prank(ids.ADMIN, ids.dai_contract) %}
-    IERC20.transfer(dai_contract, f1_contract, Uint256(3800000000,0))
-    %{ stop_prank()  %}
-
-    #New holding 
-    let (notNulAssets2_len:felt, notNulAssets2: AssetInfo*) = IFuccountMock.getNotNulAssets(f1_contract_bis)
-    let (sharePrice2_) = IFuccountMock.getSharePrice(f1_contract_bis)
-    let (liquidGav2) = IFuccountMock.calculLiquidGav(f1_contract_bis)
-    let (notLiquidGav2) = IFuccountMock.calculNotLiquidGav(f1_contract_bis)
-    let (gav2) = IFuccountMock.calculGav(f1_contract_bis)
-    let daiAsset = notNulAssets[0]
-    assert daiAsset.address = dai_contract
-    assert daiAsset.amount.low = 3800000000
-    assert daiAsset.valueInDeno.low = 100000000000000000
+    %}
 
     let (sharePrice_) = IFuccountMock.getSharePrice(f1_contract)
+
     let (liquidGav) = IFuccountMock.calculLiquidGav(f1_contract)
+
     let (notLiquidGav) = IFuccountMock.calculNotLiquidGav(f1_contract)
+
     let (gav) = IFuccountMock.calculGav(f1_contract)
-    %{
+
+        %{
         print('fund info')
         print(ids.sharePrice_.low)
         print(ids.liquidGav.low)
@@ -371,41 +322,78 @@ alloc_locals
         print(ids.notLiquidGav.low)
     %}
 
-    ## Preview Reedem newShare
 
-    let (local assetsToReedem : felt*) = alloc()
-    assert assetsToReedem[0] = eth_contract
-    assert assetsToReedem[1] = dai_contract
-    let (local percentsAsset : felt*) = alloc()
-    assert percentsAsset[0] = 95
-    assert percentsAsset[1] = 5
-    let (local sharesToReedem : ShareWithdraw*) = alloc()
-    let (local percentsShare : ShareWithdraw*) = alloc()
-
-    
-
-    let (assetCallerAmount_len: felt,assetCallerAmount:Uint256*, assetManagerAmount_len: felt,
-    assetManagerAmount:Uint256*,assetStackingVaultAmount_len: felt, assetStackingVaultAmount:Uint256*, 
-    assetDaoTreasuryAmount_len: felt,assetDaoTreasuryAmount:Uint256*, shareCallerAmount_len: felt, 
-    shareCallerAmount:Uint256*, shareManagerAmount_len: felt, shareManagerAmount:Uint256*, 
-    shareStackingVaultAmount_len: felt, shareStackingVaultAmount:Uint256*, shareDaoTreasuryAmount_len: felt, 
-    shareDaoTreasuryAmount:Uint256*) = previewReedem(
-    Uint256(1,0),
-    Uint256(9000000000000000000,0),
-    2,
-    assetsToReedem,
-    2,
-    percentsAsset,
-    0,
-    sharesToReedem,
-    0,
-    percentsShare,
-)
-    
-
-    %{ stop_prank = start_prank(ids.ADMIN, ids.f1_contract) %}
-        IERC20.transfer(dai_contract, f1_contract, Uint256(200000000,0))
+    %{ stop_prank = start_prank(ids.ADMIN, ids.dai_contract) %}
+    IERC20.transfer(dai_contract, f1_contract, Uint256(10000000,0))
     %{ stop_prank()  %}
+    let (notNulAssets_len:felt, notNulAssets: AssetInfo*) = IFuccountMock.getNotNulAssets(f1_contract)
+
+    let secondAsset = notNulAssets[0]
+    %{
+        print(ids.notNulAssets_len)
+        print(ids.secondAsset.address)
+        print(ids.secondAsset.valueInDeno.low)
+        print(ids.secondAsset.amount.low)
+
+    %}
+   
+    let (sharePrice2_) = IFuccountMock.getSharePrice(f1_contract)
+
+    let (liquidGav2) = IFuccountMock.calculLiquidGav(f1_contract)
+
+    let (notLiquidGav2) = IFuccountMock.calculNotLiquidGav(f1_contract)
+
+    let (gav2) = IFuccountMock.calculGav(f1_contract)
+
+        %{
+        print('fund info')
+        print(ids.sharePrice2_.low)
+        print(ids.liquidGav2.low)
+        print(ids.gav2.low)
+        print(ids.notLiquidGav2.low)
+    %}
+
+
+
+    # let (totalId_:Uint256) = IFuccountMock.totalId(f1_contract)
+    # %{
+    #     print(ids.totalId_.low)
+    # %}
+
+    # let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = IFuccountMock.ownerShares(f1_contract,ADMIN)
+
+    # assert assetId_len = 2
+    # let id1 = assetId[0]
+    # let amount1 = assetAmount[0]
+    # let id2 = assetId[1]
+    # let amount2 = assetAmount[1]
+
+    # assert id1.low = 1
+    # assert amount1.low = 9000000000000000000
+    # assert id2.low = 0
+    # assert amount2.low = 10000000000000000000
+
+    # let (assetManagerBalance_: Uint256) = IERC20.balanceOf(eth_contract, ADMIN)
+    # let (stackingVaultBalance_: Uint256) = IERC20.balanceOf(eth_contract, STACKINGVAULT)
+    # let (daoTreasuryBalance_: Uint256) = IERC20.balanceOf(eth_contract, DAOTREASURY)
+    # assert assetManagerBalance_.low = 8080000000000000000
+    # assert stackingVaultBalance_.low = 16000000000000000
+    # assert daoTreasuryBalance_.low = 4000000000000000
+
+    # let (mintedBlockTimesTamp_:felt) =  IFuccountMock.getMintedTimesTamp(f1_contract, id2 )
+    # let (sharePricePurchased_:Uint256) = IFuccountMock.getSharePricePurchased(f1_contract, id2)
+    # let (totalId_:Uint256) = IFuccountMock.totalId(f1_contract)
+    # let (sharesTotalSupply:Uint256) = IFuccountMock.sharesTotalSupply(f1_contract)
+    
+    # assert mintedBlockTimesTamp_ = 0
+    # assert sharePricePurchased_.low = 100000000000000000
+    # assert totalId_.low = 2
+    # assert sharesTotalSupply.low = 19000000000000000000
+
+
+
+
+
     return ()
 end
 
@@ -433,7 +421,7 @@ end
 #         print(ids.availableIntegrations_len)
 #         print(ids.integr_.contract)
 #     %}
-#     assert availableIntegrations[0] = integration(eth_contract, _SELECTOR)
+#     assert availableIntegrations[0] = integration(eth_contract, APPROVE_SELECTOR)
 #     assert availableIntegrations[1] = integration(btc_contract, APPROVE_SELECTOR)
 #     assert availableIntegrations[2] = integration(dai_contract, APPROVE_SELECTOR)
 

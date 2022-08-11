@@ -641,6 +641,7 @@ func initializeFund{
     _isPublic:felt,
     ):
     alloc_locals
+
     onlyDependenciesSet()
     let (feeManager_:felt) = feeManager.read()
     let (policyManager_:felt) = policyManager.read()
@@ -648,6 +649,7 @@ func initializeFund{
     let (valueInterpretor_:felt) = valueInterpretor.read()
     let (primitivePriceFeed_:felt) = primitivePriceFeed.read()
     let (name_:felt) = IFuccount.getName(_fund)
+
     with_attr error_message("initializeFund: vault already initialized"):
         assert name_ = 0
     end
@@ -819,7 +821,7 @@ func __addGlobalAllowedExternalPosition{
     end
 
     IIntegrationManager.setAvailableExternalPosition(_integrationManager, externalPosition_)
-
+    
     let newExternalPositionList_len:felt = _externalPositionList_len -1
     let newExternalPositionList:felt* = _externalPositionList + 1
 
