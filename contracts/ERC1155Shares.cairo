@@ -139,6 +139,8 @@ func balanceOf{
     return ERC1155.balance_of(account, id)
 end
 
+
+
 func ownerShares{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
