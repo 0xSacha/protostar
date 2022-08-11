@@ -3,7 +3,7 @@
 
 
 # @title Voting Escrow
-# @author Mesh Finance
+# @author Magnety x Mesh Finance
 # @license MIT
 # @notice Votes have a weight depending on time, so that users are
 #         committed to the future of (whatever they are voting for)
@@ -20,7 +20,8 @@ from starkware.starknet.common.syscalls import (
     get_block_number,
     get_block_timestamp
 )
-from starkware.cairo.common.math import assert_not_zero, assert_le, assert_lt, unsigned_div_rem, signed_div_rem
+from starkware.cairo.common.math import ( 
+assert_not_zero, assert_le, assert_lt, unsigned_div_rem, signed_div_rem, split_felt )
 from starkware.cairo.common.math_cmp import is_le, is_not_zero
 from starkware.cairo.common.uint256 import (
     Uint256, uint256_add, uint256_sub, uint256_mul, uint256_unsigned_div_rem, uint256_eq, uint256_le, uint256_lt, uint256_check
@@ -772,7 +773,7 @@ func _checkpoint{
     let u_new = Point(bias=0, slope=0, ts=current_timestamp, blk=current_block)
 
 
-    local old_dslope
+    tempvar old_dslope
     local new_dslope    
 
     if address != 0:
@@ -821,7 +822,7 @@ func _checkpoint{
         # Read values of scheduled changes in the slope
         # old_locked.end can be in the past and in the future
         # new_locked.end can ONLY by in the FUTURE unless everything expired: than zeros
-        let (old_dslope) = _slope_changes.read(old_locked.end_ts)
+        let (old_dslope : felt) = _slope_changes.read(old_locked.end_ts)
         if new_locked.end_ts != 0:
             if new_locked.end_ts == old_locked.end_ts:
                 assert new_dslope = old_dslope
@@ -862,30 +863,49 @@ func _checkpoint{
 
 
 
-    let last_point = Point(bias=0.bias, slope=0, ts=current_timestamp, blk=current_block)
+    tempvar last_point = Point(bias=0, slope=0, ts=current_timestamp, blk=current_block)
 
+    tempvar range_check_ptr = range_check_ptr
     if is_epoch_greater_than_zero == 1:
         let (last_point_temp: Point) = _point_history.read(epoch)
-        last_point = last_point_temp
+        last_point.bias = last_point_temp.bias
+        last_point.slope = last_point_temp.slope
+        last_point.ts = last_point_temp.ts
+        last_point.blk = last_point_temp.blk
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+    else:
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
     end
 
 
-
-
-    let last_checkpoint : felt = last_point.ts
+    local last_checkpoint = last_point.ts
     # initial_last_point is used for extrapolation to calculate block number
     # (approximately, for *At methods) and save them
     # as we cannot figure that out exactly from inside the contract
     let initial_last_point = Point(bias=last_point.bias, slope=last_point.slope, ts=last_point.ts, blk=last_point.blk)
     
     let block_slope = Uint256(0,0)
+    tempvar range_check_ptr = range_check_ptr
     let (is_current_block_timestamp_greater_than_last_point_ts) = is_le(last_point.ts, current_block)
     if is_current_block_timestamp_greater_than_last_point_ts == 1:
         tempvar block_diff = current_block - last_point.blk
         tempvar block_diff_prevision = MULTIPLIER * block_diff
         tempvar timestamp_diff = current_timestamp - last_point.ts
-        let (block_slope_temp) = unsigned_div_rem(block_diff, timestamp_diff)
+        let (block_diff_uint256) = felt_to_uint256(block_diff)
+        let (timestamp_diff_uint256) = felt_to_uint256(timestamp_diff)
+        let (block_slope_temp, _) = uint256_unsigned_div_rem(block_diff_uint256, timestamp_diff_uint256)
         assert block_slope = block_slope_temp
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+    else:
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
     end
     # If last point is already recorded in this block, slope=0
     # But that's ok b/c we know the block in such case
@@ -916,6 +936,13 @@ func _checkpoint{
         if is_last_point_bias_greater_than_equal_to_0 != 1:
             assert last_point.bias = 0
         end
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+    else:
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
     end
 
     # Record the changed point into history
@@ -926,7 +953,7 @@ func _checkpoint{
         # Schedule the slope changes (slope is going down)
         # We subtract new_user_slope from [new_locked.end]
         # and add old_user_slope to [old_locked.end]
-        tempvar current_timestamp = get_block_timestamp()
+        let (current_timestamp : felt) = get_block_timestamp()
         let (is_old_locked_end_less_than_equal_to_current_timestamp) = is_le(old_locked.end_ts, current_timestamp)
         if is_old_locked_end_less_than_equal_to_current_timestamp != 1:
             # old_dslope was <something> - u_old.slope, so we cancel that
@@ -1244,4 +1271,13 @@ func _unlock_reentrancy{
     assert reentrancy_locked = 1
     _reentrancy_locked.write(0)
     return ()
+end
+
+func felt_to_uint256{range_check_ptr}(x) -> (x_ : Uint256):
+    let split = split_felt(x)
+    return (Uint256(low=split.low, high=split.high))
+end
+
+func uint256_to_address_felt(x : Uint256) -> (address : felt):
+    return (x.low + x.high * 2 ** 128)
 end
