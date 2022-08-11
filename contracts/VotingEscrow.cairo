@@ -773,7 +773,7 @@ func _checkpoint{
     let u_new = Point(bias=0, slope=0, ts=current_timestamp, blk=current_block)
 
 
-    tempvar old_dslope
+    local old_dslope
     local new_dslope    
 
     if address != 0:
