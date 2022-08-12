@@ -146,16 +146,24 @@ func resultDispute {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
         let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = ownerShares(vault_address,asset_manager)
         IFuccount.burnBatch(contract_address, assetId_len, assetId, assetAmount_len, assetAmount)
         return ()
+    else:
+        let (asset_manager) = IFuccount.getManagerAccount(vault_address)
+        let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = ownerShares(vault_address,contract_address)
+        let (assetId_lenAM:felt, assetIdAM:Uint256*, assetAmountAM_len:felt,assetAmountAM:Uint256*) = ownerShares(vault_address,asset_manager)
+        let (assetIdWAM_len, assetIdWAM, assetAmountWAM_len, assetAmountWAM) = get_all_shares_from_dispute_fund(assetIdAll_len, assetIdAll, assetAmountAll_len,assetAmountAll, assetIdAM_len, assetIdAM, assetAmountAM_len,assetAmountAM,assetIdWAM_len, assetIdWAM, assetAmountWAM_len,assetAmountWAM)
+        IFuccount.burnBatch(contract_address, assetIdWAM_len, assetIdWAM, assetIdWAM_len, assetAmountWAM)
+        return ()
+
     end
     return()
 end
 
 #AM = Asset Manager
 #WAM = Without Asset Manager
-func get_all_shares_from_dispute_fund(assetIdAll_len:felt, assetIdAll:Uint256*, assetAmountAll_len:felt,assetAmountAll:Uint256*, assetIdAM_len:felt, assetIdAM:Uint256*, assetAmountAM_len:felt,assetAmountAM:Uint256*,assetIdWAM_len:felt, assetIdWAM:Uint256*, assetAmountWAM_len:felt,assetAmountWAM:Uint256*, vault_address) -> (len : felt):
+func get_all_shares_from_dispute_fund(assetIdAll_len:felt, assetIdAll:Uint256*, assetAmountAll_len:felt,assetAmountAll:Uint256*, assetIdAM_len:felt, assetIdAM:Uint256*, assetAmountAM_len:felt,assetAmountAM:Uint256*,assetIdWAM_len:felt, assetIdWAM:Uint256*, assetAmountWAM_len:felt,assetAmountWAM:Uint256*) -> (assetIdWAM_len : felt, assetAmountWAM : Uint256*, assetAmountWAM_len : felt, assetAmountWAM : Uint256*):
     alloc_locals
     if assetIdAll_len == 0:
-        return (assetIdWAM_len)
+        return (assetIdWAM,assetIdWAM_len)
     end
     if assetIdAM_len == 0:
         assert [assetIdWAM] = [assetIdAll]
