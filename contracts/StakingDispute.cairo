@@ -154,21 +154,24 @@ end
 #WAM = Without Asset Manager
 func get_all_shares_from_dispute_fund(assetIdAll_len:felt, assetIdAll:Uint256*, assetAmountAll_len:felt,assetAmountAll:Uint256*, assetIdAM_len:felt, assetIdAM:Uint256*, assetAmountAM_len:felt,assetAmountAM:Uint256*,assetIdWAM_len:felt, assetIdWAM:Uint256*, assetAmountWAM_len:felt,assetAmountWAM:Uint256*, vault_address) -> (len : felt):
     alloc_locals
-    if [assetIdAll] == [assetIdAM]:
-        if [assetAmountAll] == [assetAmountAM]:
-            return get_all_shares_from_dispute_fund(assetIdAll_len = assetIdAll_len - 1, assetIdAll = assetIdAll + assetIdAll.SIZE, assetAmountAll_len = assetAmountAll_len - 1, assetAmountAll = assetAmountAll + assetAmountAll.SIZE, assetIdAM_len, assetIdAM, assetAmountAM_len,assetAmountAM,assetIdWAM_len, assetIdWAM, assetAmountWAM_len,assetAmountWAM, vault_address)
-        end
-        assert [assetIdWAM] = [assetIdAll]
-        assert [assetAmountAM] = [assetAmountAll]
-        return get_all_shares_from_dispute_fund(assetIdAll_len = assetIdAll_len - 1, assetIdAll = assetIdAll + assetIdAll.SIZE, assetAmountAll_len = assetAmountAll_len - 1, assetAmountAll = assetAmountAll + assetAmountAll.SIZE, assetIdAM_len, assetIdAM, assetAmountAM_len,assetAmountAM,assetIdWAM_len = assetIdWAM_len + 1 , assetIdWAM = assetIdWAM + assetIdWAM.SIZE, assetAmountWAM_len = assetAmountWAM_len + 1,assetAmountWAM = assetAmountWAM + assetAmountWAM.SIZE, vault_address)
+    if assetIdAll_len == 0:
+        return (assetIdWAM_len)
     end
     if assetIdAM_len == 0:
         assert [assetIdWAM] = [assetIdAll]
         assert [assetAmountAM] = [assetAmountAll]
         return get_all_shares_from_dispute_fund(assetIdAll_len = assetIdAll_len - 1, assetIdAll = assetIdAll + assetIdAll.SIZE, assetAmountAll_len = assetAmountAll_len - 1, assetAmountAll = assetAmountAll + assetAmountAll.SIZE, assetIdAM_len, assetIdAM, assetAmountAM_len,assetAmountAM,assetIdWAM_len = assetIdWAM_len + 1 , assetIdWAM = assetIdWAM + assetIdWAM.SIZE, assetAmountWAM_len = assetAmountWAM_len + 1,assetAmountWAM = assetAmountWAM + assetAmountWAM.SIZE, vault_address)
     end
-
-
+    let current_id = [assetIdAll]
+    let current_ammount = [assetAmountAll]
+    let current_idAM = [assetIdAM]
+    let current_ammountAM = [assetAmountAM]
+    if current_idAM == current_id:
+        if current_ammountAM == current_ammount:
+            return get_all_shares_from_dispute_fund(assetIdAll_len = assetIdAll_len - 1, assetIdAll = assetIdAll + assetIdAll.SIZE, assetAmountAll_len = assetAmountAll_len - 1, assetAmountAll = assetAmountAll + assetAmountAll.SIZE, assetIdAM_len, assetIdAM, assetAmountAM_len,assetAmountAM,assetIdWAM_len = assetIdWAM_len  , assetIdWAM = assetIdWAM, assetAmountWAM_len = assetAmountWAM_len,assetAmountWAM = assetAmountWAM , vault_address)
+        end
+    end
+    return get_all_shares_from_dispute_fund(assetIdAll_len = assetIdAll_len , assetIdAll = assetIdAll , assetAmountAll_len = assetAmountAll_len , assetAmountAll = assetAmountAll , assetIdAM_len = assetIdAM_len - 1, assetIdAM = assetIdAM + assetIdAM.SIZE, assetAmountAM_len = assetAmountAll_len - 1,assetAmountAM = assetAmountAM + assetAmountAM.SIZE ,assetIdWAM_len = assetIdWAM_len , assetIdWAM = assetIdWAM , assetAmountWAM_len = assetAmountWAM_len ,assetAmountWAM = assetAmountWAM , vault_address)
 end
 
 func ownerShares{
