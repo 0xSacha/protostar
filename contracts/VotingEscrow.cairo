@@ -774,7 +774,7 @@ func _checkpoint{
 
 
     local old_dslope
-    local new_dslope    
+    local new_dslope 
 
     if address != 0:
         # Calculate slopes and biases
@@ -789,13 +789,13 @@ func _checkpoint{
             u_old.slope = u_old_slope
             tempvar delta = old_locked.end_ts  - current_timestamp
             u_old.bias = delta * u_old_slope
-        tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr
+            # tempvar syscall_ptr = syscall_ptr
+            # tempvar pedersen_ptr = pedersen_ptr
+            # tempvar range_check_ptr = range_check_ptr
         else:
-         tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr
+            # tempvar syscall_ptr = syscall_ptr
+            # tempvar pedersen_ptr = pedersen_ptr
+            # tempvar range_check_ptr = range_check_ptr
         end
 
         let (is_new_locked_end_greater_than_current_timestamp) = is_le(current_timestamp, new_locked.end_ts)
@@ -803,26 +803,24 @@ func _checkpoint{
 
         # if is_new_locked_greater_than_current == 1 && is_new_locked_amount_greater_than_zero == 1:
         if is_new_locked_end_greater_than_current_timestamp * is_new_locked_amount_greater_than_zero == 1:
-
-            # TODO: Is accessing low correct here??
             let (u_new_slope: felt, _) =  unsigned_div_rem(new_locked.amount.low, MAXTIME)
             u_new.slope = u_new_slope
             tempvar delta = new_locked.end_ts - current_timestamp
             u_new.bias = u_new.slope * delta
-
-        tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr
+            tempvar syscall_ptr = syscall_ptr
+            tempvar pedersen_ptr = pedersen_ptr
+            tempvar range_check_ptr = range_check_ptr
         else:
-         tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr
+            tempvar syscall_ptr = syscall_ptr
+            tempvar pedersen_ptr = pedersen_ptr
+            tempvar range_check_ptr = range_check_ptr
         end
 
         # Read values of scheduled changes in the slope
         # old_locked.end can be in the past and in the future
         # new_locked.end can ONLY by in the FUTURE unless everything expired: than zeros
-        let (old_dslope : felt) = _slope_changes.read(old_locked.end_ts)
+        let (old_dslope_temp) = _slope_changes.read(old_locked.end_ts)
+        assert old_dslope = old_dslope_temp
         if new_locked.end_ts != 0:
             if new_locked.end_ts == old_locked.end_ts:
                 assert new_dslope = old_dslope
@@ -889,7 +887,6 @@ func _checkpoint{
     let initial_last_point = Point(bias=last_point.bias, slope=last_point.slope, ts=last_point.ts, blk=last_point.blk)
     
     let block_slope = Uint256(0,0)
-    tempvar range_check_ptr = range_check_ptr
     let (is_current_block_timestamp_greater_than_last_point_ts) = is_le(last_point.ts, current_block)
     if is_current_block_timestamp_greater_than_last_point_ts == 1:
         tempvar block_diff = current_block - last_point.blk
@@ -897,6 +894,7 @@ func _checkpoint{
         tempvar timestamp_diff = current_timestamp - last_point.ts
         let (block_diff_uint256) = felt_to_uint256(block_diff)
         let (timestamp_diff_uint256) = felt_to_uint256(timestamp_diff)
+        # tempvar range_check_ptr = range_check_ptr
         let (block_slope_temp, _) = uint256_unsigned_div_rem(block_diff_uint256, timestamp_diff_uint256)
         assert block_slope = block_slope_temp
         tempvar syscall_ptr = syscall_ptr
@@ -930,12 +928,28 @@ func _checkpoint{
         let (is_last_point_slope_greater_than_equal_to_0) = is_le(0, last_point.slope)
         if is_last_point_slope_greater_than_equal_to_0 != 1:
             assert last_point.slope = 0
+            tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+        else:
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
         end
 
         let (is_last_point_bias_greater_than_equal_to_0) = is_le(0, last_point.bias)
         if is_last_point_bias_greater_than_equal_to_0 != 1:
             assert last_point.bias = 0
+            tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+        else:
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
         end
+
+
         tempvar syscall_ptr = syscall_ptr
         tempvar pedersen_ptr = pedersen_ptr
         tempvar range_check_ptr = range_check_ptr
@@ -954,6 +968,7 @@ func _checkpoint{
         # We subtract new_user_slope from [new_locked.end]
         # and add old_user_slope to [old_locked.end]
         let (current_timestamp : felt) = get_block_timestamp()
+        let (current_number : felt) = get_block_number()
         let (is_old_locked_end_less_than_equal_to_current_timestamp) = is_le(old_locked.end_ts, current_timestamp)
         if is_old_locked_end_less_than_equal_to_current_timestamp != 1:
             # old_dslope was <something> - u_old.slope, so we cancel that
@@ -963,9 +978,21 @@ func _checkpoint{
                 # It was a new deposit, not extension
                 let old_dslope_new = old_dslope - u_new.slope
                 assert old_dslope = old_dslope_new
+                tempvar syscall_ptr = syscall_ptr
+                tempvar pedersen_ptr = pedersen_ptr
+                tempvar range_check_ptr = range_check_ptr
+            
+            else:
+                tempvar syscall_ptr = syscall_ptr
+                tempvar pedersen_ptr = pedersen_ptr
+                tempvar range_check_ptr = range_check_ptr
             end
             _slope_changes.write(old_locked.end_ts, old_dslope)
-        end
+        else:
+        tempvar syscall_ptr = syscall_ptr
+                tempvar pedersen_ptr = pedersen_ptr
+                tempvar range_check_ptr = range_check_ptr
+                end
 
 
         let (is_new_locked_end_less_than_equal_to_current_timestamp) = is_le(new_locked.end_ts, current_timestamp)
@@ -976,20 +1003,42 @@ func _checkpoint{
                 let new_dslope_new = new_dslope - u_new.slope
                 assert new_dslope = new_dslope_new
                 _slope_changes.write(new_locked.end_ts, new_dslope)
+                tempvar syscall_ptr = syscall_ptr
+                tempvar pedersen_ptr = pedersen_ptr
+                tempvar range_check_ptr = range_check_ptr
+            else:
+                tempvar syscall_ptr = syscall_ptr
+                tempvar pedersen_ptr = pedersen_ptr
+                tempvar range_check_ptr = range_check_ptr
             end
             # else: we recorded it already in old_dslope
+
+            tempvar syscall_ptr = syscall_ptr
+                tempvar pedersen_ptr = pedersen_ptr
+                tempvar range_check_ptr = range_check_ptr
+
+        else:
+        tempvar syscall_ptr = syscall_ptr
+                tempvar pedersen_ptr = pedersen_ptr
+                tempvar range_check_ptr = range_check_ptr
         end
         # Now handle user history
         # TODO: Check conversion from felt to Uint256
-        let user_epoch = _user_point_epoch.read(address) + 1
 
-        tempvar current_timestamp = get_block_timestamp()
-        tempvar current_number = get_block_number()
+        let (user_epoch_temp) = _user_point_epoch.read(address) 
+        let user_epoch = user_epoch_temp + 1
 
         _user_point_epoch.write(address, user_epoch)
         u_new.ts = current_timestamp
         u_new.blk = current_number
         _user_point_history.write(address, user_epoch, u_new)
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+    else:
+    tempvar syscall_ptr = syscall_ptr
+                tempvar pedersen_ptr = pedersen_ptr
+                tempvar range_check_ptr = range_check_ptr
     end
     return ()
 end
