@@ -779,7 +779,6 @@ func _checkpoint{
     if address != 0:
         # Calculate slopes and biases
         # Kept at zero when they have to
-        # TODO: Check if using is_le correct here
         let (is_old_locked_end_greater_than_current_timestamp) = is_le(current_timestamp, old_locked.end_ts)
         let (is_old_locked_amount_greater_than_zero) =  uint256_lt(Uint256(0, 0), old_locked.amount)
 
@@ -861,246 +860,301 @@ func _checkpoint{
 
 
 
-    tempvar last_point = Point(bias=0, slope=0, ts=current_timestamp, blk=current_block)
+    # local last_point : Point = Point(bias=0, slope=0, ts=current_timestamp, blk=current_block)
 
-    tempvar range_check_ptr = range_check_ptr
-    if is_epoch_greater_than_zero == 1:
-        let (last_point_temp: Point) = _point_history.read(epoch)
-        last_point.bias = last_point_temp.bias
-        last_point.slope = last_point_temp.slope
-        last_point.ts = last_point_temp.ts
-        last_point.blk = last_point_temp.blk
-        tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr
-    else:
-        tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr
-    end
+    # if is_epoch_greater_than_zero == 1:
+    #     let (last_point_temp: Point) = _point_history.read(epoch)
+    #     last_point.bias = last_point_temp.bias
+    #     last_point.slope = last_point_temp.slope
+    #     last_point.ts = last_point_temp.ts
+    #     last_point.blk = last_point_temp.blk
+    #     tempvar syscall_ptr = syscall_ptr
+    #     tempvar pedersen_ptr = pedersen_ptr
+    #     tempvar range_check_ptr = range_check_ptr
+    # else:
+    #     tempvar syscall_ptr = syscall_ptr
+    #     tempvar pedersen_ptr = pedersen_ptr
+    #     tempvar range_check_ptr = range_check_ptr
+    # end
 
 
-    local last_checkpoint = last_point.ts
-    # initial_last_point is used for extrapolation to calculate block number
-    # (approximately, for *At methods) and save them
-    # as we cannot figure that out exactly from inside the contract
-    let initial_last_point = Point(bias=last_point.bias, slope=last_point.slope, ts=last_point.ts, blk=last_point.blk)
+    # local last_checkpoint = last_point.ts
+    # # initial_last_point is used for extrapolation to calculate block number
+    # # (approximately, for *At methods) and save them
+    # # as we cannot figure that out exactly from inside the contract
+    # let initial_last_point = Point(bias=last_point.bias, slope=last_point.slope, ts=last_point.ts, blk=last_point.blk)
     
-    let block_slope = Uint256(0,0)
-    let (is_current_block_timestamp_greater_than_last_point_ts) = is_le(last_point.ts, current_block)
-    if is_current_block_timestamp_greater_than_last_point_ts == 1:
-        tempvar block_diff = current_block - last_point.blk
-        tempvar block_diff_prevision = MULTIPLIER * block_diff
-        tempvar timestamp_diff = current_timestamp - last_point.ts
-        let (block_diff_uint256) = felt_to_uint256(block_diff)
-        let (timestamp_diff_uint256) = felt_to_uint256(timestamp_diff)
-        # tempvar range_check_ptr = range_check_ptr
-        let (block_slope_temp, _) = uint256_unsigned_div_rem(block_diff_uint256, timestamp_diff_uint256)
-        assert block_slope = block_slope_temp
-        tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr
-    else:
-        tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr
-    end
-    # If last point is already recorded in this block, slope=0
-    # But that's ok b/c we know the block in such case
+    # let block_slope = Uint256(0,0)
+    # let (is_current_block_timestamp_greater_than_last_point_ts) = is_le(last_point.ts, current_block)
+    # if is_current_block_timestamp_greater_than_last_point_ts == 1:
+    #     tempvar block_diff = current_block - last_point.blk
+    #     tempvar block_diff_prevision = MULTIPLIER * block_diff
+    #     tempvar timestamp_diff = current_timestamp - last_point.ts
+    #     let (block_diff_uint256) = felt_to_uint256(block_diff)
+    #     let (timestamp_diff_uint256) = felt_to_uint256(timestamp_diff)
+    #     let (block_slope_temp, _) = uint256_unsigned_div_rem(block_diff_uint256, timestamp_diff_uint256)
+    #     assert block_slope = block_slope_temp
+    #     tempvar syscall_ptr = syscall_ptr
+    #     tempvar pedersen_ptr = pedersen_ptr
+    #     tempvar range_check_ptr = range_check_ptr
+    # else:
+    #     tempvar syscall_ptr = syscall_ptr
+    #     tempvar pedersen_ptr = pedersen_ptr
+    #     tempvar range_check_ptr = range_check_ptr
+    # end
+    # # If last point is already recorded in this block, slope=0
+    # # But that's ok b/c we know the block in such case
 
-    # # Go over weeks to fill history and calculate what the current point is
-    let (q_i, r_i) = unsigned_div_rem(last_checkpoint, WEEK)
-    let t_i = q_i * WEEK
-    let (last_point, required_epoch) = _calculate_current_point(0, t_i, last_point, initial_last_point, last_checkpoint, block_slope, epoch)
-    assert epoch = required_epoch
-    _epoch.write(epoch)
-    # Now point_history is filled until t=now
-    if address != 0:
-        # If last point was in this block, the slope change has been applied already
-        # But in such case we have 0 slope(s)
-        let u_slope_diff = u_new.slope - u_old.slope
-        let required_slope = last_point.slope + u_slope_diff
-        assert last_point.slope = required_slope
-        let u_bias_diff = u_new.slope - u_old.slope
-        let required_bias = last_point.bias + u_bias_diff
-        assert last_point.bias = required_bias
+    # # # Go over weeks to fill history and calculate what the current point is
+    # let (q_i, r_i) = unsigned_div_rem(last_checkpoint, WEEK)
+    # let t_i = q_i * WEEK
+    # let (last_point, required_epoch) = _calculate_current_point(0, t_i, last_point, initial_last_point, last_checkpoint, block_slope, epoch)
+    # assert epoch = required_epoch
+    # _epoch.write(epoch)
+    # # Now point_history is filled until t=now
+    # if address != 0:
+    #     # If last point was in this block, the slope change has been applied already
+    #     # But in such case we have 0 slope(s)
+    #     let u_slope_diff = u_new.slope - u_old.slope
+    #     let required_slope = last_point.slope + u_slope_diff
+    #     assert last_point.slope = required_slope
+    #     let u_bias_diff = u_new.slope - u_old.slope
+    #     let required_bias = last_point.bias + u_bias_diff
+    #     assert last_point.bias = required_bias
         
-        let (is_last_point_slope_greater_than_equal_to_0) = is_le(0, last_point.slope)
-        if is_last_point_slope_greater_than_equal_to_0 != 1:
-            assert last_point.slope = 0
-            tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr
-        else:
-        tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr
-        end
+    #     let (is_last_point_slope_greater_than_equal_to_0) = is_le(0, last_point.slope)
+    #     if is_last_point_slope_greater_than_equal_to_0 != 1:
+    #         assert last_point.slope = 0
+    #         tempvar syscall_ptr = syscall_ptr
+    #         tempvar pedersen_ptr = pedersen_ptr
+    #         tempvar range_check_ptr = range_check_ptr
+    #     else:
+    #         tempvar syscall_ptr = syscall_ptr
+    #         tempvar pedersen_ptr = pedersen_ptr
+    #         tempvar range_check_ptr = range_check_ptr
+    #     end
 
-        let (is_last_point_bias_greater_than_equal_to_0) = is_le(0, last_point.bias)
-        if is_last_point_bias_greater_than_equal_to_0 != 1:
-            assert last_point.bias = 0
-            tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr
-        else:
-        tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr
-        end
+    #     let (is_last_point_bias_greater_than_equal_to_0) = is_le(0, last_point.bias)
+    #     if is_last_point_bias_greater_than_equal_to_0 != 1:
+    #         assert last_point.bias = 0
+    #         tempvar syscall_ptr = syscall_ptr
+    #         tempvar pedersen_ptr = pedersen_ptr
+    #         tempvar range_check_ptr = range_check_ptr
+    #     else:
+    #         tempvar syscall_ptr = syscall_ptr
+    #         tempvar pedersen_ptr = pedersen_ptr
+    #         tempvar range_check_ptr = range_check_ptr
+    #     end
 
 
-        tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr
-    else:
-        tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr
-    end
+    #     tempvar syscall_ptr = syscall_ptr
+    #     tempvar pedersen_ptr = pedersen_ptr
+    #     tempvar range_check_ptr = range_check_ptr
+    # else:
+    #     tempvar syscall_ptr = syscall_ptr
+    #     tempvar pedersen_ptr = pedersen_ptr
+    #     tempvar range_check_ptr = range_check_ptr
+    # end
 
-    # Record the changed point into history
-    let (epoch: felt) = _epoch.read()
-    _point_history.write(epoch, last_point)
+    # # Record the changed point into history
+    # let (epoch: felt) = _epoch.read()
+    # _point_history.write(epoch, last_point)
 
-    if address != 0:
-        # Schedule the slope changes (slope is going down)
-        # We subtract new_user_slope from [new_locked.end]
-        # and add old_user_slope to [old_locked.end]
-        let (current_timestamp : felt) = get_block_timestamp()
-        let (current_number : felt) = get_block_number()
-        let (is_old_locked_end_less_than_equal_to_current_timestamp) = is_le(old_locked.end_ts, current_timestamp)
-        if is_old_locked_end_less_than_equal_to_current_timestamp != 1:
-            # old_dslope was <something> - u_old.slope, so we cancel that
-            let old_dslope_new = old_dslope + u_old.slope
-            assert old_dslope = old_dslope_new
-            if new_locked.end_ts == old_locked.end_ts:
-                # It was a new deposit, not extension
-                let old_dslope_new = old_dslope - u_new.slope
-                assert old_dslope = old_dslope_new
-                tempvar syscall_ptr = syscall_ptr
-                tempvar pedersen_ptr = pedersen_ptr
-                tempvar range_check_ptr = range_check_ptr
+    # if address != 0:
+    #     # Schedule the slope changes (slope is going down)
+    #     # We subtract new_user_slope from [new_locked.end]
+    #     # and add old_user_slope to [old_locked.end]
+    #     let (current_timestamp : felt) = get_block_timestamp()
+    #     let (current_number : felt) = get_block_number()
+    #     let (is_old_locked_end_less_than_equal_to_current_timestamp) = is_le(old_locked.end_ts, current_timestamp)
+    #     if is_old_locked_end_less_than_equal_to_current_timestamp != 1:
+    #         # old_dslope was <something> - u_old.slope, so we cancel that
+    #         let old_dslope_new = old_dslope + u_old.slope
+    #         assert old_dslope = old_dslope_new
+    #         if new_locked.end_ts == old_locked.end_ts:
+    #             # It was a new deposit, not extension
+    #             let old_dslope_new = old_dslope - u_new.slope
+    #             assert old_dslope = old_dslope_new
+    #             tempvar syscall_ptr = syscall_ptr
+    #             tempvar pedersen_ptr = pedersen_ptr
+    #             tempvar range_check_ptr = range_check_ptr
             
-            else:
-                tempvar syscall_ptr = syscall_ptr
-                tempvar pedersen_ptr = pedersen_ptr
-                tempvar range_check_ptr = range_check_ptr
-            end
-            _slope_changes.write(old_locked.end_ts, old_dslope)
-        else:
-        tempvar syscall_ptr = syscall_ptr
-                tempvar pedersen_ptr = pedersen_ptr
-                tempvar range_check_ptr = range_check_ptr
-                end
+    #         else:
+    #             tempvar syscall_ptr = syscall_ptr
+    #             tempvar pedersen_ptr = pedersen_ptr
+    #             tempvar range_check_ptr = range_check_ptr
+    #         end
+    #         _slope_changes.write(old_locked.end_ts, old_dslope)
+    #     else:
+    #     tempvar syscall_ptr = syscall_ptr
+    #             tempvar pedersen_ptr = pedersen_ptr
+    #             tempvar range_check_ptr = range_check_ptr
+    #             end
 
 
-        let (is_new_locked_end_less_than_equal_to_current_timestamp) = is_le(new_locked.end_ts, current_timestamp)
-        if is_new_locked_end_less_than_equal_to_current_timestamp != 1:
-            let (is_new_locked_end_less_than_equal_to_old_locked_end) = is_le(new_locked.end_ts, old_locked.end_ts)
-            if is_new_locked_end_less_than_equal_to_old_locked_end != 1:
-                # old slope disappeared at this point
-                let new_dslope_new = new_dslope - u_new.slope
-                assert new_dslope = new_dslope_new
-                _slope_changes.write(new_locked.end_ts, new_dslope)
-                tempvar syscall_ptr = syscall_ptr
-                tempvar pedersen_ptr = pedersen_ptr
-                tempvar range_check_ptr = range_check_ptr
-            else:
-                tempvar syscall_ptr = syscall_ptr
-                tempvar pedersen_ptr = pedersen_ptr
-                tempvar range_check_ptr = range_check_ptr
-            end
-            # else: we recorded it already in old_dslope
+    #     let (is_new_locked_end_less_than_equal_to_current_timestamp) = is_le(new_locked.end_ts, current_timestamp)
+    #     if is_new_locked_end_less_than_equal_to_current_timestamp != 1:
+    #         let (is_new_locked_end_less_than_equal_to_old_locked_end) = is_le(new_locked.end_ts, old_locked.end_ts)
+    #         if is_new_locked_end_less_than_equal_to_old_locked_end != 1:
+    #             # old slope disappeared at this point
+    #             let new_dslope_new = new_dslope - u_new.slope
+    #             assert new_dslope = new_dslope_new
+    #             _slope_changes.write(new_locked.end_ts, new_dslope)
+    #             tempvar syscall_ptr = syscall_ptr
+    #             tempvar pedersen_ptr = pedersen_ptr
+    #             tempvar range_check_ptr = range_check_ptr
+    #         else:
+    #             tempvar syscall_ptr = syscall_ptr
+    #             tempvar pedersen_ptr = pedersen_ptr
+    #             tempvar range_check_ptr = range_check_ptr
+    #         end
+    #         # else: we recorded it already in old_dslope
 
-            tempvar syscall_ptr = syscall_ptr
-                tempvar pedersen_ptr = pedersen_ptr
-                tempvar range_check_ptr = range_check_ptr
+    #         tempvar syscall_ptr = syscall_ptr
+    #             tempvar pedersen_ptr = pedersen_ptr
+    #             tempvar range_check_ptr = range_check_ptr
 
-        else:
-        tempvar syscall_ptr = syscall_ptr
-                tempvar pedersen_ptr = pedersen_ptr
-                tempvar range_check_ptr = range_check_ptr
-        end
-        # Now handle user history
-        # TODO: Check conversion from felt to Uint256
+    #     else:
+    #     tempvar syscall_ptr = syscall_ptr
+    #             tempvar pedersen_ptr = pedersen_ptr
+    #             tempvar range_check_ptr = range_check_ptr
+    #     end
+    #     # Now handle user history
+    #     # TODO: Check conversion from felt to Uint256
 
-        let (user_epoch_temp) = _user_point_epoch.read(address) 
-        let user_epoch = user_epoch_temp + 1
+    #     let (user_epoch_temp) = _user_point_epoch.read(address) 
+    #     let user_epoch = user_epoch_temp + 1
 
-        _user_point_epoch.write(address, user_epoch)
-        u_new.ts = current_timestamp
-        u_new.blk = current_number
-        _user_point_history.write(address, user_epoch, u_new)
-        tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr
-    else:
-    tempvar syscall_ptr = syscall_ptr
-                tempvar pedersen_ptr = pedersen_ptr
-                tempvar range_check_ptr = range_check_ptr
-    end
+    #     _user_point_epoch.write(address, user_epoch)
+    #     u_new.ts = current_timestamp
+    #     u_new.blk = current_number
+    #     _user_point_history.write(address, user_epoch, u_new)
+    #     tempvar syscall_ptr = syscall_ptr
+    #     tempvar pedersen_ptr = pedersen_ptr
+    #     tempvar range_check_ptr = range_check_ptr
+    # else:
+    # tempvar syscall_ptr = syscall_ptr
+    #             tempvar pedersen_ptr = pedersen_ptr
+    #             tempvar range_check_ptr = range_check_ptr
+    # end
     return ()
 end
 
 # Go over weeks to fill history and calculate what the current point is
 # Returns both last_point and epoch
+
+#  for i in range(255):
+#         # Hopefully it won't happen that this won't get used in 5 years!
+#         # If it does, users will be able to withdraw but vote weight will be broken
+#         t_i += WEEK
+#         d_slope: int128 = 0
+#         if t_i > block.timestamp:
+#             t_i = block.timestamp
+#         else:
+#             d_slope = self.slope_changes[t_i]
+#         last_point.bias -= last_point.slope * convert(t_i - last_checkpoint, int128)
+#         last_point.slope += d_slope
+#         if last_point.bias < 0:  # This can happen
+#             last_point.bias = 0
+#         if last_point.slope < 0:  # This cannot happen - just in case
+#             last_point.slope = 0
+#         last_checkpoint = t_i
+#         last_point.ts = t_i
+#         last_point.blk = initial_last_point.blk + block_slope * (t_i - initial_last_point.ts) / MULTIPLIER
+#         _epoch += 1
+#         if t_i == block.timestamp:
+#             last_point.blk = block.number
+#             break
+#         else:
+#             self.point_history[_epoch] = last_point
+
+
 func _calculate_current_point{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-    }(current_index: felt, t_i: felt, last_point: Point, initial_last_point: Point, last_checkpoint: felt, block_slope: Uint256, epoch: felt) -> (new_point: Point, new_epoch: felt):
+    }(current_index: felt, t_i: felt, last_point: Point, initial_last_point: Point, last_checkpoint: felt, block_slope: felt, epoch: felt) -> (new_point: Point, new_epoch: felt):
     alloc_locals
     if current_index == 255:
         return (last_point, epoch)
     end
-    let new_t_i = t_i + WEEK
-    let (current_timestamp) = get_block_timestamp()
-    local d_slope
 
-    let (is_new_t_i_greater_than_current_timestamp) = is_le(current_timestamp, new_t_i)
+    let new_t_i_week = t_i + WEEK
+
+    let (current_timestamp) = get_block_timestamp()
+    let (current_block) = get_block_number()
+    let (is_new_t_i_greater_than_current_timestamp) = is_le(current_timestamp, new_t_i_week)
+
     if is_new_t_i_greater_than_current_timestamp == 1:
-        let (current_timestamp) = get_block_timestamp()
-        new_t_i = current_timestamp
-        assert d_slope = 0
-        tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
+        tempvar d_slope_temp = 0
+        tempvar new_t_i_temp = current_timestamp
+
         tempvar range_check_ptr = range_check_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar syscall_ptr = syscall_ptr
     else:
-        let (required_dslope) = _slope_changes.read(new_t_i)
-        assert d_slope = required_dslope
-        tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
+        let (required_dslope) = _slope_changes.read(new_t_i_week)
+        tempvar d_slope_temp = required_dslope
+        tempvar new_t_i_temp =  new_t_i_week
+
         tempvar range_check_ptr = range_check_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar syscall_ptr = syscall_ptr
     end
-    let new_bias = last_point.bias - (last_point.slope * (new_t_i - last_checkpoint))
-    let new_slope = last_point.slope + d_slope
+
+    let d_slope= d_slope_temp
+    let new_t_i = new_t_i_temp
+
 
     let (is_last_point_bias_less_than_0) = is_le(last_point.bias, 0)
     if is_last_point_bias_less_than_0 == 1:
-        assert new_bias = 0
+        tempvar new_bias_temp = 0
+        
+        tempvar range_check_ptr = range_check_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar syscall_ptr = syscall_ptr
+    else:
+        tempvar new_bias_temp = last_point.bias - (last_point.slope * (new_t_i - last_checkpoint))
+        
+        tempvar range_check_ptr = range_check_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar syscall_ptr = syscall_ptr
     end
+
+    let new_bias = new_bias_temp
+
 
     let (is_last_point_slope_less_than_0) = is_le(last_point.slope, 0)
     if is_last_point_slope_less_than_0 == 1:
-        assert new_slope = 0
+        tempvar new_slope_temp = 0
+        
+        tempvar range_check_ptr = range_check_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar syscall_ptr = syscall_ptr
+    else:
+        tempvar new_slope_temp = last_point.slope + d_slope
+        
+        tempvar range_check_ptr = range_check_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar syscall_ptr = syscall_ptr
     end
 
-    let new_last_checkpoint = new_t_i
-    let new_ts = new_t_i
-    let new_blk = initial_last_point.blk + block_slope * (t_i - initial_last_point.ts) / MULTIPLIER
+    let new_slope = new_slope_temp
+
 
     let new_epoch = epoch + 1
-    let (current_timestamp) = get_block_timestamp()
+
     if new_t_i == current_timestamp:
-        let (current_block) = get_block_number()
-        assert new_blk = current_block
-        let new_point = Point(bias=new_bias, slope=new_slope, ts=new_ts, blk=new_blk)
+        let new_blk = current_block
+        let new_point = Point(bias=new_bias, slope=new_slope, ts=new_t_i, blk=new_blk)
         return (new_point, new_epoch)
     else:
-        let new_point = Point(bias=new_bias, slope=new_slope, ts=new_ts, blk=new_blk)
+        let delta = t_i - initial_last_point.ts
+        let new_blk_precision = initial_last_point.blk + block_slope * delta 
+        let (new_blk,_) = unsigned_div_rem(new_blk_precision, MULTIPLIER)
+        let new_point = Point(bias=new_bias, slope=new_slope, ts=new_t_i, blk=new_blk)
         _point_history.write(new_epoch, new_point)
-        return _calculate_current_point(current_index + 1, new_t_i, new_point, initial_last_point, new_last_checkpoint, block_slope, new_epoch)
+        return _calculate_current_point(current_index + 1, new_t_i, new_point, initial_last_point, new_t_i, block_slope, new_epoch)
     end
 end
 

@@ -44,6 +44,15 @@ namespace IVaultFactory:
     func getStackingVaultFee() -> (res : felt):
     end
 
+    func getMaxFundLevel() -> (res : felt):
+    end
+
+    func getStackingDispute() -> (res : felt):
+    end
+
+    func getGuaranteeRatio() -> (res : felt):
+    end
+
     ##Business
 
     func initializeFund(
