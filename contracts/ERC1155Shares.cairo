@@ -18,10 +18,64 @@ from starkware.cairo.common.math import assert_not_zero
 from contracts.erc1155 import ERC1155
 from openzeppelin.introspection.erc165.library import ERC165
 
-from starkware.cairo.common.alloc import (
-    alloc,
-)
+from starkware.cairo.common.alloc import alloc
 
+
+#
+# Events
+#
+
+@event
+func singleTransferFrom (
+        from_: felt,
+        to: felt,
+        id: Uint256,
+        amount: Uint256,
+        data_len: felt,
+        data: felt*
+    ):
+end
+
+@event
+func batchTransferFrom(
+        from_: felt,
+        to: felt,
+        ids_len: felt,
+        ids: Uint256*,
+        amounts_len: felt,
+        amounts: Uint256*,
+        data_len: felt,
+        data: felt*
+    ):
+end
+
+@event
+func mint (
+    to: felt, 
+    sharesAmount: Uint256, 
+    _sharePricePurchased:Uint256,
+    data_len: felt,
+    data: felt*
+    ):
+end
+
+@event
+func singleBurn(
+    from_: felt,
+    id: Uint256,
+    amount: Uint256
+    ):
+end
+
+@event
+func batchBurn(
+    from_: felt,
+    ids_len: felt,
+    ids: Uint256*,
+    amounts_len: felt,
+    amounts: Uint256*
+    ):
+end
 
 #
 # Storage
@@ -260,6 +314,7 @@ func safeTransferFrom{
         data: felt*
     ):
     ERC1155.safe_transfer_from(from_, to, id, amount, data_len, data)
+    singleTransferFrom.emit(from_, to, id, amount, data_len, data)
     return ()
 end
 
@@ -281,6 +336,7 @@ func safeBatchTransferFrom{
     ):
     ERC1155.safe_batch_transfer_from(
         from_, to, ids_len, ids, amounts_len, amounts, data_len, data)
+    batchTransferFrom.emit(from_, to, ids_len, ids, amounts_len, amounts, data_len, data)
     return ()
 end
 
@@ -305,6 +361,7 @@ func mint{
     let (newTotalId_,_) = uint256_add(totalId_, Uint256(1,0) )
     totalId.write(newTotalId_)
     ERC1155._mint(to, totalId_, sharesAmount, data_len, data)
+    mint.emit(to, totalId_, sharesAmount, data_len, data)
     return ()
 end
 
@@ -322,6 +379,7 @@ func burn{
     let (currentTotalSupply_) = sharesTotalSupply.read()
     let (newTotalSupply_) = uint256_sub(currentTotalSupply_, amount )
     sharesTotalSupply.write(newTotalSupply_)
+    singleBurn.emit(from_, id, amount)
     return ()
 end
 
@@ -343,6 +401,7 @@ func burnBatch{
     end
     ERC1155._burn_batch(from_, ids_len, ids, amounts_len, amounts)
     reduceSupplyBatch(amounts_len, amounts)
+    batchBurn.emit(from_, ids_len, ids, amounts_len, amounts)
     return ()
 end
 
@@ -366,7 +425,6 @@ end
         amounts_len= amounts_len - 1,
         amounts=amounts)
 end
-
 
     func __is_zero{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(x : felt) -> (
     res : felt
