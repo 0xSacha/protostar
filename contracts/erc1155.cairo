@@ -14,6 +14,7 @@ from openzeppelin.introspection.erc165.IERC165 import IERC165
 from openzeppelin.introspection.erc165.library import ERC165
 from contracts.interfaces.IERC1155Receiver import IERC1155_Receiver
 from openzeppelin.security.safemath.library import SafeUint256
+from openzeppelin.security.reentrancyguard.library import ReentrancyGuard
 
 
 const IERC1155_ID = 0xd9b67a26
@@ -162,11 +163,13 @@ namespace ERC1155:
             pedersen_ptr: HashBuiltin*,
             range_check_ptr
         }(operator: felt, approved: felt):
+        ReentrancyGuard._start()
         let (caller) = get_caller_address()
         with_attr error_message("ERC1155: cannot approve from the zero address"):
             assert_not_zero(caller)
         end
         _set_approval_for_all(caller, operator, approved)
+        ReentrancyGuard._end()
         return ()
     end
 
@@ -182,6 +185,7 @@ namespace ERC1155:
             data_len: felt,
             data: felt*
         ):
+        ReentrancyGuard._start()
         let (caller) = get_caller_address()
         with_attr error_message("ERC1155: cannot call transfer from the zero address"):
             assert_not_zero(caller)
@@ -190,6 +194,7 @@ namespace ERC1155:
             assert_owner_or_approved(from_)
         end
         _safe_transfer_from(from_, to, id, amount, data_len, data)
+        ReentrancyGuard._end()
         return ()
     end
 
@@ -207,6 +212,7 @@ namespace ERC1155:
             data_len: felt,
             data: felt*
         ):
+        ReentrancyGuard._start()
         let (caller) = get_caller_address()
         with_attr error_message("ERC1155: cannot call transfer from the zero address"):
             assert_not_zero(caller)
@@ -215,6 +221,7 @@ namespace ERC1155:
             assert_owner_or_approved(from_)
         end
         _safe_batch_transfer_from(from_, to, ids_len, ids, amounts_len, amounts, data_len, data)
+        ReentrancyGuard._end()
         return ()
     end
 
@@ -235,6 +242,7 @@ namespace ERC1155:
             data: felt*
         ):
         alloc_locals
+        ReentrancyGuard._start()
         # Check args
         with_attr error_message("ERC1155: transfer to the zero address"):
             assert_not_zero(to)
@@ -269,15 +277,7 @@ namespace ERC1155:
             id,
             amount
         )
-        # _do_safe_transfer_acceptance_check(
-        #     operator,
-        #     from_,
-        #     to,
-        #     id,
-        #     amount,
-        #     data_len,
-        #     data
-        # )
+        ReentrancyGuard._end()
         return ()
     end
 
@@ -296,6 +296,7 @@ namespace ERC1155:
             data: felt*
         ):
         alloc_locals
+        ReentrancyGuard._start()
         # Check args
         with_attr error_message("ERC1155: transfer to the zero address"):
             assert_not_zero(to)
@@ -329,6 +330,7 @@ namespace ERC1155:
             data_len,
             data
         )
+        ReentrancyGuard._end()
         return ()
     end
 
@@ -343,6 +345,7 @@ namespace ERC1155:
             data_len: felt,
             data: felt*
         ):
+        ReentrancyGuard._start()
         # Cannot mint to zero address
         with_attr error_message("ERC1155: mint to the zero address"):
             assert_not_zero(to)
@@ -371,15 +374,7 @@ namespace ERC1155:
             id=id,
             value=amount
         )
-        # _do_safe_transfer_acceptance_check(
-        #     operator=operator,
-        #     from_=0,
-        #     to=to,
-        #     id=id,
-        #     amount=amount,
-        #     data_len=data_len,
-        #     data=data
-        # )
+        ReentrancyGuard._end()
         return ()
     end
 
@@ -397,6 +392,7 @@ namespace ERC1155:
             data: felt*
         ):
         alloc_locals
+        ReentrancyGuard._start()
         # Cannot mint to zero address
         with_attr error_message("ERC1155: mint to the zero address"):
             assert_not_zero(to)
@@ -432,6 +428,7 @@ namespace ERC1155:
             data_len=data_len,
             data=data
         )
+        ReentrancyGuard._end()
         return ()
     end
 
@@ -441,6 +438,8 @@ namespace ERC1155:
             range_check_ptr
         }(from_: felt, id: Uint256, amount: Uint256):
         alloc_locals
+
+        ReentrancyGuard._start()
         with_attr error_message("ERC1155: burn from the zero address"):
             assert_not_zero(from_)
         end
@@ -463,6 +462,7 @@ namespace ERC1155:
         let (operator) = get_caller_address()
         TransferSingle.emit(operator=operator, from_=from_, to=0, id=id, value=amount)
         return ()
+        ReentrancyGuard._end()
     end
 
     func _burn_batch{
@@ -477,6 +477,7 @@ namespace ERC1155:
             amounts: Uint256*
         ):
         alloc_locals
+        ReentrancyGuard._start()
         with_attr error_message("ERC1155: burn from the zero address"):
             assert_not_zero(from_)
         end
@@ -497,6 +498,7 @@ namespace ERC1155:
             values_len=amounts_len,
             values=amounts
         )
+        ReentrancyGuard._end()
         return ()
     end
 
