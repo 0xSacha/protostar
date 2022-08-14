@@ -1,19 +1,47 @@
-# SPDX-License-Identifier: MIT
-# OpenZeppelin Contracts for Cairo v0.2.1 (token/erc1155/library.cairo)
-
 %lang starknet
 
-from starkware.starknet.common.syscalls import get_caller_address
-from starkware.cairo.common.cairo_builtins import HashBuiltin
-from starkware.cairo.common.math import assert_not_zero, assert_not_equal
+
+from starkware.cairo.common.registers import get_fp_and_pc
+from starkware.starknet.common.syscalls import (get_block_timestamp, get_contract_address, get_caller_address, call_contract, get_tx_info)
+from starkware.cairo.common.signature import verify_ecdsa_signature
+from starkware.cairo.common.cairo_builtins import HashBuiltin, SignatureBuiltin, BitwiseBuiltin
+from starkware.cairo.common.cairo_secp.signature import verify_eth_signature_uint256
 from starkware.cairo.common.alloc import alloc
-from starkware.cairo.common.uint256 import Uint256, uint256_check
 from starkware.cairo.common.bool import TRUE
+from starkware.cairo.common.memcpy import memcpy
+from starkware.cairo.common.math import (
+    assert_not_zero,
+    assert_not_equal,
+    assert_le,
+    unsigned_div_rem,
+    split_felt,
+)
 
 from openzeppelin.introspection.erc165.IERC165 import IERC165
 from openzeppelin.introspection.erc165.library import ERC165
 from contracts.interfaces.IERC1155Receiver import IERC1155_Receiver
 from openzeppelin.security.safemath.library import SafeUint256
+from openzeppelin.security.reentrancyguard.library import ReentrancyGuard
+
+from starkware.cairo.common.uint256 import (
+    Uint256,
+    uint256_sub,
+    uint256_check,
+    uint256_le,
+    uint256_add,
+    uint256_mul,
+)
+from contracts.utils.utils import felt_to_uint256, uint256_div, uint256_percent, uint256_pow, uint256_mul_low
+
+from openzeppelin.token.erc20.IERC20 import IERC20
+from contracts.interfaces.IVaultFactory import IVaultFactory
+from contracts.interfaces.IFeeManager import FeeConfig, IFeeManager
+from contracts.interfaces.IPolicyManager import IPolicyManager
+from contracts.interfaces.IFuccount import IFuccount
+from contracts.interfaces.IStackingDispute import IStackingDispute
+from contracts.interfaces.IPreLogic import IPreLogic
+from contracts.interfaces.IIntegrationManager import IIntegrationManager
+from contracts.interfaces.IValueInterpretor import IValueInterpretor
 
 
 const IERC1155_ID = 0xd9b67a26
@@ -51,6 +79,22 @@ end
 struct PositionInfo:
     member address : felt
     member valueInDeno : Uint256
+end
+
+struct Call:
+    member to: felt
+    member selector: felt
+    member calldata_len: felt
+    member calldata: felt*
+end
+
+# Tmp struct introduced while we wait for Cairo
+# to support passing `[AccountCall]` to __execute__
+struct AccountCallArray:
+    member to: felt
+    member selector: felt
+    member data_offset: felt
+    member data_len: felt
 end
 
 
@@ -140,6 +184,20 @@ end
 func denominationAsset() -> (res : felt):
 end
 
+@storage_var
+func Account_current_nonce() -> (res: felt):
+end
+
+@storage_var
+func Account_public_key() -> (res: felt):
+end
+
+@storage_var
+func fundLevel() -> (res: felt):
+end
+
+
+
 
 namespace FuccountLib:
 
@@ -152,12 +210,17 @@ namespace FuccountLib:
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }(
+        _public_key: felt,
         _vaultFactory: felt,
     ):
         with_attr error_message("constructor: cannot set the vaultFactory to the zero address"):
         assert_not_zero(_vaultFactory)
         end
         vaultFactory.write(_vaultFactory)
+        Account_public_key.write(_public_key)
+        ERC165.register_interface(IACCOUNT_ID)
+        ERC165.register_interface(IERC1155_ID)
+        ERC165.register_interface(IERC1155_METADATA_ID)
         return ()
     end
 
@@ -177,11 +240,9 @@ namespace FuccountLib:
             data:felt*,
         ):
         onlyVaultFactory()
-        _set_uri(uri_)
+        _set_uri(_uri)
         name.write(_name)
         symbol.write(_symbol)
-        ERC165.register_interface(IERC1155_ID)
-        ERC165.register_interface(IERC1155_METADATA_ID)
         denominationAsset.write(_denominationAsset)
         managerAccount.write(_managerAccount)
         mint(_managerAccount, _shareAmount, _sharePrice, data_len, data)
@@ -327,7 +388,7 @@ func ownerShares{
     let (totalId_:Uint256) = totalId.read()
     let (local assetId : Uint256*) = alloc()
     let (local assetAmount : Uint256*) = alloc()
-    let (tabSize_:felt) = _completeMultiAssetTab(totalId_, 0, assetId, 0, assetAmount, account)    
+    let (tabSize_:felt) = _completeMultiShareTab(totalId_, 0, assetId, 0, assetAmount, account)    
     return (tabSize_, assetId, tabSize_, assetAmount)
 end
 
@@ -395,7 +456,7 @@ func getShareBalance{
     }(_share: felt, _id: felt) -> (shareBalance_: Uint256):
     let (account_:felt) = get_contract_address()
     let (shareBalance_:Uint256) = IFuccount.balanceOf(account_, _share, _id)
-    return (assetBalance_)
+    return (shareBalance_)
 end
 
 
@@ -450,7 +511,7 @@ func getSharePrice{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     let (gav) = calculGav()
     #shares have 18 decimals
     let (gavPow18_:Uint256,_) = uint256_mul(gav, Uint256(POW18,0))
-    let (total_supply) = sharesTotalSupply()
+    let (total_supply) = sharesTotalSupply.read()
     let (price : Uint256) = uint256_div(gavPow18_, total_supply)
     return (res=price)
 end
@@ -553,7 +614,7 @@ func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     #calculate the performance 
 
     
-    let(previous_share_price_:Uint256) = sharePricePurchased(id)
+    let(previous_share_price_:Uint256) = sharePricePurchased.read(id)
     let(has_performed_) = uint256_le(previous_share_price_, sharePrice_)
     if has_performed_ == 1 :
         let(diff_:Uint256) = SafeUint256.sub_le(sharePrice_, previous_share_price_)
@@ -573,7 +634,7 @@ func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
 
     #calculate the duration
 
-    let (mintedBlockTimesTamp_:felt) = ERC1155Shares.getMintedBlockTimesTamp(id)
+    let (mintedBlockTimesTamp_:felt) = getMintedBlockTimesTamp(id)
     let (currentTimesTamp_:felt) = get_block_timestamp()
     let diff = currentTimesTamp_ - mintedBlockTimesTamp_
     let diff_precision = diff * PRECISION
@@ -594,12 +655,54 @@ func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     return(assets_len,assetCallerAmount, assets_len,assetManagerAmount,assets_len, assetStackingVaultAmount, assets_len,assetDaoTreasuryAmount, shares_len, shareCallerAmount, shares_len, shareManagerAmount, shares_len, shareStackingVaultAmount, shares_len, shareDaoTreasuryAmount)
 end
 
+    func get_public_key{
+            syscall_ptr : felt*,
+            pedersen_ptr : HashBuiltin*,
+            range_check_ptr
+        }() -> (res: felt):
+        let (res) = Account_public_key.read()
+        return (res=res)
+    end
+
+    func get_nonce{
+            syscall_ptr : felt*,
+            pedersen_ptr : HashBuiltin*,
+            range_check_ptr
+        }() -> (res: felt):
+        let (res) = Account_current_nonce.read()
+        return (res=res)
+    end
+
+    func getFundLevel{
+            syscall_ptr : felt*,
+            pedersen_ptr : HashBuiltin*,
+            range_check_ptr
+        }() -> (res: felt):
+        let (res) = fundLevel.read()
+        return (res=res)
+    end
+
 
 
 
     #
     # Externals
     #
+
+func previewDeposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+     _amount: Uint256
+) -> (shareAmount: Uint256, fundAmount: Uint256, managerAmount: Uint256, treasuryAmount: Uint256, stackingVaultAmount: Uint256):
+    alloc_locals
+    let (fund_:felt) = get_contract_address()
+    let (denominationAsset_:felt) = denominationAsset.read()
+    let (caller_ : felt) = get_caller_address()
+    let (fee, fee_assset_manager, fee_treasury, fee_stacking_vault) = _get_fee(fund_, FeeConfig.ENTRANCE_FEE, _amount)
+    let (sharePrice_) = getSharePrice()
+    let (fundAmount_) = uint256_sub(_amount, fee)
+    let (amountWithoutFeesPow_,_) = uint256_mul(fundAmount_, Uint256(10**18,0))
+    let (shareAmount_) = uint256_div(amountWithoutFeesPow_, sharePrice_)
+    return (shareAmount_, fundAmount_, fee_assset_manager, fee_treasury, fee_stacking_vault)
+end
 
 
 func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
@@ -608,27 +711,23 @@ func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     alloc_locals
     let (fund_:felt) = get_contract_address()
     let (denominationAsset_:felt) = denominationAsset.read()
-    _assertMaxminRange(_amount)
     let (caller_ : felt) = get_caller_address()
-    _assertAllowedDepositor(caller_)
-    let (fee, fee_assset_manager, fee_treasury, fee_stacking_vault) = _get_fee(fund_, FeeConfig.ENTRANCE_FEE, _amount)
 
+    _assertMaxminRange(_amount)
+    _assertAllowedDepositor(caller_)
+
+    let (shareAmount_: Uint256, fundAmount_: Uint256, managerAmount_: Uint256, treasuryAmount_: Uint256, stackingVaultAmount_: Uint256) = previewDeposit(_amount)
     # transfer fee to fee_treasury, stacking_vault
     let (_managerAccount:felt) = managerAccount.read()
     let (treasury:felt) = _getDaoTreasury()
     let (stacking_vault:felt) = _getStackingVault()
 
-    IERC20.transferFrom(denominationAsset_, caller_, _managerAccount, fee_assset_manager)
-    IERC20.transferFrom(denominationAsset_, caller_, treasury, fee_treasury)
-    IERC20.transferFrom(denominationAsset_, caller_, stacking_vault, fee_stacking_vault)
+    # transfer asset
+    IERC20.transferFrom(denominationAsset_, caller_, _managerAccount, managerAmount_)
+    IERC20.transferFrom(denominationAsset_, caller_, treasury, treasuryAmount_)
+    IERC20.transferFrom(denominationAsset_, caller_, stacking_vault, stackingVaultAmount_)
+    IERC20.transferFrom(denominationAsset_, caller_, fund_, fundAmount_)
     let (sharePrice_) = getSharePrice()
-    let (amountWithoutFees_) = uint256_sub(_amount, fee)
-    IERC20.transferFrom(denominationAsset_, caller_, fund_, amountWithoutFees_)
-
-    # let (decimals_:felt) = IERC20.decimals(denominationAsset_)
-    # let (decimalsPow_:Uint256) = uint256_pow(Uint256(10,0), decimals_)
-    let (amountWithoutFeesPow_,_) = uint256_mul(amountWithoutFees_, Uint256(10**18,0))
-    let (shareAmount_) = uint256_div(amountWithoutFeesPow_, sharePrice_)
 
     # mint share
     mint(caller_, shareAmount_, sharePrice_, data_len, data)
@@ -654,7 +753,7 @@ func reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     #check timelock
     let (caller_:felt) = get_caller_address()
     let (policyManager_:felt) = _getPolicyManager()
-    let (mintedBlockTimesTamp_:felt) = mintedBlockTimesTamp(id)
+    let (mintedBlockTimesTamp_:felt) = mintedBlockTimesTamp.read(id)
     let (currentTimesTamp_:felt) = get_block_timestamp()
     let (fund_:felt) = get_contract_address()
     let (timelock_:felt) = IPolicyManager.getTimelock(policyManager_, fund_)
@@ -806,9 +905,274 @@ func burnBatch{
     return ()
 end
 
+func set_public_key{
+            syscall_ptr : felt*,
+            pedersen_ptr : HashBuiltin*,
+            range_check_ptr
+        }(new_public_key: felt):
+        assert_only_self()
+        Account_public_key.write(new_public_key)
+        return ()
+    end
+
+    func setFundLevel{
+            syscall_ptr : felt*,
+            pedersen_ptr : HashBuiltin*,
+            range_check_ptr
+        }(_fundLevel: felt):
+        onlyVaultFactory()
+        fundLevel.write(_fundLevel)
+        return ()
+    end
+
+    func execute{
+            syscall_ptr : felt*,
+            pedersen_ptr : HashBuiltin*,
+            range_check_ptr,
+            ecdsa_ptr: SignatureBuiltin*,
+            bitwise_ptr: BitwiseBuiltin*
+        }(
+            call_array_len: felt,
+            call_array: AccountCallArray*,
+            calldata_len: felt,
+            calldata: felt*,
+            nonce: felt
+        ) -> (response_len: felt, response: felt*):
+        alloc_locals
+
+        let (__fp__, _) = get_fp_and_pc()
+        let (tx_info) = get_tx_info()
+
+        # validate transaction
+        with_attr error_message("Account: invalid signature"):
+            let (is_valid) = is_valid_signature(tx_info.transaction_hash, tx_info.signature_len, tx_info.signature)
+            assert is_valid = TRUE
+        end
+
+        return _unsafe_execute(call_array_len, call_array, calldata_len, calldata, nonce)
+    end
+
+    func eth_execute{
+            syscall_ptr : felt*,
+            pedersen_ptr : HashBuiltin*,
+            range_check_ptr,
+            ecdsa_ptr: SignatureBuiltin*,
+            bitwise_ptr: BitwiseBuiltin*
+        }(
+            call_array_len: felt,
+            call_array: AccountCallArray*,
+            calldata_len: felt,
+            calldata: felt*,
+            nonce: felt
+        ) -> (response_len: felt, response: felt*):
+        alloc_locals
+
+        let (__fp__, _) = get_fp_and_pc()
+        let (tx_info) = get_tx_info()
+
+        # validate transaction
+        with_attr error_message("Account: invalid secp256k1 signature"):
+            let (is_valid) = is_valid_eth_signature(tx_info.transaction_hash, tx_info.signature_len, tx_info.signature)
+            assert is_valid = TRUE
+        end
+
+        return _unsafe_execute(call_array_len, call_array, calldata_len, calldata, nonce)
+    end
+
+
     #
     # Internals
     #
+
+
+func _unsafe_execute{
+            syscall_ptr : felt*,
+            pedersen_ptr : HashBuiltin*,
+            range_check_ptr,
+            ecdsa_ptr: SignatureBuiltin*,
+            bitwise_ptr: BitwiseBuiltin*
+        }(
+            call_array_len: felt,
+            call_array: AccountCallArray*,
+            calldata_len: felt,
+            calldata: felt*,
+            nonce: felt
+        ) -> (response_len: felt, response: felt*):
+        alloc_locals
+
+        let (caller) = get_caller_address()
+        with_attr error_message("Account: no reentrant call"):
+            assert caller = 0
+        end
+
+        # validate nonce
+
+        let (_current_nonce) = Account_current_nonce.read()
+
+        with_attr error_message("Account: nonce is invalid"):
+            assert _current_nonce = nonce
+        end
+
+        # bump nonce
+        Account_current_nonce.write(_current_nonce + 1)
+
+        # TMP: Convert `AccountCallArray` to 'Call'.
+        let (calls : Call*) = alloc()
+        _from_call_array_to_call(call_array_len, call_array, calldata, calls)
+        let calls_len = call_array_len
+
+        # execute call
+        let (response : felt*) = alloc()
+        let (response_len) = _execute_list(calls_len, calls, response)
+
+        return (response_len=response_len, response=response)
+    end
+
+    func _execute_list{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+            calls_len: felt,
+            calls: Call*,
+            response: felt*
+        ) -> (response_len: felt):
+        alloc_locals
+
+        # if no more calls
+        if calls_len == 0:
+           return (0)
+        end
+
+        # do the current call
+        let this_call: Call = [calls]
+        _checkCall(this_call.to, this_call.selector, this_call.calldata_len, this_call.calldata)
+        let res = call_contract(
+            contract_address=this_call.to,
+            function_selector=this_call.selector,
+            calldata_size=this_call.calldata_len,
+            calldata=this_call.calldata
+        )
+        # copy the result in response
+        memcpy(response, res.retdata, res.retdata_size)
+        # do the next calls recursively
+        let (response_len) = _execute_list(calls_len - 1, calls + Call.SIZE, response + res.retdata_size)
+        return (response_len + res.retdata_size)
+    end
+
+    func _from_call_array_to_call{syscall_ptr: felt*}(
+            call_array_len: felt,
+            call_array: AccountCallArray*,
+            calldata: felt*,
+            calls: Call*
+        ):
+        # if no more calls
+        if call_array_len == 0:
+           return ()
+        end
+
+        # parse the current call
+        assert [calls] = Call(
+                to=[call_array].to,
+                selector=[call_array].selector,
+                calldata_len=[call_array].data_len,
+                calldata=calldata + [call_array].data_offset
+            )
+        # parse the remaining calls recursively
+        _from_call_array_to_call(call_array_len - 1, call_array + AccountCallArray.SIZE, calldata, calls + Call.SIZE)
+        return ()
+    end
+
+
+func _checkCall{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        _contract: felt, _selector: felt, _callData_len: felt, _callData: felt*):
+    alloc_locals
+    #check if allowed call
+    let (vaultFactory_:felt) = vaultFactory.read()
+    let (integrationManager_:felt) = IVaultFactory.getIntegrationManager(vaultFactory_)
+    let (isIntegrationAvailable_) = IIntegrationManager.checkIsIntegrationAvailable(integrationManager_, _contract, _selector)
+    with_attr error_message("the operation is not allowed on Magnety"):
+        assert isIntegrationAvailable_ = 1
+    end
+
+    let (fundLevel_) = getFundLevel()
+    let (integrationLevel_) = IIntegrationManager.getIntegrationRequiredLevel(integrationManager_, _contract, _selector)
+    with_attr error_message("the operation is not allowed for this fund"):
+        assert_le(integrationLevel_, fundLevel_)
+    end
+
+    #perform pre-call logic if necessary
+    let (preLogicContract:felt) = IIntegrationManager.getIntegration(integrationManager_, _contract, _selector)
+    let (isPreLogicNonRequired:felt) = _is_zero(preLogicContract)
+    let (contractAddress_:felt) = get_contract_address()
+    if isPreLogicNonRequired ==  0:
+        IPreLogic.runPreLogic(preLogicContract, contractAddress_, _callData_len, _callData)
+        return ()
+    end
+    return ()
+end
+
+
+func is_valid_signature{
+            syscall_ptr : felt*,
+            pedersen_ptr : HashBuiltin*,
+            range_check_ptr,
+            ecdsa_ptr: SignatureBuiltin*
+        }(
+            hash: felt,
+            signature_len: felt,
+            signature: felt*
+        ) -> (is_valid: felt):
+        let (_public_key) = Account_public_key.read()
+
+        # This interface expects a signature pointer and length to make
+        # no assumption about signature validation schemes.
+        # But this implementation does, and it expects a (sig_r, sig_s) pair.
+        let sig_r = signature[0]
+        let sig_s = signature[1]
+
+        verify_ecdsa_signature(
+            message=hash,
+            public_key=_public_key,
+            signature_r=sig_r,
+            signature_s=sig_s)
+
+        return (is_valid=TRUE)
+    end
+
+    func is_valid_eth_signature{
+            syscall_ptr : felt*,
+            pedersen_ptr : HashBuiltin*,
+            bitwise_ptr: BitwiseBuiltin*,
+            range_check_ptr
+        }(
+            hash: felt,
+            signature_len: felt,
+            signature: felt*
+        ) -> (is_valid: felt):
+        alloc_locals
+        let (_public_key) = get_public_key()
+        let (__fp__, _) = get_fp_and_pc()
+
+        # This interface expects a signature pointer and length to make
+        # no assumption about signature validation schemes.
+        # But this implementation does, and it expects a the sig_v, sig_r,
+        # sig_s, and hash elements.
+        let sig_v : felt = signature[0]
+        let sig_r : Uint256 = Uint256(low=signature[1], high=signature[2])
+        let sig_s : Uint256 = Uint256(low=signature[3], high=signature[4])
+        let (high, low) = split_felt(hash)
+        let msg_hash : Uint256 = Uint256(low=low, high=high)
+
+        let (local keccak_ptr : felt*) = alloc()
+
+        with keccak_ptr:
+            verify_eth_signature_uint256(
+                msg_hash=msg_hash,
+                r=sig_r,
+                s=sig_s,
+                v=sig_v,
+                eth_address=_public_key)
+        end
+
+        return (is_valid=TRUE)
+    end
 
 
 func _get_fee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
@@ -894,7 +1258,7 @@ func _calcAmountOfEachShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
     return ()
 end
 
-func __transferEachAsset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+func _transferEachAsset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     fund : felt, caller : felt, manager : felt, stackingVault : felt, daoTreasury : felt, assets_len : felt, assets : felt*, callerAmount : Uint256*, managerAmount : Uint256*, stackingVaultAmount : Uint256*, daoTreasuryAmount : Uint256*
 ):
     alloc_locals
@@ -913,10 +1277,10 @@ func __transferEachAsset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range
     _withdrawAssetTo(asset, stackingVault, stackingVaultAmount_)
     _withdrawAssetTo(asset, daoTreasury, daoTreasuryAmount_)
 
-    return __transferEachAsset(fund, caller, manager, stackingVault, daoTreasury, assets_len - 1, assets + 1, callerAmount + Uint256.SIZE, managerAmount + Uint256.SIZE, stackingVaultAmount + Uint256.SIZE, daoTreasuryAmount + Uint256.SIZE)
+    return _transferEachAsset(fund, caller, manager, stackingVault, daoTreasury, assets_len - 1, assets + 1, callerAmount + Uint256.SIZE, managerAmount + Uint256.SIZE, stackingVaultAmount + Uint256.SIZE, daoTreasuryAmount + Uint256.SIZE)
 end
 
-func __transferEachShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+func _transferEachShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     fund : felt, caller : felt, manager : felt, stackingVault : felt, daoTreasury : felt, shares_len : felt, shares: ShareWithdraw*, callerAmount : Uint256*, managerAmount : Uint256*, stackingVaultAmount : Uint256*, daoTreasuryAmount : Uint256*
 ):
     alloc_locals
@@ -937,7 +1301,7 @@ func __transferEachShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range
     _withdrawShareTo(fund, stackingVault, shareAddress, shareId, callerAmount_, 0, data)
     _withdrawShareTo(fund, daoTreasury, shareAddress, shareId, callerAmount_, 0, data)
 
-    return __transferEachShare(fund, caller, manager, stackingVault, daoTreasury, shares_len - 1, shares + ShareWithdraw.SIZE, callerAmount + Uint256.SIZE, managerAmount + Uint256.SIZE, stackingVaultAmount + Uint256.SIZE, daoTreasuryAmount + Uint256.SIZE)
+    return _transferEachShare(fund, caller, manager, stackingVault, daoTreasury, shares_len - 1, shares + ShareWithdraw.SIZE, callerAmount + Uint256.SIZE, managerAmount + Uint256.SIZE, stackingVaultAmount + Uint256.SIZE, daoTreasuryAmount + Uint256.SIZE)
 end
 
 
@@ -1101,16 +1465,18 @@ func _calculTab100{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
 end
 
 
-func _assertEnoughtGuarantee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (res:felt):
-   let (shareSupply_) = ERC1155Shares.sharesTotalSupply()
+func _assertEnoughtGuarantee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
+    alloc_locals
+   let (shareSupply_) = sharesTotalSupply.read()
+   let (contractAddress_ : felt) = get_contract_address()
    let (vaultFactory_) = vaultFactory.read()
    let (stackingDispute_) = IVaultFactory.getStackingDispute(vaultFactory_)
-   let (securityFundBalance_)  = IStackingDispute.getSecurityFundBalance(stackingDispute_)
+   let (securityFundBalance_)  = IStackingDispute.getSecurityFundBalance(stackingDispute_, contractAddress_)
    let (guaranteeRatio_) = IVaultFactory.getGuaranteeRatio(vaultFactory_)
-   let (minGuarantee_) =  uint256_percent(shareSupply_, guaranteeRatio_)
+   let (minGuarantee_) =  uint256_percent(shareSupply_, Uint256(guaranteeRatio_,0))
    let (isEnoughtGuarantee_) = uint256_le(minGuarantee_, securityFundBalance_)
    with_attr error_message("_assertEnoughtGuarantee: Asser manager need to provide more guarantee "):
-        assert_not_zero(_success)
+        assert_not_zero(isEnoughtGuarantee_)
     end
    return()
 end
@@ -1188,7 +1554,7 @@ func _reedemTab{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_pt
     assert stackingVaultAmount[tabLen] = cumulativeFeeStackingVault2
     assert daoTreasuryAmount[tabLen] = cumulativeFeeDaoTreasury2
 
-    return __reedemTab(len - 1, amount + Uint256.SIZE, performancePermillion, durationPermillion, fund, tabLen + 1, callerAmount, managerAmount, stackingVaultAmount, daoTreasuryAmount)
+    return _reedemTab(len - 1, amount + Uint256.SIZE, performancePermillion, durationPermillion, fund, tabLen + 1, callerAmount, managerAmount, stackingVaultAmount, daoTreasuryAmount)
 end
 
 
@@ -1324,7 +1690,7 @@ end
 end
 
 
-    func _completeMultiAssetTab{
+    func _completeMultiShareTab{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -1341,7 +1707,7 @@ end
         # assert assetAmount[assetId_len*Uint256.SIZE] = balance_
         assert assetId[assetId_len] = newTotalId_
         assert assetAmount[assetId_len] = balance_
-         return _completeMultiAssetTab(
+         return _completeMultiShareTab(
         totalId= newTotalId_,
         assetId_len=assetId_len+1,
         assetId= assetId ,
@@ -1350,7 +1716,7 @@ end
         account=account,
         )
     end
-    return _completeMultiAssetTab(
+    return _completeMultiShareTab(
         totalId=newTotalId_,
         assetId_len= assetId_len,
         assetId=assetId,
@@ -1707,14 +2073,14 @@ end
         if caller == owner:
             return ()
         end
-        let (approved) = ERC1155.is_approved_for_all(owner, caller)
+        let (approved) = is_approved_for_all(owner, caller)
         with_attr error_message("ERC1155: caller is not owner nor approved"):
             assert approved = TRUE
         end
         return ()
     end
 
-end
+
 
 #
 # Private
@@ -1826,7 +2192,7 @@ func balance_of_batch_iter{
     let account: felt = [accounts]
 
     # Get balance
-    let (balance: Uint256) = ERC1155.balance_of(account, id)
+    let (balance: Uint256) = balance_of(account, id)
     assert [batch_balances] = balance
     return balance_of_batch_iter(
         len - 1, accounts + 1, ids + Uint256.SIZE, batch_balances + Uint256.SIZE
@@ -1952,4 +2318,6 @@ func burn_batch_iter{
 
     # Recursive call
     return burn_batch_iter(from_, len - 1, ids + Uint256.SIZE, amounts + Uint256.SIZE)
+end
+
 end
