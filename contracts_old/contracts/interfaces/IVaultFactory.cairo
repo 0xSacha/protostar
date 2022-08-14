@@ -53,10 +53,8 @@ namespace IVaultFactory:
     func getGuaranteeRatio() -> (res : felt):
     end
 
-    func getExitTimestamp() -> (res : felt):
+    func exitTimestamp() -> (res : felt):
     end
-    
-
 
     ##Business
 
@@ -131,13 +129,16 @@ namespace IVaultFactory:
     func setMaxFundLevel(_maxFundLevel:felt):
     end
 
-    func setStackingDispute(_stackingDispute:felt):
-    end
+    
 
-    func setGuaranteeRatio(_guaranteeRatio:felt):
-    end
 
-    func setExitTimestamp(_exitTimestamp:felt):
-    end
 
+
+
+
+
+
+
+
+    
 end

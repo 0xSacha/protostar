@@ -14,9 +14,8 @@ struct ShareWithdraw:
     member address : felt
     member id : Uint256
 end
-
 @contract_interface
-namespace IFuccount:
+namespace IFuccountMock:
 
     # Setters
     func activater(
@@ -99,9 +98,6 @@ namespace IFuccount:
 ) -> (assetCallerAmount_len: felt,assetCallerAmount:Uint256*, assetManagerAmount_len: felt,assetManagerAmount:Uint256*,assetStackingVaultAmount_len: felt, assetStackingVaultAmount:Uint256*, assetDaoTreasuryAmount_len: felt,assetDaoTreasuryAmount:Uint256*, shareCallerAmount_len: felt, shareCallerAmount:Uint256*, shareManagerAmount_len: felt, shareManagerAmount:Uint256*, shareStackingVaultAmount_len: felt, shareStackingVaultAmount:Uint256*, shareDaoTreasuryAmount_len: felt, shareDaoTreasuryAmount:Uint256*):
     end
 
-    func previewDeposit(_amount: Uint256) -> (shareAmount: Uint256, fundAmount: Uint256, managerAmount: Uint256, treasuryAmount: Uint256, stackingVaultAmount: Uint256):
-    end
-
     # ERC1155-like getters
 
     func getName() -> (res : felt):
@@ -142,11 +138,16 @@ namespace IFuccount:
     func getMintedTimesTamp(tokenId : Uint256) -> (res : felt):
     end
 
+
+
+
+
+
     ## Business 
 
     #Account
 
-    func __execute__(
+    func execute(
             call_array_len: felt,
             call_array: AccountCallArray*,
             calldata_len: felt,
@@ -214,4 +215,9 @@ namespace IFuccount:
     ):
     end  
 
+
+
+
 end
+
+    

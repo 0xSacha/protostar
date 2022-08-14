@@ -80,11 +80,11 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     %}    
     #Extensions
     %{ 
-    context.PM = deploy_contract("./contracts/PolicyManager.cairo",[context.VF]).contract_address 
+    context.PM = deploy_contract("./contracts/extensions/PolicyManager.cairo",[context.VF]).contract_address 
     ids.pm_contract = context.PM
-    context.IM = deploy_contract("./contracts/IntegrationManager.cairo",[context.VF]).contract_address 
+    context.IM = deploy_contract("./contracts/extensions/IntegrationManager.cairo",[context.VF]).contract_address 
     ids.im_contract = context.IM
-    context.FM = deploy_contract("./contracts/FeeManager.cairo",[context.VF]).contract_address 
+    context.FM = deploy_contract("./contracts/extensions/FeeManager.cairo",[context.VF]).contract_address 
     ids.fm_contract = context.FM
     %}
 
@@ -163,8 +163,8 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     ## deploy 3 Funds
     %{ 
     context.F1 = deploy_contract("./contracts/Fuccount.cairo",[123,context.VF]).contract_address 
-    context.F2 = deploy_contract("./contracts/mock/Fuccount.cairo",[231,context.VF]).contract_address 
-    context.F3 = deploy_contract("./contracts/mock/Fuccount.cairo",[312,context.VF]).contract_address 
+    context.F2 = deploy_contract("./contracts/Fuccount.cairo",[231,context.VF]).contract_address 
+    context.F3 = deploy_contract("./contracts/Fuccount.cairo",[312,context.VF]).contract_address 
     ids.f1_contract = context.F1
     ids.f2_contract = context.F2
     ids.f3_contract = context.F3
