@@ -69,13 +69,8 @@ namespace IVaultFactory:
     _denominationAsset:felt,
     _amount: Uint256,
     _shareAmount: Uint256,
-    data_len:felt,
-    data:felt*,
     _feeConfig_len: felt,
     _feeConfig: felt*,
-    _maxAmount: Uint256,
-    _minAmount: Uint256,
-    _timelock:felt,
     _isPublic:felt,
     ):
     end

@@ -7,24 +7,24 @@ from starkware.cairo.common.uint256 import Uint256
 @contract_interface
 namespace IPolicyManager:
 
-    func setMaxminAmount(vault: felt, max : Uint256, min:Uint256):
+    #setters
+    func setIsPublic(_fund: felt, _isPublic: felt):
     end
-    func setTimelock(_vault: felt, _blocAmount: felt):
+    func setAllowedDepositor(_fund: felt, _depositor: felt):
     end
-    func setIsPublic(_vault: felt, _isPublic: felt):
-    end
-    func setAllowedDepositor(_vault: felt, _depositor: felt):
-    end
-    
-    
-    #getters
-    func getMaxminAmount(_vault: felt) -> (max : Uint256, min: Uint256):
+    func setAllowedAssetToReedem(_fund: felt, _asset_len: felt, _asset: felt*):
     end
 
-    func getTimelock(_vault:felt)-> (res : felt):
+    #getters
+    func checkIsPublic(_fund:felt)-> (res : felt):
     end
-    func checkIsPublic(_vault:felt)-> (res : felt):
+    func checkIsAllowedDepositor(_fund:felt, _depositor:felt)-> (res : felt):
     end
-    func checkIsAllowedDepositor(_vault:felt, _depositor:felt)-> (res : felt):
+    func checkIsAllowedAssetToReedem(_fund:felt, _asset:felt)-> (res : felt):
+    end
+
+    func getAllowedDepositor(_fund:felt) -> (allowedDepositor_len: felt, allowedDepositor:felt*):
+    end
+    func getAllowedAssetToReedem(_fund:felt) -> (allowedAssetToReedem_len: felt, allowedAssetToReedem:felt*):
     end
 end

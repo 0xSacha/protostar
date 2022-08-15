@@ -688,27 +688,14 @@ func initializeFund{
     _fundLevel: felt,
     _fundName:felt,
     _fundSymbol:felt,
-    _uri:felt,
     _denominationAsset:felt,
     _amount: Uint256,
     _shareAmount: Uint256,
-    data_len:felt,
-    data:felt*,
-    
-    #fee config Initializer
     _feeConfig_len: felt,
     _feeConfig: felt*,
-
-    _maxAmount: Uint256,
-    _minAmount: Uint256,
-
-    #Timelock before selling shares
-    _timelock:felt,
-    #allowed depositors 
     _isPublic:felt,
     ):
     alloc_locals
-
     onlyDependenciesSet()
     let (feeManager_:felt) = feeManager.read()
     let (policyManager_:felt) = policyManager.read()
@@ -768,7 +755,7 @@ func initializeFund{
     let (sharePricePurchased_:Uint256) = uint256_div(amountPow18_ , _shareAmount)
 
     #Fuccount activater
-    IFuccount.activater(_fund, _fundName, _fundSymbol, _uri, _fundLevel, _denominationAsset, assetManager_, _shareAmount, sharePricePurchased_, data_len, data)
+    IFuccount.activater(_fund, _fundName, _fundSymbol, _fundLevel, _denominationAsset, assetManager_, _shareAmount, sharePricePurchased_)
     IERC20.transferFrom(_denominationAsset, assetManager_, _fund, _amount)
 
     #Set feeconfig for vault
@@ -814,15 +801,13 @@ func initializeFund{
         IFeeManager.setFeeConfig(feeManager_, _fund, FeeConfig.MANAGEMENT_FEE, 0)
     else:
         with_attr error_message("initializeFund: management fee must be between 0 and 20"):
-            assert_le(management_fee, 20)
+            assert_le(management_fee, 60)
         end
         IFeeManager.setFeeConfig(feeManager_, _fund, FeeConfig.MANAGEMENT_FEE_ENABLED, 1)
         IFeeManager.setFeeConfig(feeManager_, _fund, FeeConfig.MANAGEMENT_FEE, management_fee)
     end
 
     # Policy config for fund
-    IPolicyManager.setMaxminAmount(policyManager_, _fund, _maxAmount, _minAmount)
-    IPolicyManager.setTimelock(policyManager_, _fund, _timelock)
     IPolicyManager.setIsPublic(policyManager_, _fund, _isPublic)
     return ()
 end

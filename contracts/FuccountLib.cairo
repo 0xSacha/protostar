@@ -128,10 +128,6 @@ end
 func ApprovalForAll(account: felt, operator: felt, approved: felt):
 end
 
-@event
-func URI(value_len: felt, value: felt*, id: Uint256):
-end
-
 #
 # Storage
 #
@@ -142,10 +138,6 @@ end
 
 @storage_var
 func ERC1155_operator_approvals(account: felt, operator: felt) -> (approved: felt):
-end
-
-@storage_var
-func ERC1155_uri() -> (uri: felt):
 end
 
 @storage_var
@@ -229,23 +221,19 @@ namespace FuccountLib:
             pedersen_ptr: HashBuiltin*,
             range_check_ptr
         }(
-            _uri: felt,
             _name: felt,
             _symbol: felt,
             _denominationAsset: felt,
             _managerAccount:felt,
             _shareAmount:Uint256,
             _sharePrice:Uint256,
-            data_len:felt,
-            data:felt*,
         ):
         onlyVaultFactory()
-        _set_uri(_uri)
         name.write(_name)
         symbol.write(_symbol)
         denominationAsset.write(_denominationAsset)
         managerAccount.write(_managerAccount)
-        mint(_managerAccount, _shareAmount, _sharePrice, data_len, data)
+        mint(_managerAccount, _shareAmount, _sharePrice)
         return ()
     end
     
@@ -277,14 +265,6 @@ namespace FuccountLib:
     # Getters
     #
 
-    func uri{
-            syscall_ptr: felt*,
-            pedersen_ptr: HashBuiltin*,
-            range_check_ptr
-        }() -> (uri: felt):
-        let (uri) = ERC1155_uri.read()
-        return (uri)
-    end
 
     func balance_of{
             syscall_ptr: felt*,
@@ -567,7 +547,117 @@ func calculGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
 end
 
 
-## Preview Deposit to do
+func isFreeReedem{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(amount: Uint256) -> (isFreeReedem: felt):
+    let (policyManager_:felt) = _getPolicyManager()
+    let (contractAddress_:felt) = get_contract_address()
+    let (allowedAssetToReedem_len: felt, allowedAssetToReedem:felt*) = IPolicyManager.getAllowedAssetToReedem(contractAddress_)
+    if allowedAssetToReedem_len == 0:
+    return (1)
+    else:
+    let (denominationAsset_)= denominationAsset.read()
+    let (valueInDeno_:Uint256) = _sumValueInDeno(allowedAssetToReedem_len, allowedAssetToReedem, denominationAsset_)
+    let (sharePrice_) = getSharePrice()
+    let (shareValueInDenoTemp_:Uint256) = SafeUint256.mul(sharePrice_, amount)
+    let (shareValueInDeno_:Uint256,_) = SafeUint256.div_rem(shareValueInDenoTemp_, Uint256(POW18,0))
+    let (isFreeReedem:felt) = uint256_le(valueInDeno_, shareValueInDeno_)
+    return(isFreeReedem)
+    end
+end
+
+func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    id : Uint256,
+    amount : Uint256,
+    assets_len : felt,
+    assets : felt*,
+    shares_len : felt,
+    shares : ShareWithdraw*,
+) -> (assetCallerAmount_len: felt,assetCallerAmount:Uint256*, assetManagerAmount_len: felt,assetManagerAmount:Uint256*,assetStackingVaultAmount_len: felt, assetStackingVaultAmount:Uint256*, assetDaoTreasuryAmount_len: felt,assetDaoTreasuryAmount:Uint256*, shareCallerAmount_len: felt, shareCallerAmount:Uint256*, shareManagerAmount_len: felt, shareManagerAmount:Uint256*, shareStackingVaultAmount_len: felt, shareStackingVaultAmount:Uint256*, shareDaoTreasuryAmount_len: felt, shareDaoTreasuryAmount:Uint256*):
+    alloc_locals
+    let (local assetCallerAmount : Uint256*) = alloc()
+    let (local assetManagerAmount : Uint256*) = alloc()
+    let (local assetStackingVaultAmount : Uint256*) = alloc()
+    let (local assetDaoTreasuryAmount : Uint256*) = alloc()
+    let (local shareCallerAmount : Uint256*) = alloc()
+    let (local shareManagerAmount : Uint256*) = alloc()
+    let (local shareStackingVaultAmount : Uint256*) = alloc()
+    let (local shareDaoTreasuryAmount : Uint256*) = alloc()
+    let (local assetAmounts : Uint256*) = alloc()
+    let (local shareAmounts : Uint256*) = alloc()
+    let (fund_:felt) = get_contract_address()
+    let (isFreeReedem_:felt) = isFreeReedem(amount)
+    let (denominationAsset_:felt) = denominationAsset.read()
+    let (caller_) = get_caller_address()
+    let (sharePrice_) = getSharePrice()
+    let (sharesValuePow_:Uint256,_) = uint256_mul(sharePrice_, amount)
+    let (sharesValue_:Uint256) = uint256_div(sharesValuePow_, Uint256(POW18,0))
+
+    if isFreeReedem_ == 0:
+        with_attr error_message("previewReedem: Only allowed assets can be reedem"):
+            assert shares_len = 0
+        end
+        let (policyManager_:felt) = _getPolicyManager()
+        _assertAllowedAssetToReedem(assets_len, assets, policyManager_, fund_)
+    end
+
+
+    #get amount tab
+    let (remainingValue: Uint256) = 
+    _calcAmountOfEachAsset(sharesValue_, assets_len, assets, percentsAsset, assetAmounts)
+    _calcAmountOfEachShare(sharesValue_, shares_len, shares, percentsShare, shareAmounts)
+
+    #calculate the performance 
+    let(previous_share_price_:Uint256) = sharePricePurchased.read(id)
+    let(has_performed_) = uint256_le(previous_share_price_, sharePrice_)
+    if has_performed_ == 1 :
+        let(diff_:Uint256) = SafeUint256.sub_le(sharePrice_, previous_share_price_)
+        let(diffPermillion_:Uint256,diffperc_h_) = uint256_mul(diff_, Uint256(PRECISION,0))
+        let(perfF_:Uint256)=uint256_div(diffPermillion_, sharePrice_)
+        tempvar perf_ = perfF_
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+    else:
+        tempvar perf_ = Uint256(0,0)
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+    end
+    let performancePermillion_ = perf_
+
+    #calculate the duration
+
+    let (mintedBlockTimesTamp_:felt) = getMintedBlockTimesTamp(id)
+    let (currentTimesTamp_:felt) = get_block_timestamp()
+    let diff = currentTimesTamp_ - mintedBlockTimesTamp_
+    let diff_precision = diff * PRECISION
+    let (durationPermillion_,_) = unsigned_div_rem(diff_precision, SECOND_YEAR)
+
+
+    _reedemTab(assets_len,  assetAmounts, performancePermillion_, durationPermillion_, fund_, 0, assetCallerAmount, assetManagerAmount, assetStackingVaultAmount, assetDaoTreasuryAmount)
+    _reedemTab(shares_len, shareAmounts, performancePermillion_, durationPermillion_, fund_, 0, shareCallerAmount, shareManagerAmount, shareStackingVaultAmount, shareDaoTreasuryAmount)
+
+    return(assets_len,assetCallerAmount, assets_len,assetManagerAmount,assets_len, assetStackingVaultAmount, assets_len,assetDaoTreasuryAmount, shares_len, shareCallerAmount, shares_len, shareManagerAmount, shares_len, shareStackingVaultAmount, shares_len, shareDaoTreasuryAmount)
+end
+
+func _assertAllowedAssetToReedem{
+            syscall_ptr : felt*,
+            pedersen_ptr : HashBuiltin*,
+            range_check_ptr
+        }(asset_len:felt, asset: felt, policyManager: felt, contractAddress: felt):
+        if asset_len == 0:
+            return()
+        end
+        let (isAllowedAssetToReedem_) = IPolicyManager.checkIsAllowedAssetToReedem(policyManager, contractAddress, asset[0])
+        with_attr error_message("_assertAllowedAssetToReedem:  Only allowed assets can be reedem"):
+            assert isAllowedAssetToReedem_ = 1
+        end
+        return _assertAllowedAssetToReedem(asset_len - 1, asset + 1, policyManager, contractAddress)
+    end
+
 
 func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     id : Uint256,
@@ -706,7 +796,7 @@ end
 
 
 func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-     _amount: Uint256, data_len: felt, data: felt*
+     _amount: Uint256,
 ):
     alloc_locals
     let (fund_:felt) = get_contract_address()
@@ -730,7 +820,7 @@ func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     let (sharePrice_) = getSharePrice()
 
     # mint share
-    mint(caller_, shareAmount_, sharePrice_, data_len, data)
+    mint(caller_, shareAmount_, sharePrice_)
     _assertEnoughtGuarantee()
     return ()
 end
@@ -800,8 +890,6 @@ end
             to: felt,
             id: Uint256,
             amount: Uint256,
-            data_len: felt,
-            data: felt*
         ):
         let (caller) = get_caller_address()
         with_attr error_message("ERC1155: cannot call transfer from the zero address"):
@@ -810,7 +898,7 @@ end
         with_attr error_message("ERC1155: caller is not owner nor approved"):
             assert_owner_or_approved(from_)
         end
-        _safe_transfer_from(from_, to, id, amount, data_len, data)
+        _safe_transfer_from(from_, to, id, amount)
         return ()
     end
 
@@ -825,8 +913,6 @@ end
             ids: Uint256*,
             amounts_len: felt,
             amounts: Uint256*,
-            data_len: felt,
-            data: felt*
         ):
         let (caller) = get_caller_address()
         with_attr error_message("ERC1155: cannot call transfer from the zero address"):
@@ -835,7 +921,7 @@ end
         with_attr error_message("ERC1155: transfer caller is not owner nor approved"):
             assert_owner_or_approved(from_)
         end
-        _safe_batch_transfer_from(from_, to, ids_len, ids, amounts_len, amounts, data_len, data)
+        _safe_batch_transfer_from(from_, to, ids_len, ids, amounts_len, amounts)
         return ()
     end
 
@@ -848,8 +934,6 @@ func mint{
         to: felt, 
         sharesAmount: Uint256, 
         _sharePricePurchased:Uint256,
-        data_len: felt,
-        data: felt*
     ):
     let (totalId_) = totalId.read()
     sharePricePurchased.write(totalId_, _sharePricePurchased)
@@ -860,7 +944,7 @@ func mint{
     sharesTotalSupply.write(newTotalSupply_)
     let (newTotalId_,_) = uint256_add(totalId_, Uint256(1,0) )
     totalId.write(newTotalId_)
-    _mint(to, totalId_, sharesAmount, data_len, data)
+    _mint(to, totalId_, sharesAmount)
     return ()
 end
 
@@ -983,6 +1067,21 @@ func set_public_key{
     #
     # Internals
     #
+
+func _sumValueInDeno{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(asset_len: felt, asset: felt*, denominationAsset: felt) -> (valueInDeno: Uint256):
+    if asset_len == 0:
+        return(Uint256(0,0)
+    end
+    let (fundAssetBalance:Uint256) = getAssetBalance(asset[0])
+    let (AssetvalueInDeno_: Uint256) = getAssetValue(asset[0], fundAssetBalance, denominationAsset)
+    let (valueOfRest_: Uint256) = _sumValueInDeno(asset_len - 1, asset + 1, denominationAsset)
+    let (totalValueInDeno:Uint256) = SafeUint256.add(AssetvalueInDeno_, valueOfRest_)
+    return(valueInDeno=totalValueInDeno)
+end
 
 
 func _unsafe_execute{
@@ -1232,6 +1331,32 @@ func _calcAmountOfEachAsset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
     )
 
     return ()
+end
+
+func _calcAmountOfEachAsset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    totalValue : Uint256, asset_len : felt, asset : felt*, assetAmount_len: felt, assetAmount: Uint256*,denominationAsset: felt) -> (remainingValue:Uint256, len : felt):
+    alloc_locals
+    if len == 0:
+        return (total_value, assetAmount_len)
+    end
+
+    let (assetfundbalance_: Uint256) = getAssetBalance(asset[0])
+    let (isAssetFundBalanceNul_ : felt) = uint256_eq(assetfundbalance_, Uint256(0,0))
+    if isAssetFundBalanceNul_ == 1:
+        return _calcAmountOfEachAsset(totalValue, asset_len - 1, asset + 1, assetAmount_len, assetAmount)
+    else:
+    let (AssetvalueInDeno_: Uint256) = getAssetValue(asset[0], assetfundbalance_, denominationAsset_)
+    let (isAssetFundBalanceEnought: felt) = uint256_le(totalValue, AssetvalueInDeno_)
+    if isAssetFundBalanceEnought == 1:
+        let (requiredAmount: Uint256) = getAssetValue(denominationAsset_, totalValue, asset[0])
+        assert assetAmount[assetAmount_len] = requiredAmount
+        return(Uint256(0,0), assetAmount_len + 1)
+    else:
+        let (remainingAmount_:Uint256) = SafeUint256.sub_le(totalValue, AssetvalueInDeno_)
+        assert assetAmount[assetAmount_len] = assetfundbalance_
+        return _calcAmountOfEachAsset(remainingAmount_, asset_len - 1, asset + 1, assetAmount_len + 1, assetAmount)
+    end
+    end
 end
 
 func _calcAmountOfEachShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
@@ -1507,10 +1632,8 @@ func _withdrawShareTo{
         _share: felt,
         _id:Uint256,
         _amount:Uint256,
-        data_len: felt,
-        data: felt*
     ):
-    IFuccount.safeTransferFrom(_share, _fund, _target, _id, _amount, data_len, data)
+    IFuccount.safeTransferFrom(_share, _fund, _target, _id, _amount)
     return ()
 end
 
@@ -1767,8 +1890,6 @@ end
             to: felt,
             id: Uint256,
             amount: Uint256,
-            data_len: felt,
-            data: felt*
         ):
         alloc_locals
         # Check args
@@ -1805,15 +1926,6 @@ end
             id,
             amount
         )
-        # _do_safe_transfer_acceptance_check(
-        #     operator,
-        #     from_,
-        #     to,
-        #     id,
-        #     amount,
-        #     data_len,
-        #     data
-        # )
         return ()
     end
 
@@ -1828,8 +1940,6 @@ end
             ids: Uint256*,
             amounts_len: felt,
             amounts: Uint256*,
-            data_len: felt,
-            data: felt*
         ):
         alloc_locals
         # Check args
@@ -1854,17 +1964,6 @@ end
             amounts_len,
             amounts
         )
-        _do_safe_batch_transfer_acceptance_check(
-            operator,
-            from_,
-            to,
-            ids_len,
-            ids,
-            amounts_len,
-            amounts,
-            data_len,
-            data
-        )
         return ()
     end
 
@@ -1876,8 +1975,6 @@ end
             to: felt,
             id: Uint256,
             amount: Uint256,
-            data_len: felt,
-            data: felt*
         ):
         # Cannot mint to zero address
         with_attr error_message("ERC1155: mint to the zero address"):
@@ -1907,15 +2004,6 @@ end
             id=id,
             value=amount
         )
-        # _do_safe_transfer_acceptance_check(
-        #     operator=operator,
-        #     from_=0,
-        #     to=to,
-        #     id=id,
-        #     amount=amount,
-        #     data_len=data_len,
-        #     data=data
-        # )
         return ()
     end
 
@@ -1929,8 +2017,6 @@ end
             ids: Uint256*,
             amounts_len: felt,
             amounts: Uint256*,
-            data_len: felt,
-            data: felt*
         ):
         alloc_locals
         # Cannot mint to zero address
@@ -1956,17 +2042,6 @@ end
             ids=ids,
             values_len=amounts_len,
             values=amounts,
-        )
-        _do_safe_batch_transfer_acceptance_check(
-            operator=operator,
-            from_=0,
-            to=to,
-            ids_len=ids_len,
-            ids=ids,
-            amounts_len=amounts_len,
-            amounts=amounts,
-            data_len=data_len,
-            data=data
         )
         return ()
     end
@@ -2055,14 +2130,6 @@ end
         return ()
     end
 
-    func _set_uri{
-            syscall_ptr: felt*,
-            pedersen_ptr: HashBuiltin*,
-            range_check_ptr
-        }(newuri: felt):
-        ERC1155_uri.write(newuri)
-        return ()
-    end
 
     func assert_owner_or_approved{
             syscall_ptr: felt*,
@@ -2086,84 +2153,7 @@ end
 # Private
 #
 
-func _do_safe_transfer_acceptance_check{
-        syscall_ptr: felt*,
-        pedersen_ptr: HashBuiltin*,
-        range_check_ptr
-    }(
-        operator: felt,
-        from_: felt,
-        to: felt,
-        id: Uint256,
-        amount: Uint256,
-        data_len: felt,
-        data: felt*
-    ):
-    # Confirm supports IERC1155Reciever interface
-    let (is_supported) = IERC165.supportsInterface(to, IERC1155_RECEIVER_ID)
-    if is_supported == TRUE:
-        let (selector) = IERC1155_Receiver.onERC1155Received(
-            to, operator, from_, id, amount, data_len, data
-        )
 
-        # Confirm onERC1155Recieved selector returned
-        with_attr error_message("ERC1155: ERC1155Receiver rejected tokens"):
-            assert selector = ON_ERC1155_RECEIVED_SELECTOR
-        end
-        return ()
-    end
-
-    # Alternatively confirm account
-    let (is_account) = IERC165.supportsInterface(to, IACCOUNT_ID)
-    with_attr error_message("ERC1155: transfer to non ERC1155Receiver implementer"):
-        assert_not_zero(is_account)
-    end
-    return ()
-end
-
-func _do_safe_batch_transfer_acceptance_check{
-        syscall_ptr: felt*,
-        pedersen_ptr: HashBuiltin*,
-        range_check_ptr
-    }(
-        operator: felt,
-        from_: felt,
-        to: felt,
-        ids_len: felt,
-        ids: Uint256*,
-        amounts_len: felt,
-        amounts: Uint256*,
-        data_len: felt,
-        data: felt*
-    ):
-    # Confirm supports IERC1155Reciever interface
-    let (is_supported) = IERC165.supportsInterface(to, IERC1155_RECEIVER_ID)
-    if is_supported == TRUE:
-        let (selector) = IERC1155_Receiver.onERC1155BatchReceived(
-            contract_address=to,
-            operator=operator,
-            from_=from_,
-            ids_len=ids_len,
-            ids=ids,
-            amounts_len=amounts_len,
-            amounts=amounts,
-            data_len=data_len,
-            data=data
-        )
-        # Confirm onBatchERC1155Recieved selector returned
-        with_attr error_message("ERC1155: ERC1155Receiver rejected tokens"):
-            assert selector = ON_ERC1155_BATCH_RECEIVED_SELECTOR
-        end
-        return ()
-    end
-
-    # Alternatively confirm account
-    let (is_account) = IERC165.supportsInterface(to, IACCOUNT_ID)
-    with_attr error_message("ERC1155: transfer to non ERC1155Receiver implementer"):
-        assert is_account = TRUE
-    end
-    return ()
-end
 
 
 

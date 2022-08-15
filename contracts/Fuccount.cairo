@@ -186,17 +186,6 @@ func previewDeposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
 ) -> (shareAmount: Uint256, fundAmount: Uint256, managerAmount: Uint256, treasuryAmount: Uint256, stackingVaultAmount: Uint256):
     return FuccountLib.previewDeposit(_amount)
 end
-## Shares
-
-@view
-func uri{
-        syscall_ptr: felt*,
-        pedersen_ptr: HashBuiltin*,
-        range_check_ptr
-    }() -> (uri: felt):
-    return FuccountLib.uri()
-end
-
 
 
 @view
@@ -321,24 +310,18 @@ func activater{
     }(
         _fundName: felt,
         _fundSymbol: felt,
-        _uri: felt,
         _fundLevel: felt,
         _denominationAsset: felt,
         _managerAccount:felt,
         _shareAmount:Uint256,
         _sharePrice:Uint256,
-        data_len:felt,
-        data:felt*,
     ):
     FuccountLib.activater( _fundName,
         _fundSymbol,
-        _uri,
         _denominationAsset,
         _managerAccount,
         _shareAmount,
-        _sharePrice,
-        data_len,
-        data)
+        _sharePrice)
     FuccountLib.setFundLevel(_fundLevel)
     return ()
 end
@@ -402,9 +385,9 @@ end
 
 @external
 func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-      _amount: Uint256, data_len: felt, data: felt*
+      _amount: Uint256,
 ):
-   FuccountLib.deposit(_amount, data_len, data)
+   FuccountLib.deposit(_amount)
     return ()
 end
 
@@ -449,10 +432,8 @@ func safeTransferFrom{
         to: felt,
         id: Uint256,
         amount: Uint256,
-        data_len: felt,
-        data: felt*
     ):
-    FuccountLib.safe_transfer_from(from_, to, id, amount, data_len, data)
+    FuccountLib.safe_transfer_from(from_, to, id, amount)
     return ()
 end
 
@@ -469,11 +450,9 @@ func safeBatchTransferFrom{
         ids: Uint256*,
         amounts_len: felt,
         amounts: Uint256*,
-        data_len: felt,
-        data: felt*
     ):
     FuccountLib.safe_batch_transfer_from(
-        from_, to, ids_len, ids, amounts_len, amounts, data_len, data)
+        from_, to, ids_len, ids, amounts_len, amounts)
     return ()
 end
 

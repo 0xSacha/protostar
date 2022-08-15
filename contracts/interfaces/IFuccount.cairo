@@ -28,8 +28,6 @@ namespace IFuccount:
         _managerAccount:felt,
         _shareAmount:Uint256,
         _sharePrice:Uint256,
-        data_len:felt,
-        data:felt*,
     ):
     end    
 
@@ -158,7 +156,7 @@ namespace IFuccount:
 
     #Fund
 
-    func deposit(_amount: Uint256, data_len: felt, data: felt*):
+    func deposit(_amount: Uint256):
     end 
 
     func reedem(

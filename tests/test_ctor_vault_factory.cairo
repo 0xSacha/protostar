@@ -43,6 +43,9 @@ const APPROVE_SELECTOR = 9490219902039183898431577874961646298631442289915109765
 const DEPOSIT_SELECTOR = 352040181584456735608515580760888541466059565068553383579463728554843487745
 const REEDEM_SELECTOR = 481719463807444873104482035153189208627524278231225222947146558976722465517
 
+const DAY = 86400 
+
+
 struct integration:
     member contract : felt
     member selector : felt
@@ -72,6 +75,7 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     tempvar f1_contract
     tempvar f2_contract
     tempvar f3_contract
+    tempvar sd_contract
 
     ##Vault Factory
     %{ 
@@ -88,6 +92,12 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     ids.fm_contract = context.FM
     %}
 
+    #stackingDispute
+    %{ 
+    context.SD = deploy_contract("./contracts/StackingDipsute.cairo",[context.VF]).contract_address 
+    ids.sd_contract = context.SD
+    %}
+
     %{ stop_pranks = [start_prank(ids.ADMIN, contract) for contract in [ids.vf_contract] ] %}
 
     
@@ -95,6 +105,9 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
      IVaultFactory.setPolicyManager(vf_contract, pm_contract)
      IVaultFactory.setIntegrationManager(vf_contract, im_contract)
      IVaultFactory.setMaxFundLevel(vf_contract, 2)
+     IVaultFactory.setStackingDispute(vf_contract, sd_contract)
+     IVaultFactory.setGuaranteeRatio(vf_contract, 5)
+     IVaultFactory.setExitTimestamp(vf_contract, DAY)
 
     %{ [stop_prank() for stop_prank in stop_pranks] %}
 
