@@ -48,6 +48,10 @@ func idToAllowedAssetToReedem(vault: felt, id:felt) -> (res : felt):
 end
 
 @storage_var
+func allowedAssetToReedemToId(vault: felt, id:felt) -> (res : felt):
+end
+
+@storage_var
 func allowedAssetToReedemLength(vault: felt) -> (res : felt):
 end
 
@@ -194,17 +198,18 @@ end
 
 @external
 func setAllowedAssetToReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _fund: felt, _asset_len: felt, _asset: felt*):
+        _fund: felt, _asset: felt):
     onlyVaultFactory()
-    allowedAssetToReedemLength.write(_fund, _asset_len)
-    _setAllowedAssetToReedem(_fund, _asset_len, _asset)
-    let (denominationAsset_:felt) = IFuccount.getDenominationAsset(_fund)
-    let (isDenominationAssetAllowedToReedem:felt) = isAllowedAssetToReedem(_fund, denominationAsset_)
-    with_attr error_message("setAllowedAssetToReedem: must contain the fund's denomination asset"):
-        assert isDenominationAssetAllowedToReedem = 1
-    end 
+    let (isAllowedAssetToReedem_:felt) = isAllowedAssetToReedem.read(_fund, _asset)
+    if isAllowedAssetToReedem_ == 1:
+    return()
+    else:
+    isAllowedAssetToReedem.write(_fund, _asset, 1)
+    let (currentAllowedAssetToReedemLength_:felt) = allowedAssetToReedemLength.read(_fund)
+    idToAllowedAssetToReedem.write(_fund, currentAllowedAssetToReedemLength_, _asset)
+    allowedAssetToReedemToId.write(_fund, _asset, currentAllowedAssetToReedemLength_)
+    allowedAssetToReedemLength.write(_fund, currentAllowedAssetToReedem_ + 1)
     return ()
-    end
 end
 
 
@@ -219,13 +224,3 @@ func setIsPublic{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
 end
 
 
-
-func _setAllowedAssetToReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _fund: felt, _asset_len: felt, _asset: felt*):
-    if _asset_len == 0:
-    return()
-    end
-    isAllowedAssetToReedem.write(_fund, _asset[_asset_len - 1], 1)
-    idToAllowedAssetToReedem.write(_fund, _asset_len - 1, _asset[_asset_len - 1])
-    return _setAllowedAssetToReedem(_fund, _asset_len - 1, _asset)
-end

@@ -506,10 +506,10 @@ func getAssetValue{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
 end
 
 func getShareValue{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    _asset: felt, _amount: Uint256, _denominationAsset: felt
+    _share: felt, _id: Uint256, _amount: Uint256, _denominationAsset: felt
 ) -> (res: Uint256):
     let (valueInterpretor_:felt) = _getValueInterpretor()
-    let (value_:Uint256) = IValueInterpretor.calculAssetValue(valueInterpretor_, _asset, _amount, _denominationAsset)
+    let (value_:Uint256) = IValueInterpretor.calculAssetValue(valueInterpretor_, _share, Uint256(_amount.low, _id.low), _denominationAsset)
     return (res=value_)
 end
 
@@ -568,6 +568,20 @@ func isFreeReedem{
     end
 end
 
+func isAvailableReedem{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(amount: Uint256) -> (isAvailableReedem: felt):
+    let (liquidGav_) = calculLiquidGav()
+    let (sharePrice_) = getSharePrice()
+    let (shareValueInDenoTemp_:Uint256) = SafeUint256.mul(sharePrice_, amount)
+    let (shareValueInDeno_:Uint256,_) = SafeUint256.div_rem(shareValueInDenoTemp_, Uint256(POW18,0))
+    let (isAvailableReedem) = uint256_le(shareValueInDeno_, liquidGav_)
+    return(isAvailableReedem)
+    end
+end
+
 func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     id : Uint256,
     amount : Uint256,
@@ -577,24 +591,14 @@ func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     shares : ShareWithdraw*,
 ) -> (assetCallerAmount_len: felt,assetCallerAmount:Uint256*, assetManagerAmount_len: felt,assetManagerAmount:Uint256*,assetStackingVaultAmount_len: felt, assetStackingVaultAmount:Uint256*, assetDaoTreasuryAmount_len: felt,assetDaoTreasuryAmount:Uint256*, shareCallerAmount_len: felt, shareCallerAmount:Uint256*, shareManagerAmount_len: felt, shareManagerAmount:Uint256*, shareStackingVaultAmount_len: felt, shareStackingVaultAmount:Uint256*, shareDaoTreasuryAmount_len: felt, shareDaoTreasuryAmount:Uint256*):
     alloc_locals
-    let (local assetCallerAmount : Uint256*) = alloc()
-    let (local assetManagerAmount : Uint256*) = alloc()
-    let (local assetStackingVaultAmount : Uint256*) = alloc()
-    let (local assetDaoTreasuryAmount : Uint256*) = alloc()
-    let (local shareCallerAmount : Uint256*) = alloc()
-    let (local shareManagerAmount : Uint256*) = alloc()
-    let (local shareStackingVaultAmount : Uint256*) = alloc()
-    let (local shareDaoTreasuryAmount : Uint256*) = alloc()
-    let (local assetAmounts : Uint256*) = alloc()
-    let (local shareAmounts : Uint256*) = alloc()
-    let (fund_:felt) = get_contract_address()
-    let (isFreeReedem_:felt) = isFreeReedem(amount)
-    let (denominationAsset_:felt) = denominationAsset.read()
-    let (caller_) = get_caller_address()
-    let (sharePrice_) = getSharePrice()
-    let (sharesValuePow_:Uint256,_) = uint256_mul(sharePrice_, amount)
-    let (sharesValue_:Uint256) = uint256_div(sharesValuePow_, Uint256(POW18,0))
 
+    let (isAvailableReedem) = isAvailableReedem(amount)
+    with_attr error_message("previewReedem: Not enought liquid positions"):
+            assert isAvailableReedem = 1
+    end
+
+    let (isFreeReedem_:felt) = isFreeReedem(amount)
+    let (fund_:felt) = get_contract_address()
     if isFreeReedem_ == 0:
         with_attr error_message("previewReedem: Only allowed assets can be reedem"):
             assert shares_len = 0
@@ -603,11 +607,10 @@ func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
         _assertAllowedAssetToReedem(assets_len, assets, policyManager_, fund_)
     end
 
-
-    #get amount tab
-    let (remainingValue: Uint256) = 
-    _calcAmountOfEachAsset(sharesValue_, assets_len, assets, percentsAsset, assetAmounts)
-    _calcAmountOfEachShare(sharesValue_, shares_len, shares, percentsShare, shareAmounts)
+    let (denominationAsset_:felt) = denominationAsset.read()
+    let (sharePrice_) = getSharePrice()
+    let (sharesValuePow_:Uint256,_) = uint256_mul(sharePrice_, amount)
+    let (sharesValue_:Uint256) = uint256_div(sharesValuePow_, Uint256(POW18,0))
 
     #calculate the performance 
     let(previous_share_price_:Uint256) = sharePricePurchased.read(id)
@@ -636,11 +639,33 @@ func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     let diff_precision = diff * PRECISION
     let (durationPermillion_,_) = unsigned_div_rem(diff_precision, SECOND_YEAR)
 
+    let (local assetCallerAmount : Uint256*) = alloc()
+    let (local assetManagerAmount : Uint256*) = alloc()
+    let (local assetStackingVaultAmount : Uint256*) = alloc()
+    let (local assetDaoTreasuryAmount : Uint256*) = alloc()
+    let (local shareCallerAmount : Uint256*) = alloc()
+    let (local shareManagerAmount : Uint256*) = alloc()
+    let (local shareStackingVaultAmount : Uint256*) = alloc()
+    let (local shareDaoTreasuryAmount : Uint256*) = alloc()
 
-    _reedemTab(assets_len,  assetAmounts, performancePermillion_, durationPermillion_, fund_, 0, assetCallerAmount, assetManagerAmount, assetStackingVaultAmount, assetDaoTreasuryAmount)
-    _reedemTab(shares_len, shareAmounts, performancePermillion_, durationPermillion_, fund_, 0, shareCallerAmount, shareManagerAmount, shareStackingVaultAmount, shareDaoTreasuryAmount)
+    let (local assetAmounts : Uint256*) = alloc()
+    let (local shareAmounts : Uint256*) = alloc()
 
-    return(assets_len,assetCallerAmount, assets_len,assetManagerAmount,assets_len, assetStackingVaultAmount, assets_len,assetDaoTreasuryAmount, shares_len, shareCallerAmount, shares_len, shareManagerAmount, shares_len, shareStackingVaultAmount, shares_len, shareDaoTreasuryAmount)
+    let (remainingValue_: Uint256, len: felt) = _calcAmountOfEachAsset(sharesValue_, assets_len, assets, 0,assetAmounts , denominationAsset_)
+    let (isRemaingValueNul_: felt) = uint256_eq(remainingValue, Uint256(0,0))
+    if isRemaingValueNul_ = 0:
+        let (remainingValue2_: Uint256, len2: felt) = _calcAmountOfEachShare(remainingValue_, shares_len, shares, 0, shareAmounts , denominationAsset_)
+        let (isRemaingValue2Nul_: felt) = uint256_eq(remainingValue2_, Uint256(0,0))
+        with_attr error_message("previewReedem: Choose more Assets/Shares to reedem"):
+            assert isRemaingValue2Nul_ = 1
+        end
+        _reedemTab(len,  assetAmounts, performancePermillion_, durationPermillion_, fund_, 0, assetCallerAmount, assetManagerAmount, assetStackingVaultAmount, assetDaoTreasuryAmount)
+        _reedemTab(len2, shareAmounts, performancePermillion_, durationPermillion_, fund_, 0, shareCallerAmount, shareManagerAmount, shareStackingVaultAmount, shareDaoTreasuryAmount)
+        return(len,assetCallerAmount, len,assetManagerAmount,len, assetStackingVaultAmount, len,assetDaoTreasuryAmount, len2, shareCallerAmount, len2, shareManagerAmount, len2, shareStackingVaultAmount, len2, shareDaoTreasuryAmount)
+    else:
+    _reedemTab(len,  assetAmounts, performancePermillion_, durationPermillion_, fund_, 0, assetCallerAmount, assetManagerAmount, assetStackingVaultAmount, assetDaoTreasuryAmount)
+    return(len,assetCallerAmount, len,assetManagerAmount,len, assetStackingVaultAmount, len,assetDaoTreasuryAmount, 0, shareCallerAmount, 0, shareManagerAmount, 0, shareStackingVaultAmount, 0, shareDaoTreasuryAmount)
+    end
 end
 
 func _assertAllowedAssetToReedem{
@@ -658,92 +683,6 @@ func _assertAllowedAssetToReedem{
         return _assertAllowedAssetToReedem(asset_len - 1, asset + 1, policyManager, contractAddress)
     end
 
-
-func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    id : Uint256,
-    amount : Uint256,
-    assets_len : felt,
-    assets : felt*,
-    percentsAsset_len : felt,
-    percentsAsset : felt*,
-    shares_len : felt,
-    shares : ShareWithdraw*,
-    percentsShare_len : felt,
-    percentsShare : felt*,
-) -> (assetCallerAmount_len: felt,assetCallerAmount:Uint256*, assetManagerAmount_len: felt,assetManagerAmount:Uint256*,assetStackingVaultAmount_len: felt, assetStackingVaultAmount:Uint256*, assetDaoTreasuryAmount_len: felt,assetDaoTreasuryAmount:Uint256*, shareCallerAmount_len: felt, shareCallerAmount:Uint256*, shareManagerAmount_len: felt, shareManagerAmount:Uint256*, shareStackingVaultAmount_len: felt, shareStackingVaultAmount:Uint256*, shareDaoTreasuryAmount_len: felt, shareDaoTreasuryAmount:Uint256*):
-    alloc_locals
-    with_attr error_message("sell_share: percents asset tab and asset tab not same length"):
-        assert assets_len = percentsAsset_len
-    end
-    with_attr error_message("sell_share: percents share and share tab not same length"):
-        assert shares_len = percentsShare_len
-    end
-
-    let (fund_:felt) = get_contract_address()
-    let (denominationAsset_:felt) = denominationAsset.read()
-    let (caller_) = get_caller_address()
-    let (totalpercentAsset_:felt) = _calculTab100(percentsAsset_len, percentsAsset)
-    let (totalpercentShares_:felt) = _calculTab100(percentsShare_len, percentsShare)
-    with_attr error_message("sell_share: sum of percents tabs not equal at 100%"):
-        assert totalpercentAsset_ + totalpercentShares_ = 100
-    end
-
-    #shareprice retrun price of 10^18 shares 
-    let (sharePrice_) = getSharePrice()
-    let (sharesValuePow_:Uint256,_) = uint256_mul(sharePrice_, amount)
-    # let (decimals_:felt) = IERC20.decimals(denominationAsset_)
-    # let (decimalsPow_:Uint256) = uint256_pow(Uint256(10,0), decimals_)
-    let (sharesValue_:Uint256) = uint256_div(sharesValuePow_, Uint256(10**18,0))
-
-    #get amount tab according to share_value and the percents tab, 
-    let (local assetAmounts : Uint256*) = alloc()
-    _calcAmountOfEachAsset(sharesValue_, assets_len, assets, percentsAsset, assetAmounts)
-    let (local shareAmounts : Uint256*) = alloc()
-    _calcAmountOfEachShare(sharesValue_, shares_len, shares, percentsShare, shareAmounts)
-
-    #calculate the performance 
-
-    
-    let(previous_share_price_:Uint256) = sharePricePurchased.read(id)
-    let(has_performed_) = uint256_le(previous_share_price_, sharePrice_)
-    if has_performed_ == 1 :
-        let(diff_:Uint256) = SafeUint256.sub_le(sharePrice_, previous_share_price_)
-        let(diffPermillion_:Uint256,diffperc_h_) = uint256_mul(diff_, Uint256(PRECISION,0))
-        let(perfF_:Uint256)=uint256_div(diffPermillion_, sharePrice_)
-        tempvar perf_ = perfF_
-        tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr
-    else:
-        tempvar perf_ = Uint256(0,0)
-        tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr
-    end
-    let performancePermillion_ = perf_
-
-    #calculate the duration
-
-    let (mintedBlockTimesTamp_:felt) = getMintedBlockTimesTamp(id)
-    let (currentTimesTamp_:felt) = get_block_timestamp()
-    let diff = currentTimesTamp_ - mintedBlockTimesTamp_
-    let diff_precision = diff * PRECISION
-    let (durationPermillion_,_) = unsigned_div_rem(diff_precision, SECOND_YEAR)
-
-    let (local assetCallerAmount : Uint256*) = alloc()
-    let (local assetManagerAmount : Uint256*) = alloc()
-    let (local assetStackingVaultAmount : Uint256*) = alloc()
-    let (local assetDaoTreasuryAmount : Uint256*) = alloc()
-    _reedemTab(assets_len,  assetAmounts, performancePermillion_, durationPermillion_, fund_, 0, assetCallerAmount, assetManagerAmount, assetStackingVaultAmount, assetDaoTreasuryAmount)
-
-    let (local shareCallerAmount : Uint256*) = alloc()
-    let (local shareManagerAmount : Uint256*) = alloc()
-    let (local shareStackingVaultAmount : Uint256*) = alloc()
-    let (local shareDaoTreasuryAmount : Uint256*) = alloc()
-    _reedemTab(shares_len, shareAmounts, performancePermillion_, durationPermillion_, fund_, 0, shareCallerAmount, shareManagerAmount, shareStackingVaultAmount, shareDaoTreasuryAmount)
-
-    return(assets_len,assetCallerAmount, assets_len,assetManagerAmount,assets_len, assetStackingVaultAmount, assets_len,assetDaoTreasuryAmount, shares_len, shareCallerAmount, shares_len, shareManagerAmount, shares_len, shareStackingVaultAmount, shares_len, shareDaoTreasuryAmount)
-end
 
     func get_public_key{
             syscall_ptr : felt*,
@@ -838,18 +777,20 @@ func reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     percentsShare : felt*,
 ):
     alloc_locals
-    let (_,assetCallerAmount:Uint256*, _,assetManagerAmount:Uint256*,_, assetStackingVaultAmount:Uint256*, _,assetDaoTreasuryAmount:Uint256*, _, shareCallerAmount:Uint256*, _, shareManagerAmount:Uint256*, _, shareStackingVaultAmount:Uint256*, _, shareDaoTreasuryAmount:Uint256*) = previewReedem( id,amount,assets_len,assets,percentsAsset_len,percentsAsset, shares_len, shares, percentsShare_len, percentsShare )
+    let (len: felt,assetCallerAmount:Uint256*, len: felt,assetManagerAmount:Uint256*, len: felt, assetStackingVaultAmount:Uint256*,  len: felt, assetDaoTreasuryAmount:Uint256*, len2: felt, shareCallerAmount:Uint256*,  len2: felt, shareManagerAmount:Uint256*,  len2: felt, shareStackingVaultAmount:Uint256*,  len2: felt, shareDaoTreasuryAmount:Uint256*) = previewReedem( id,amount,assets_len,assets,percentsAsset_len,percentsAsset, shares_len, shares, percentsShare_len, percentsShare )
    
-    #check timelock
     let (caller_:felt) = get_caller_address()
-    let (policyManager_:felt) = _getPolicyManager()
-    let (mintedBlockTimesTamp_:felt) = mintedBlockTimesTamp.read(id)
-    let (currentTimesTamp_:felt) = get_block_timestamp()
     let (fund_:felt) = get_contract_address()
-    let (timelock_:felt) = IPolicyManager.getTimelock(policyManager_, fund_)
-    let diffTimesTamp_:felt = currentTimesTamp_ - mintedBlockTimesTamp_
-    with_attr error_message("sell_share: timelock not reached"):
-        assert_le(timelock_, diffTimesTamp_)
+
+    #check timelock (fund lvl3)
+    let (fundLevel_:felt) = getFundLevel()
+    if fundLevel_ == 3:
+        let (policyManager_:felt) = _getPolicyManager()
+        let (currentTimesTamp_:felt) = get_block_timestamp()
+        let (reedemTime_:felt) = IPolicyManager.getTimelock(policyManager_, fund_)
+        with_attr error_message("reedem: timelock not reached"):
+            assert_le(reedemTime_, currentTimesTamp_)
+        end
     end
 
     # burn share
@@ -1309,79 +1250,57 @@ end
 
 
 func _calcAmountOfEachAsset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    total_value : Uint256, len : felt, assets : felt*, percents : felt*, amounts : Uint256*
-):
-    alloc_locals
-
-    if len == 0:
-        return ()
-    end
-    let (denominationAsset_)= denominationAsset.read()
-    let (percent:Uint256) = felt_to_uint256(percents[0])
-    let (valuePercent_:Uint256) = uint256_percent(total_value, percent)
-    let (assetAmount_:Uint256) = getAssetValue(denominationAsset_, valuePercent_,assets[0])
-    assert [amounts] = assetAmount_
-
-    _calcAmountOfEachAsset(
-        total_value=total_value,
-        len=len - 1,
-        assets=assets + 1,
-        percents=percents + 1,
-        amounts=amounts + Uint256.SIZE,
-    )
-
-    return ()
-end
-
-func _calcAmountOfEachAsset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     totalValue : Uint256, asset_len : felt, asset : felt*, assetAmount_len: felt, assetAmount: Uint256*,denominationAsset: felt) -> (remainingValue:Uint256, len : felt):
     alloc_locals
     if len == 0:
         return (total_value, assetAmount_len)
     end
-
-    let (assetfundbalance_: Uint256) = getAssetBalance(asset[0])
-    let (isAssetFundBalanceNul_ : felt) = uint256_eq(assetfundbalance_, Uint256(0,0))
+    let (assetFundbalance_: Uint256) = getAssetBalance(asset[0])
+    let (isAssetFundBalanceNul_ : felt) = uint256_eq(assetFundbalance_, Uint256(0,0))
     if isAssetFundBalanceNul_ == 1:
         return _calcAmountOfEachAsset(totalValue, asset_len - 1, asset + 1, assetAmount_len, assetAmount)
     else:
-    let (AssetvalueInDeno_: Uint256) = getAssetValue(asset[0], assetfundbalance_, denominationAsset_)
-    let (isAssetFundBalanceEnought: felt) = uint256_le(totalValue, AssetvalueInDeno_)
-    if isAssetFundBalanceEnought == 1:
-        let (requiredAmount: Uint256) = getAssetValue(denominationAsset_, totalValue, asset[0])
-        assert assetAmount[assetAmount_len] = requiredAmount
-        return(Uint256(0,0), assetAmount_len + 1)
-    else:
-        let (remainingAmount_:Uint256) = SafeUint256.sub_le(totalValue, AssetvalueInDeno_)
-        assert assetAmount[assetAmount_len] = assetfundbalance_
-        return _calcAmountOfEachAsset(remainingAmount_, asset_len - 1, asset + 1, assetAmount_len + 1, assetAmount)
-    end
+        let (assetvalueInDeno_: Uint256) = getAssetValue(asset[0], assetFundbalance_, denominationAsset_)
+        let (isAssetFundBalanceEnought: felt) = uint256_le(totalValue, assetvalueInDeno_)
+        if isAssetFundBalanceEnought == 1:
+            let (requiredAmount: Uint256) = getAssetValue(denominationAsset_, totalValue, asset[0])
+            assert assetAmount[assetAmount_len] = requiredAmount
+            return(Uint256(0,0), assetAmount_len + 1)
+        else:
+            let (remainingAmount_:Uint256) = SafeUint256.sub_le(totalValue, assetvalueInDeno_)
+            assert assetAmount[assetAmount_len] = assetFundbalance_
+            return _calcAmountOfEachAsset(remainingAmount_, asset_len - 1, asset + 1, assetAmount_len + 1, assetAmount)
+        end
     end
 end
 
 func _calcAmountOfEachShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    total_value : Uint256, len : felt, shares : ShareWithdraw*, percents : felt*, amounts : Uint256*
-):
+    totalValue : Uint256, share_len : felt, share : ShareWithdraw*, shareAmount_len : felt*, shareAmount : Uint256*, denominationAsset: felt) -> (remainingValue:Uint256, len : felt):
     alloc_locals
     if len == 0:
-        return ()
+        return (total_value, shareAmount_len)
     end
-    let (denominationAsset_)= denominationAsset.read()
-    let (percent:Uint256) = felt_to_uint256(percents[0])
-    let (valuePercent_:Uint256) = uint256_percent(total_value, percent)
-
-    let (assetAmount_:Uint256) = getAssetValue(denominationAsset_, Uint256(valuePercent_.low, shares[0].id.low),shares[0].address)
-    assert [amounts] = assetAmount_
-
-    _calcAmountOfEachShare(
-        total_value=total_value,
-        len=len - 1,
-        shares=shares + ShareWithdraw.SIZE,
-        percents=percents + 1,
-        amounts=amounts + Uint256.SIZE,
-    )
-    return ()
+    let (shareFundbalance_: Uint256) = getShareBalance(share[0].address, share[0].id)
+    let (isShareFundBalanceNul_ : felt) = uint256_eq(shareFundbalance_, Uint256(0,0))
+    if isShareFundBalanceNul_ == 1:
+        return _calcAmountOfEachShare(totalValue, share_len - 1, share + ShareWithdraw.SIZE, shareAmount_len, shareAmount)
+    else:
+        let (sharevalueInDeno_: Uint256) = getShareValue(share[0].address, share[0].id,shareFundbalance_, denominationAsset_)
+        let (isShareFundBalanceEnought: felt) = uint256_le(totalValue, sharevalueInDeno_)
+        if isShareFundBalanceEnought == 1:
+            let (oneSharevalueInDeno_: Uint256) = getShareValue(share[0].address, share[0].id,Uint256(POW18,0), denominationAsset_)
+            let (totalValuePow_:Uint256) = uint256_mul(totalValuePow_, POW18)
+            let (requiredAmount: Uint256) = uint256_div(totalValuePow_, oneSharevalueInDenoPow_)
+            assert shareAmount[shareAmount_len] = requiredAmount
+            return(Uint256(0,0), shareAmount_len + 1)
+        else:
+            let (remainingAmount_:Uint256) = SafeUint256.sub_le(totalValue, sharevalueInDeno_)
+            assert shareAmount[shareAmount_len] = shareFundbalance_
+            return _calcAmountOfEachShare(remainingAmount_, share_len - 1, share + ShareWithdraw.SIZE, shareAmount_len + 1, shareAmount)
+        end
+    end
 end
+
 
 func _transferEachAsset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     fund : felt, caller : felt, manager : felt, stackingVault : felt, daoTreasury : felt, assets_len : felt, assets : felt*, callerAmount : Uint256*, managerAmount : Uint256*, stackingVaultAmount : Uint256*, daoTreasuryAmount : Uint256*
@@ -1763,7 +1682,7 @@ func _completeShareInfo{
     assert shareInfo[shareInfo_len].address = fundAddress
     assert shareInfo[shareInfo_len].id = assetId[len -1]
     assert shareInfo[shareInfo_len].amount = assetAmount[len - 1]
-    let (valueInDeno_) = getShareValue(fundAddress, Uint256(assetAmount[shareInfo_len - 1].low, assetId[shareInfo_len -1].low), denominationAsset_)
+    let (valueInDeno_) = getShareValue(fundAddress, assetId[shareInfo_len -1], assetAmount[shareInfo_len - 1], denominationAsset_)
     assert shareInfo[shareInfo_len].valueInDeno = valueInDeno_
     return _completeShareInfo(
         len=len -1,

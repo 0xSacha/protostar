@@ -12,19 +12,27 @@ namespace IPolicyManager:
     end
     func setAllowedDepositor(_fund: felt, _depositor: felt):
     end
-    func setAllowedAssetToReedem(_fund: felt, _asset_len: felt, _asset: felt*):
+    func setAllowedAssetToReedem(_fund: felt, _asset: felt):
     end
 
     #getters
     func checkIsPublic(_fund:felt)-> (res : felt):
     end
+
     func checkIsAllowedDepositor(_fund:felt, _depositor:felt)-> (res : felt):
     end
+
+    func getAllowedAssetToReedem(_fund:felt) -> (allowedAssetToReedem_len: felt, allowedAssetToReedem:felt*):
+    end
+
+
     func checkIsAllowedAssetToReedem(_fund:felt, _asset:felt)-> (res : felt):
     end
 
     func getAllowedDepositor(_fund:felt) -> (allowedDepositor_len: felt, allowedDepositor:felt*):
     end
-    func getAllowedAssetToReedem(_fund:felt) -> (allowedAssetToReedem_len: felt, allowedAssetToReedem:felt*):
+
+    func getReedemTime(_fund:felt) -> (reedemTime: felt):
     end
+    
 end

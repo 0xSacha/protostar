@@ -174,6 +174,10 @@ end
 func exitTimestamp() -> (res : felt):
 end
 
+@storage_var
+func closeFundRequest(fund: felt) -> (res : felt):
+end
+
 
 
 
@@ -809,6 +813,39 @@ func initializeFund{
 
     # Policy config for fund
     IPolicyManager.setIsPublic(policyManager_, _fund, _isPublic)
+    return ()
+end
+
+@external
+func requestCloseFund{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        _fund: felt)-> ():
+        onlyAssetManager(_fund)
+        let (notLiquidGav_:Uint256) = calculNotLiquidGav(_fund)
+        with_attr error_message("requestCloseFund: remove your positions first"):
+            assert_not_zero(notLiquidGav_.low)
+        end
+        let (currentTimesTamp_) = get_block_timestamp()
+        closeFundRequest.write(_fund, currentTimesTamp_)
+        IFuccount.removeManagerAccess(_fund)
+    return ()
+end
+
+@external
+func executeCloseFund{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        _fund: felt)-> ():
+        onlyAssetManager(_fund)
+        let (timestampRequest:felt) = closeFundRequest.read(_fund)
+        with_attr error_message("executeCloseFund: no request registered"):
+            assert_not_zero(timestampRequest)
+        end
+        let (currentTimesTamp_) = get_block_timestamp()
+        let (timestampRequest:felt) = closeFundRequest.read(_fund)
+        let (exitTimestamp_:felt) = exitTimestamp
+        with_attr error_message("executeCloseFund: execute request time not reached"):
+            assert_le(timestampRequest + exitTimestamp_, currentTimesTamp_)
+        end
+        IFuccount.closeFund(_fund)
+        closeFundRequest.write(_fund, 0)
     return ()
 end
 
