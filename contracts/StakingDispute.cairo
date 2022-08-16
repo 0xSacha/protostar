@@ -18,6 +18,7 @@ from contracts.utils.utils import felt_to_uint256, uint256_div, uint256_percent,
 from contracts.interfaces.IFuccount import IFuccount
 
 from openzeppelin.access.ownable.library import Ownable
+from openzeppelin.security.safemath.library import SafeUint256
 
 
 #
@@ -84,7 +85,7 @@ end
 
 
 @storage_var
-func ERC1155_balances (vault_address : felt, user_address : felt, token_id: Uint256) -> (balance : Uint256):
+func ERC1155_balances(vault_address : felt, user_address : felt, token_id: Uint256) -> (balance : Uint256):
 end
 
 @storage_var
@@ -145,9 +146,9 @@ func deposit_to_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, 
     let (balance_report) = report_fund_balance.read(vault_address)
     let(contract_address) = get_contract_address()
     IFuccount.safeTransferFrom(caller_addr,contract_address,token_id,amount_to_deposit,0,0)
-    ERC1155_balances.write(vault_address,caller_addr,token_id,amount_to_deposit + balance_user)
+    ERC1155_balances.write(vault_address,caller_addr,token_id,SafeUint256.add(amount_to_deposit, balance_user))
     depositToDisputeFund.emit(vault_address,caller_addr,token_id,amount_to_deposit)
-    report_fund_balance.write(vault_address, balance_report + amount_to_deposit)
+    report_fund_balance.write(vault_address, SafeUint256.add(balance_report , amount_to_deposit))
 
     let (balance_complains_user) = report_fund_balance.read(vault_address)
     let (percent) = uint256_percent(IFuccount.sharesTotalSupply(),balance_complains_user) 
@@ -170,9 +171,9 @@ func withdraw_to_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
     let (dispute_fund) = report_fund.read(vault_address)
     let(contract_address) = get_contract_address()
     IFuccount.safeTransferFrom(contract_address,caller_addr,token_id,amount_to_withdraw,0,0)
-    ERC1155_balances.write(vault_address,caller_addr,token_id, balance_user - amount_to_withdraw)
+    ERC1155_balances.write(vault_address,caller_addr,token_id, SafeUint256.sub_le(balance_user ,amount_to_withdraw))
     withdrawFromDisputeFund.emit(vault_address,caller_addr,token_id,amount_to_deposit)
-    report_fund_balance.write(caller_addr,token_id, dispute_fund - amount_to_withdraw)
+    report_fund_balance.write(caller_addr,token_id, SafeUint256.sub_le(dispute_fund , amount_to_withdraw))
     return()
 end
 
@@ -190,9 +191,9 @@ func asset_manager_deposit {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
     let (security_balance) = security_fund_balance.read(vault_address)
     let(contract_address) = get_contract_address()
     IFuccount.safeTransferFrom(caller_addr,contract_address,token_id,amount_to_deposit,0,0)
-    ERC1155_balances.write(vault_address,caller_addr,token_id,amount_to_deposit + balance_user)
+    ERC1155_balances.write(vault_address,caller_addr,token_id,SafeUint256.add(amount_to_deposit, balance_user))
     depositToSecurityFund.emit(vault_address,caller_addr,token_id,amount_to_deposit)
-    security_fund_balance.write(vault_address, security_balance + amount_to_deposit)
+    security_fund_balance.write(vault_address, SafeUint256.add(security_balance ,amount_to_deposit))
     return()
 end
 
@@ -211,9 +212,9 @@ func withdraw_asset_manager_dispute_fund {syscall_ptr : felt*, pedersen_ptr : Ha
        assert is_le(5,percent) = 1
     end
     IFuccount.safeTransferFrom(contract_address,caller_addr,token_id,amount_to_withdraw,0,0)
-    ERC1155_balances.write(vault_address,caller_addr,token_id, balance_user - amount_to_withdraw)
+    ERC1155_balances.write(vault_address,caller_addr,token_id, SafeUint256.sub_le(balance_user , amount_to_withdraw))
     withdrawFromSecurityFund.emit(vault_address,caller_addr,token_id,amount_to_deposit)
-    security_balance.write(caller_addr,token_id, balance_user - amount_to_withdraw)
+    security_balance.write(caller_addr,token_id, SafeUint256.sub_le(balance_user , amount_to_withdraw))
     return()
 end
 
