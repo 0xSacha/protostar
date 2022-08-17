@@ -16,7 +16,7 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin
 from contracts.utils.utils import felt_to_uint256, uint256_div, uint256_percent, uint256_pow
 
 from contracts.interfaces.IFuccount import IFuccount
-
+from openzeppelin.security.safemath.library import SafeUint256
 #
 # Events
 #
@@ -127,8 +127,8 @@ func balanceOf{
 end
 
 @view
-func isGuarenteeWithdrawable{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _fund: felt)-> (isGuarenteeWithdrawable_:felt):
+func isGuaranteeWithdrawable{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        _fund: felt)-> (isGuaranteeWithdrawable_:felt):
         let (timestampRequest_:felt) = IVaultFactory.getCloseFundRequest.read(_fund)
         if timestampRequest == 0:
             return(0)
@@ -222,8 +222,8 @@ func withdraw_asset_manager_dispute_fund {syscall_ptr : felt*, pedersen_ptr : Ha
     end
     let (balance_user) = ERC1155_balances.read(vault_address,caller_addr,token_id)
     let(contract_address) = get_contract_address()
-    let (isGuarenteeWithdrawable_) = isGuarenteeWithdrawable(vault_address)
-    if isGuarenteeWithdrawable_ == 0:
+    let (isGuaranteeWithdrawable_) = isGuaranteeWithdrawable(vault_address)
+    if isGuaranteeWithdrawable_ == 0:
         let (vault_factory_) = vault_factory.read()
         ## uint256 - uin256 Not Possible  
         let theorical_balance = balance_user - amount_to_withdraw
