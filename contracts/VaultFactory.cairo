@@ -34,7 +34,6 @@ from starkware.cairo.common.uint256 import (
     uint256_unsigned_div_rem,
 )
 
-from openzeppelin.access.ownable.library import Ownable
 
 from contracts.interfaces.IFuccount import IFuccount
 
@@ -48,9 +47,11 @@ from contracts.interfaces.IOraclePriceFeedMixin import IOraclePriceFeedMixin
 
 from contracts.interfaces.Ivalue_interpretor import Ivalue_interpretor
 
-
 from contracts.interfaces.IERC20 import IERC20
 
+from openzeppelin.access.ownable.library import Ownable
+
+from openzeppelin.security.safemath.library import SafeUint256
 
 #
 # Events
@@ -174,11 +175,8 @@ func exit_timestamp() -> (res : felt):
 end
 
 @storage_var
-func closeFundRequest(fund: felt) -> (res : felt):
+func close_fund_request(fund: felt) -> (res : felt):
 end
-
-
-
 
 
 #
@@ -236,7 +234,7 @@ func are_dependencies_set{
     let (value_interpretor_:felt) = get_value_interpretor()
     let (primitive_price_feed_:felt) = get_primitive_price_feed()
     let (approve_prelogic_:felt) = get_approve_prelogic()
-    let (max_fund_level_:felt) = getmax_fund_level()
+    let (max_fund_level_:felt) = get_max_fund_level()
     let (stacking_dispute_: felt) = get_stacking_dispute()
     let (guarantee_ratio_: felt) = get_guarantee_ratio()
     let (exit_timestamp_: felt) = get_exit_timestamp()
@@ -250,7 +248,7 @@ func are_dependencies_set{
 end
 
 @view
-func getOwner{
+func get_owner{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -333,7 +331,7 @@ func get_approve_prelogic{
 end
 
 @view
-func getshare_price_feed{
+func get_share_price_feed{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -343,7 +341,7 @@ func getshare_price_feed{
 end
 
 @view
-func getdao_treasury{
+func get_dao_treasury{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -353,7 +351,7 @@ func getdao_treasury{
 end
 
 @view
-func getStackingVault{
+func get_stacking_vault{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -363,7 +361,7 @@ func getStackingVault{
 end
 
 @view
-func getStackingVaultFee{
+func get_stacking_vault_fee{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -373,7 +371,7 @@ func getStackingVaultFee{
 end
 
 @view
-func getdao_treasuryFee{
+func get_dao_treasury_fee{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -383,7 +381,7 @@ func getdao_treasuryFee{
 end
 
 @view
-func getmax_fund_level{
+func get_max_fund_level{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -559,7 +557,7 @@ func set_stacking_vault{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_
 end
 
 @external
-func setdao_treasury{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+func set_dao_treasury{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         _dao_treasury : felt):
     Ownable.assert_only_owner()
     dao_treasury.write(_dao_treasury)
@@ -577,7 +575,7 @@ end
 # TO continue
 
 @external
-func set_dao_treasuryFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+func set_dao_treasury_fee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         _dao_treasuryFee : felt):
     Ownable.assert_only_owner()
     dao_treaury_fee.write(_dao_treasuryFee)
@@ -751,13 +749,13 @@ func initialize_fund{
      __add_global_allowed_integration(_integrationList_len, _integrationList, integration_manager_)
      
     ##register the position
-    let (share_price_feed_:felt) = getshare_price_feed()
+    let (share_price_feed_:felt) = get_share_price_feed()
     Ivalue_interpretor.addDerivative(value_interpretor_, _fund, share_price_feed_)
 
 
     # shares have 18 decimals
-    let (amountPow18_:Uint256, _) = uint256_mul(_amount, Uint256(POW18,0))
-    let (sharePricePurchased_:Uint256) = uint256_div(amountPow18_ , _shareAmount)
+    let (amountPow18_:Uint256, _) = SafeUint256.mul(_amount, Uint256(POW18,0))
+    let (sharePricePurchased_:Uint256) = SafeUint256.div_rem(amountPow18_ , _shareAmount)
 
     #Fuccount activater
     IFuccount.activater(_fund, _fundName, _fundSymbol, _fundLevel, _denominationAsset, assetManager_, _shareAmount, sharePricePurchased_)
@@ -826,7 +824,7 @@ func request_close_fund{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_
             assert_not_zero(notLiquidGav_.low)
         end
         let (currentTimesTamp_) = get_block_timestamp()
-        closeFundRequest.write(_fund, currentTimesTamp_)
+        close_fund_request.write(_fund, currentTimesTamp_)
         IFuccount.removeManagerAccess(_fund)
     return ()
 end
@@ -835,18 +833,18 @@ end
 func execute_close_fund{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         _fund: felt)-> ():
         onlyAssetManager(_fund)
-        let (timestampRequest:felt) = closeFundRequest.read(_fund)
+        let (timestampRequest:felt) = close_fund_request.read(_fund)
         with_attr error_message("execute_close_fund: no request registered"):
             assert_not_zero(timestampRequest)
         end
         let (currentTimesTamp_) = get_block_timestamp()
-        let (timestampRequest:felt) = closeFundRequest.read(_fund)
+        let (timestampRequest:felt) = close_fund_request.read(_fund)
         let (exitTimestamp_:felt) = exitTimestamp
         with_attr error_message("execute_close_fund: execute request time not reached"):
             assert_le(timestampRequest + exitTimestamp_, currentTimesTamp_)
         end
         IFuccount.closeFund(_fund)
-        closeFundRequest.write(_fund, 0)
+        close_fund_request.write(_fund, 0)
     return ()
 end
 
