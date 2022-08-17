@@ -178,6 +178,10 @@ end
 func closeFundRequest(fund: felt) -> (res : felt):
 end
 
+@storage_var
+func isGuarenteeWithdrawable(fund: felt) -> (res : felt):
+end
+
 
 
 
@@ -436,9 +440,6 @@ func getVaultAmount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
     return (res=res)
 end
 
-
-
-
 @view
 func getVaultFromId{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_vaultId: felt) -> (res: felt):
     let(res:felt) = idToVault.read(_vaultId)
@@ -446,6 +447,19 @@ func getVaultFromId{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
         assert_not_zero(res)
     end
     return (res=res)
+end
+
+@view
+func getCloseFundRequest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_fund: felt) -> (res: felt):
+    let(closeFundRequest_:felt) = closeFundRequest.read(_fund)
+    return (res=closeFundRequest_)
+end
+
+@view
+func getManagerGuaanteeRatio{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_fund: felt) -> (res: felt):
+    let (baseGuaranteeRatio_) = guaranteeRatio.read()
+    ##TODO KYC + soulbound consideration
+    return (res=baseGuaranteeRatio_)
 end
 
 
@@ -826,28 +840,11 @@ func requestCloseFund{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
         end
         let (currentTimesTamp_) = get_block_timestamp()
         closeFundRequest.write(_fund, currentTimesTamp_)
-        IFuccount.removeManagerAccess(_fund)
+        IFuccount.closeFund(_fund)
     return ()
 end
 
-@external
-func executeCloseFund{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _fund: felt)-> ():
-        onlyAssetManager(_fund)
-        let (timestampRequest:felt) = closeFundRequest.read(_fund)
-        with_attr error_message("executeCloseFund: no request registered"):
-            assert_not_zero(timestampRequest)
-        end
-        let (currentTimesTamp_) = get_block_timestamp()
-        let (timestampRequest:felt) = closeFundRequest.read(_fund)
-        let (exitTimestamp_:felt) = exitTimestamp
-        with_attr error_message("executeCloseFund: execute request time not reached"):
-            assert_le(timestampRequest + exitTimestamp_, currentTimesTamp_)
-        end
-        IFuccount.closeFund(_fund)
-        closeFundRequest.write(_fund, 0)
-    return ()
-end
+
 
 func __is_zero{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         x: felt)-> (res:felt):

@@ -17,9 +17,6 @@ from contracts.utils.utils import felt_to_uint256, uint256_div, uint256_percent,
 
 from contracts.interfaces.IFuccount import IFuccount
 
-from openzeppelin.access.ownable.library import Ownable
-
-
 #
 # Events
 #
@@ -82,6 +79,9 @@ end
 # Storage Var
 #
 
+@storage_var
+func vault_factory() -> (res : felt):
+end
 
 @storage_var
 func ERC1155_balances (vault_address : felt, user_address : felt, token_id: Uint256) -> (balance : Uint256):
@@ -106,9 +106,9 @@ func constructor{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
-}(owner_address : felt):
+}(_vault_factory: felt):
     # Owner address must be the DAO contract
-    Ownable.initializer(owner_address)
+    vault_factory.write(_vault_factory)
     return ()
 end
 
@@ -116,7 +116,6 @@ end
 #
 # View
 #
-
 @view
 func balanceOf{
         syscall_ptr: felt*,
@@ -125,6 +124,23 @@ func balanceOf{
     }(account: felt, id: Uint256, vault_address : felt) -> (balance: Uint256):
     let (balances) = ERC1155_balances.read(vault_address,account,id)
     return (balances)
+end
+
+@view
+func isGuarenteeWithdrawable{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        _fund: felt)-> (isGuarenteeWithdrawable_:felt):
+        let (timestampRequest_:felt) = IVaultFactory.getCloseFundRequest.read(_fund)
+        if timestampRequest == 0:
+            return(0)
+        end
+        let (currentTimesTamp_) = get_block_timestamp()
+        let (vaultFactory_) = vault_factory.read()
+        let (exitTimestamp_:felt) = IVaultFactory.getExitTimestamp()
+        if currentTimesTamp_ < exitTimestamp_ + timestampRequest_
+            return(0)
+        else:
+        return (1)
+        end
 end
 
 
@@ -145,6 +161,7 @@ func deposit_to_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, 
     let (balance_report) = report_fund_balance.read(vault_address)
     let(contract_address) = get_contract_address()
     IFuccount.safeTransferFrom(caller_addr,contract_address,token_id,amount_to_deposit,0,0)
+    ### Balance user is UINT256, to change everywhere
     ERC1155_balances.write(vault_address,caller_addr,token_id,amount_to_deposit + balance_user)
     depositToDisputeFund.emit(vault_address,caller_addr,token_id,amount_to_deposit)
     report_fund_balance.write(vault_address, balance_report + amount_to_deposit)
@@ -198,18 +215,28 @@ end
 
 @external
 func withdraw_asset_manager_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(vault_address : felt, token_id : felt,amount_to_withdraw : Uint256) -> ():
+    let (asset_man) = IFuccount.getManagerAccount(vault_address)
     let (caller_addr) = get_caller_address()
-    let (vault_status) = is_fund_disputed.read(vault_address)
-    if vault_status == TRUE:
-        return()
+    with_attr error_message("Only asset Manager can call this function"):
+        assert asset_man = caller_addr
     end
     let (balance_user) = ERC1155_balances.read(vault_address,caller_addr,token_id)
     let(contract_address) = get_contract_address()
-    let theorical_balance = balance_user - amount_to_withdraw
-    let (percent) = uint256_percent(IFuccount.sharesTotalSupply(),theorical_balance) 
-    with_attr error_message("You must have at least 5% in this fund as a garantee"):
-       assert is_le(5,percent) = 1
+    let (isGuarenteeWithdrawable_) = isGuarenteeWithdrawable(vault_address)
+    if isGuarenteeWithdrawable_ == 0:
+        let (vault_factory_) = vault_factory.read()
+        ## uint256 - uin256 Not Possible  
+        let theorical_balance = balance_user - amount_to_withdraw
+        let (sharesTotalSupply_) = IFuccount.sharesTotalSupply()
+        ## uint256_percent(IFuccount.sharesTotalSupply(),theorical_balance) forbidden
+        ##Percent suckkk, not precise enought 
+        let (percent) = uint256_percent(sharesTotalSupply_,theorical_balance) 
+        let (guaranteeRatio) = IVaultFactory.getManagerGuaanteeRatio(vault_factory_, caller_addr)
+        with_attr error_message("You can't withdraw more than the guarantee ratio in this fund"):
+        assert is_le(guaranteeRatio,percent) = 1
+        end
     end
+    
     IFuccount.safeTransferFrom(contract_address,caller_addr,token_id,amount_to_withdraw,0,0)
     ERC1155_balances.write(vault_address,caller_addr,token_id, balance_user - amount_to_withdraw)
     withdrawFromSecurityFund.emit(vault_address,caller_addr,token_id,amount_to_deposit)

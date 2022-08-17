@@ -38,18 +38,11 @@ func calcUnderlyingValues{
         range_check_ptr
     }(_derivative: felt, _amount: Uint256) -> ( underlyingsAssets_len:felt, underlyingsAssets:felt*, underlyingsAmount_len:felt, underlyingsAmount:Uint256* ):
     alloc_locals
-    let (denominationAsset_:felt) = IFuccount.getDenominationAsset(_derivative)
     let (amount:Uint256) = felt_to_uint256(_amount.low)
     let (id:Uint256) = felt_to_uint256(_amount.high)
-
+    let (denominationAsset_: felt, amount_len: felt, amount_:Uint256*) = IFuccount.shareToDeno(id, amount)
     let (local assets_:felt*) = alloc()
-    let (local percentsAsset_:felt*) = alloc()
     assert assets_[0] = denominationAsset_
-    assert percentsAsset_[0] = 100
-    let (local shares_:ShareWithdraw*) = alloc()
-    let (local percentsShare_:felt*) = alloc()
-
-    let (_,amount_:Uint256*,_,_,_,_,_,_,_,_,_,_,_,_,_,_) =IFuccount.previewReedem(_derivative, id, amount, 1, assets_, 1, percentsAsset_, 0, shares_, 0, percentsShare_)
-    return (1, assets_, 1, amount_)
+    return (1, assets_, amount_len, amount_)
 end
 

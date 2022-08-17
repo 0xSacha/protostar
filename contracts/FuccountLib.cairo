@@ -185,7 +185,19 @@ func Account_public_key() -> (res: felt):
 end
 
 @storage_var
+func Account_public_key() -> (res: felt):
+end
+
+@storage_var
 func fundLevel() -> (res: felt):
+end
+
+@storage_var
+func isFundRevoked() -> (res: felt):
+end
+
+@storage_var
+func isFundClosed() -> (res: felt):
 end
 
 
@@ -582,6 +594,55 @@ func isAvailableReedem{
     end
 end
 
+func shareToDeno{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    id : Uint256, amount : Uint256) -> (denominationAsset: felt, amount_len: felt, amount:Uint256*):
+    alloc_locals
+
+    let (denominationAsset_:felt) = denominationAsset.read()
+    let (sharePrice_) = getSharePrice()
+    let (sharesValuePow_:Uint256,_) = uint256_mul(sharePrice_, amount)
+    let (sharesValue_:Uint256) = uint256_div(sharesValuePow_, Uint256(POW18,0))
+
+    #calculate the performance 
+    let(previous_share_price_:Uint256) = sharePricePurchased.read(id)
+    let(has_performed_) = uint256_le(previous_share_price_, sharePrice_)
+    if has_performed_ == 1 :
+        let(diff_:Uint256) = SafeUint256.sub_le(sharePrice_, previous_share_price_)
+        let(diffPermillion_:Uint256,diffperc_h_) = uint256_mul(diff_, Uint256(PRECISION,0))
+        let(perfF_:Uint256)=uint256_div(diffPermillion_, sharePrice_)
+        tempvar perf_ = perfF_
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+    else:
+        tempvar perf_ = Uint256(0,0)
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+    end
+    let performancePermillion_ = perf_
+
+    #calculate the duration
+
+    let (mintedBlockTimesTamp_:felt) = getMintedBlockTimesTamp(id)
+    let (currentTimesTamp_:felt) = get_block_timestamp()
+    let diff = currentTimesTamp_ - mintedBlockTimesTamp_
+    let diff_precision = diff * PRECISION
+    let (durationPermillion_,_) = unsigned_div_rem(diff_precision, SECOND_YEAR)
+
+
+    let (fund_:felt) = get_caller_address()
+    let (local assetCallerAmount : Uint256*) = alloc()
+    let (local assetManagerAmount : Uint256*) = alloc()
+    let (local assetStackingVaultAmount : Uint256*) = alloc()
+    let (local assetDaoTreasuryAmount : Uint256*) = alloc()
+    let (local assetAmounts : Uint256*) = alloc()
+    assert assetAmounts[0] = sharesValue_
+    _reedemTab(1,  assetAmounts, performancePermillion_, durationPermillion_, fund_, 0, assetCallerAmount, assetManagerAmount, assetStackingVaultAmount, assetDaoTreasuryAmount)
+    return(denominationAsset_,1, len,assetCallerAmount)
+    end
+end
+
 func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     id : Uint256,
     amount : Uint256,
@@ -710,15 +771,8 @@ func _assertAllowedAssetToReedem{
         let (res) = fundLevel.read()
         return (res=res)
     end
-
-
-
-
-    #
-    # Externals
-    #
-
-func previewDeposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    
+    func previewDeposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
      _amount: Uint256
 ) -> (shareAmount: Uint256, fundAmount: Uint256, managerAmount: Uint256, treasuryAmount: Uint256, stackingVaultAmount: Uint256):
     alloc_locals
@@ -731,6 +785,78 @@ func previewDeposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
     let (amountWithoutFeesPow_,_) = uint256_mul(fundAmount_, Uint256(10**18,0))
     let (shareAmount_) = uint256_div(amountWithoutFeesPow_, sharePrice_)
     return (shareAmount_, fundAmount_, fee_assset_manager, fee_treasury, fee_stacking_vault)
+end
+
+
+
+    #
+    # Externals
+    #
+
+    func revoke{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
+        alloc_locals
+        let (vaultFactory_:felt) = vaultFactory.read()
+        let (stackingDispute_:felt) = IVaultFactory.getStackingDispute()
+        let (caller_ : felt) = get_caller_address()
+        with_attr error_message("revoke: not allowed caller"):
+            assert caller_ = stackingDispute_
+        end
+        isFundRevoked.write(1)
+        return ()
+    end
+
+    func revokeResult{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(isReportAccepted: felt):
+        alloc_locals
+        let (vaultFactory_:felt) = vaultFactory.read()
+        let (stackingDispute_:felt) = IVaultFactory.getStackingDispute()
+        let (caller_ : felt) = get_caller_address()
+        with_attr error_message("revoke: not allowed caller"):
+            assert caller_ = stackingDispute_
+        end
+        if isReportAccepted == 1:
+            isFundRevoked.write(0)
+            isFundClosed.write(1)
+        else:
+            isFundRevoked.write(0)
+        end
+        return ()
+    end
+
+    func close{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
+        alloc_locals
+        onlyVaultFactory()
+        isFundClosed.write(1)
+        return ()
+    end
+
+func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+     _amount: Uint256,
+):
+    alloc_locals
+    let (fund_:felt) = get_contract_address()
+    let (denominationAsset_:felt) = denominationAsset.read()
+    let (caller_ : felt) = get_caller_address()
+
+    _assertMaxminRange(_amount)
+    _assertAllowedDepositor(caller_)
+
+    let (shareAmount_: Uint256, fundAmount_: Uint256, managerAmount_: Uint256, treasuryAmount_: Uint256, stackingVaultAmount_: Uint256) = previewDeposit(_amount)
+    # transfer fee to fee_treasury, stacking_vault
+    let (_managerAccount:felt) = managerAccount.read()
+    let (treasury:felt) = _getDaoTreasury()
+    let (stacking_vault:felt) = _getStackingVault()
+
+    # transfer asset
+    IERC20.transferFrom(denominationAsset_, caller_, _managerAccount, managerAmount_)
+    IERC20.transferFrom(denominationAsset_, caller_, treasury, treasuryAmount_)
+    IERC20.transferFrom(denominationAsset_, caller_, stacking_vault, stackingVaultAmount_)
+    IERC20.transferFrom(denominationAsset_, caller_, fund_, fundAmount_)
+    let (sharePrice_) = getSharePrice()
+
+    # mint share
+    mint(caller_, shareAmount_, sharePrice_)
+    _assertEnoughtGuarantee()
+    return ()
 end
 
 
@@ -787,7 +913,7 @@ func reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     if fundLevel_ == 3:
         let (policyManager_:felt) = _getPolicyManager()
         let (currentTimesTamp_:felt) = get_block_timestamp()
-        let (reedemTime_:felt) = IPolicyManager.getTimelock(policyManager_, fund_)
+        let (reedemTime_:felt) = IPolicyManager.getReedemTime(policyManager_, fund_)
         with_attr error_message("reedem: timelock not reached"):
             assert_le(reedemTime_, currentTimesTamp_)
         end
@@ -964,6 +1090,11 @@ func set_public_key{
             nonce: felt
         ) -> (response_len: felt, response: felt*):
         alloc_locals
+        let (isFundClosed_:felt) = isFundClosed.read()
+        let (isFundRevoked_: felt) = isFundRevoked.read()
+        with_attr error_message("Account: fund is revoked or closed"):
+            assert isFundClosed_ + isFundRevoked_ = 0
+        end
 
         let (__fp__, _) = get_fp_and_pc()
         let (tx_info) = get_tx_info()
@@ -1233,7 +1364,6 @@ func _get_fee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}
     let (feeManager_) = _getFeeManager()
     let (percent) = IFeeManager.getFeeConfig(feeManager_, _vault, config)
     let (percent_uint256) = felt_to_uint256(percent)
-
     let (VF_) = getVaultFactory()
     let (daoTreasuryFee_) = _getDaoTreasuryFee()
     let (stackingVaultFee_) = _getStackingVaultFee()
@@ -1511,13 +1641,18 @@ end
 
 func _assertEnoughtGuarantee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
     alloc_locals
-   let (shareSupply_) = sharesTotalSupply.read()
-   let (contractAddress_ : felt) = get_contract_address()
-   let (vaultFactory_) = vaultFactory.read()
-   let (stackingDispute_) = IVaultFactory.getStackingDispute(vaultFactory_)
-   let (securityFundBalance_)  = IStackingDispute.getSecurityFundBalance(stackingDispute_, contractAddress_)
-   let (guaranteeRatio_) = IVaultFactory.getGuaranteeRatio(vaultFactory_)
-   let (minGuarantee_) =  uint256_percent(shareSupply_, Uint256(guaranteeRatio_,0))
+
+    let (contractAddress_ : felt) = get_contract_address()
+    let (vaultFactory_) = vaultFactory.read()
+    let (stackingDispute_) = IVaultFactory.getStackingDispute(vaultFactory_)
+    let (securityFundBalance_)  = IStackingDispute.getSecurityFundBalance(stackingDispute_, contractAddress_)
+  
+    let (shareSupply_) = sharesTotalSupply.read()
+    let (managerAccount_) = getManagerAccount()
+    let (guaranteeRatio_) = IVaultFactory.getManagerGuaanteeRatio(vaultFactory_, managerAmount_)
+    ##Given Per Million
+    let (minGuarantee_) =  uint256_permillion(shareSupply_, guaranteeRatio_)
+
    let (isEnoughtGuarantee_) = uint256_le(minGuarantee_, securityFundBalance_)
    with_attr error_message("_assertEnoughtGuarantee: Asser manager need to provide more guarantee "):
         assert_not_zero(isEnoughtGuarantee_)

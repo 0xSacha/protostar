@@ -55,8 +55,14 @@ namespace IVaultFactory:
 
     func getExitTimestamp() -> (res : felt):
     end
-    
 
+    func getCloseFundRequest() -> (res : felt):
+    end
+
+    func getManagerGuaanteeRatio(account: felt) -> (res : felt):
+    end
+
+    
 
     ##Business
 
