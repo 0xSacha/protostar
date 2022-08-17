@@ -22,7 +22,6 @@ namespace IFuccount:
     func activater(
         _fundName: felt,
         _fundSymbol: felt,
-        _uri: felt,
         _fundLevel: felt,
         _denominationAsset: felt,
         _managerAccount:felt,
@@ -108,8 +107,6 @@ namespace IFuccount:
     func getSymbol() -> (res : felt):
     end
 
-    func uri() -> (uri: felt):
-    end
 
     func totalId() -> (res : Uint256):
     end
@@ -183,8 +180,6 @@ namespace IFuccount:
         to: felt,
         id: Uint256,
         amount: Uint256,
-        data_len: felt,
-        data: felt*
     ):
     end  
 
@@ -195,8 +190,6 @@ namespace IFuccount:
         ids: Uint256*,
         amounts_len: felt,
         amounts: Uint256*,
-        data_len: felt,
-        data: felt*
     ):
     end  
 
