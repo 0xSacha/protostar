@@ -180,9 +180,6 @@ end
 func Account_current_nonce() -> (res: felt):
 end
 
-@storage_var
-func Account_public_key() -> (res: felt):
-end
 
 @storage_var
 func Account_public_key() -> (res: felt):
@@ -402,6 +399,8 @@ func getSymbol{
     let (symbol_) = symbol.read()
     return (symbol_)
 end
+
+
 
 func getVaultFactory{
         syscall_ptr: felt*,
@@ -641,7 +640,8 @@ func shareToDeno{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     _reedemTab(1,  assetAmounts, performancePermillion_, durationPermillion_, fund_, 0, assetCallerAmount, assetManagerAmount, assetStackingVaultAmount, assetDaoTreasuryAmount)
     return(denominationAsset_,1, len,assetCallerAmount)
     end
-end
+
+        
 
 func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     id : Uint256,
@@ -714,7 +714,7 @@ func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
 
     let (remainingValue_: Uint256, len: felt) = _calcAmountOfEachAsset(sharesValue_, assets_len, assets, 0,assetAmounts , denominationAsset_)
     let (isRemaingValueNul_: felt) = uint256_eq(remainingValue, Uint256(0,0))
-    if isRemaingValueNul_ = 0:
+    if isRemaingValueNul_ == 0:
         let (remainingValue2_: Uint256, len2: felt) = _calcAmountOfEachShare(remainingValue_, shares_len, shares, 0, shareAmounts , denominationAsset_)
         let (isRemaingValue2Nul_: felt) = uint256_eq(remainingValue2_, Uint256(0,0))
         with_attr error_message("previewReedem: Choose more Assets/Shares to reedem"):
@@ -728,6 +728,29 @@ func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     return(len,assetCallerAmount, len,assetManagerAmount,len, assetStackingVaultAmount, len,assetDaoTreasuryAmount, 0, shareCallerAmount, 0, shareManagerAmount, 0, shareStackingVaultAmount, 0, shareDaoTreasuryAmount)
     end
 end
+func mint{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(
+        to: felt, 
+        sharesAmount: Uint256, 
+        _sharePricePurchased:Uint256,
+    ):
+    let (totalId_) = totalId.read()
+    sharePricePurchased.write(totalId_, _sharePricePurchased)
+    let (currentTimesTamp_:felt) = get_block_timestamp()
+    mintedBlockTimesTamp.write(totalId_, currentTimesTamp_)
+    let (currentTotalSupply_) = sharesTotalSupply.read()
+    let (newTotalSupply_,_) = uint256_add(currentTotalSupply_, sharesAmount )
+    sharesTotalSupply.write(newTotalSupply_)
+    let (newTotalId_,_) = uint256_add(totalId_, Uint256(1,0) )
+    totalId.write(newTotalId_)
+    _mint(to, totalId_, sharesAmount)
+    return ()
+end
+
+
 
 func _assertAllowedAssetToReedem{
             syscall_ptr : felt*,
@@ -793,6 +816,8 @@ end
     # Externals
     #
 
+
+
     func revoke{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
         alloc_locals
         let (vaultFactory_:felt) = vaultFactory.read()
@@ -829,35 +854,7 @@ end
         return ()
     end
 
-func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-     _amount: Uint256,
-):
-    alloc_locals
-    let (fund_:felt) = get_contract_address()
-    let (denominationAsset_:felt) = denominationAsset.read()
-    let (caller_ : felt) = get_caller_address()
 
-    _assertMaxminRange(_amount)
-    _assertAllowedDepositor(caller_)
-
-    let (shareAmount_: Uint256, fundAmount_: Uint256, managerAmount_: Uint256, treasuryAmount_: Uint256, stackingVaultAmount_: Uint256) = previewDeposit(_amount)
-    # transfer fee to fee_treasury, stacking_vault
-    let (_managerAccount:felt) = managerAccount.read()
-    let (treasury:felt) = _getDaoTreasury()
-    let (stacking_vault:felt) = _getStackingVault()
-
-    # transfer asset
-    IERC20.transferFrom(denominationAsset_, caller_, _managerAccount, managerAmount_)
-    IERC20.transferFrom(denominationAsset_, caller_, treasury, treasuryAmount_)
-    IERC20.transferFrom(denominationAsset_, caller_, stacking_vault, stackingVaultAmount_)
-    IERC20.transferFrom(denominationAsset_, caller_, fund_, fundAmount_)
-    let (sharePrice_) = getSharePrice()
-
-    # mint share
-    mint(caller_, shareAmount_, sharePrice_)
-    _assertEnoughtGuarantee()
-    return ()
-end
 
 
 func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
@@ -889,6 +886,7 @@ func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     _assertEnoughtGuarantee()
     return ()
 end
+
 
 func reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     id : Uint256,
@@ -993,27 +991,27 @@ end
     end
 
 
-func mint{
-        syscall_ptr: felt*,
-        pedersen_ptr: HashBuiltin*,
-        range_check_ptr
-    }(
-        to: felt, 
-        sharesAmount: Uint256, 
-        _sharePricePurchased:Uint256,
-    ):
-    let (totalId_) = totalId.read()
-    sharePricePurchased.write(totalId_, _sharePricePurchased)
-    let (currentTimesTamp_:felt) = get_block_timestamp()
-    mintedBlockTimesTamp.write(totalId_, currentTimesTamp_)
-    let (currentTotalSupply_) = sharesTotalSupply.read()
-    let (newTotalSupply_,_) = uint256_add(currentTotalSupply_, sharesAmount )
-    sharesTotalSupply.write(newTotalSupply_)
-    let (newTotalId_,_) = uint256_add(totalId_, Uint256(1,0) )
-    totalId.write(newTotalId_)
-    _mint(to, totalId_, sharesAmount)
-    return ()
-end
+# func mint{
+#         syscall_ptr: felt*,
+#         pedersen_ptr: HashBuiltin*,
+#         range_check_ptr
+#     }(
+#         to: felt, 
+#         sharesAmount: Uint256, 
+#         _sharePricePurchased:Uint256,
+#     ):
+#     let (totalId_) = totalId.read()
+#     sharePricePurchased.write(totalId_, _sharePricePurchased)
+#     let (currentTimesTamp_:felt) = get_block_timestamp()
+#     mintedBlockTimesTamp.write(totalId_, currentTimesTamp_)
+#     let (currentTotalSupply_) = sharesTotalSupply.read()
+#     let (newTotalSupply_,_) = uint256_add(currentTotalSupply_, sharesAmount )
+#     sharesTotalSupply.write(newTotalSupply_)
+#     let (newTotalId_,_) = uint256_add(totalId_, Uint256(1,0) )
+#     totalId.write(newTotalId_)
+#     _mint(to, totalId_, sharesAmount)
+#     return ()
+# end
 
 
 func burn{
@@ -1146,8 +1144,9 @@ func _sumValueInDeno{
         range_check_ptr
     }(asset_len: felt, asset: felt*, denominationAsset: felt) -> (valueInDeno: Uint256):
     if asset_len == 0:
-        return(Uint256(0,0)
+        return(Uint256(0,0))
     end
+    
     let (fundAssetBalance:Uint256) = getAssetBalance(asset[0])
     let (AssetvalueInDeno_: Uint256) = getAssetValue(asset[0], fundAssetBalance, denominationAsset)
     let (valueOfRest_: Uint256) = _sumValueInDeno(asset_len - 1, asset + 1, denominationAsset)
@@ -1915,7 +1914,7 @@ func reduceSupplyBatch{
 
         if amounts_len == 0 :
     return()
-end
+    end
     let (currentTotalSupply_) = sharesTotalSupply.read()
     let (newTotalSupply_) = uint256_sub(currentTotalSupply_, amounts[amounts_len* Uint256.SIZE - Uint256.SIZE] )
     sharesTotalSupply.write(newTotalSupply_)    
