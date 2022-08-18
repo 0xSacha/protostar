@@ -16,10 +16,13 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin
 from contracts.utils.utils import felt_to_uint256, uint256_div, uint256_percent, uint256_pow
 
 from contracts.interfaces.IFuccount import IFuccount
+
+
 from openzeppelin.security.safemath.library import SafeUint256
 #
 # Events
 #
+
 
 @event
 func fundFroze(vault_address: felt):
@@ -136,10 +139,10 @@ func isGuaranteeWithdrawable{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, r
         let (currentTimesTamp_) = get_block_timestamp()
         let (vaultFactory_) = vault_factory.read()
         let (exitTimestamp_:felt) = IVaultFactory.getExitTimestamp()
-        if currentTimesTamp_ < exitTimestamp_ + timestampRequest_
+        if is_le(currentTimesTamp_ , exitTimestamp_ + timestampRequest_) == 1:
             return(0)
         else:
-        return (1)
+            return (1)
         end
 end
 
