@@ -41,7 +41,7 @@ func runPreLogic{
     let token0_:felt = [_callData]
     let token1_:felt = [_callData + 1]
     let poolPair_ = PoolPair(token0_,token1_)
-    let (incomingAsset_:felt) = IARFPoolFactory.getPool(IARFPoolFactoryContract_, poolPair_)
+    let (incomingAsset_:felt) = IARFPoolFactory.get_pool(IARFPoolFactoryContract_, poolPair_)
     let (VF_:felt) = vaultFactory.read()
     let (IM_:felt) = IVaultFactory.getIntegrationManager(VF_)
     let (isAllowedAsset_:felt) = IIntegrationManager.checkIsAssetAvailable(IM_, incomingAsset_)
