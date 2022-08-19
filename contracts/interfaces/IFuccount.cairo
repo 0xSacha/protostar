@@ -30,6 +30,9 @@ namespace IFuccount:
     ):
     end    
 
+    func close():
+    end  
+
     func set_public_key(new_public_key: felt):
     end  
 
@@ -87,12 +90,8 @@ namespace IFuccount:
     amount : Uint256,
     assets_len : felt,
     assets : felt*,
-    percentsAsset_len : felt,
-    percentsAsset : felt*,
     shares_len : felt,
     shares : ShareWithdraw*,
-    percentsShare_len : felt,
-    percentsShare : felt*,
 ) -> (assetCallerAmount_len: felt,assetCallerAmount:Uint256*, assetManagerAmount_len: felt,assetManagerAmount:Uint256*,assetStackingVaultAmount_len: felt, assetStackingVaultAmount:Uint256*, assetDaoTreasuryAmount_len: felt,assetDaoTreasuryAmount:Uint256*, shareCallerAmount_len: felt, shareCallerAmount:Uint256*, shareManagerAmount_len: felt, shareManagerAmount:Uint256*, shareStackingVaultAmount_len: felt, shareStackingVaultAmount:Uint256*, shareDaoTreasuryAmount_len: felt, shareDaoTreasuryAmount:Uint256*):
     end
 
@@ -128,7 +127,7 @@ namespace IFuccount:
     func isApprovedForAll(account: felt, operator: felt) -> (isApproved: felt):
     end
 
-    func owner_shares(account: felt) -> (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*):
+    func ownerShares(account: felt) -> (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*):
     end
 
     func getSharePricePurchased(tokenId : Uint256) -> (res : Uint256):
@@ -161,12 +160,8 @@ namespace IFuccount:
     amount : Uint256,
     assets_len : felt,
     assets : felt*,
-    percentsAsset_len : felt,
-    percentsAsset : felt*,
     shares_len : felt,
     shares : ShareWithdraw*,
-    percentsShare_len : felt,
-    percentsShare : felt*,
     ):
     end 
 

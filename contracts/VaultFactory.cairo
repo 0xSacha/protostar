@@ -37,15 +37,15 @@ from starkware.cairo.common.uint256 import (
 
 from contracts.interfaces.IFuccount import IFuccount
 
-from contracts.interfaces.Ifee_manager import Ifee_manager, FeeConfig
+from contracts.interfaces.IFeeManager import IFeeManager, FeeConfig
 
-from contracts.interfaces.Ipolicy_manager import Ipolicy_manager
+from contracts.interfaces.IPolicyManager import IPolicyManager
 
-from contracts.interfaces.Iintegration_manager import Iintegration_manager
+from contracts.interfaces.IIntegrationManager import IIntegrationManager
 
 from contracts.interfaces.IOraclePriceFeedMixin import IOraclePriceFeedMixin
 
-from contracts.interfaces.Ivalue_interpretor import Ivalue_interpretor
+from contracts.interfaces.IValueInterpretor import IValueInterpretor
 
 from contracts.interfaces.IERC20 import IERC20
 
@@ -58,11 +58,11 @@ from openzeppelin.security.safemath.library import SafeUint256
 #
 
 @event
-func set_fee_manager(fee_managerAddress: felt):
+func fee_manager_set(fee_managerAddress: felt):
 end
 
 @event
-func set_oracle(fee_managerAddress: felt):
+func oracle_set(fee_managerAddress: felt):
 end
 
 @event
@@ -204,16 +204,16 @@ end
 #
 
 func only_dependencies_set{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}():
-    let (are_dependencies_set:felt) = are_dependencies_set()
+    let (are_dependencies_set_:felt) = are_dependencies_set()
     with_attr error_message("only_dependencies_set:Dependencies not set"):
-        assert are_dependencies_set = 1
+        assert are_dependencies_set_ = 1
     end
     return ()
 end
 
 func only_asset_manager{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}(_fund:felt):
     let (caller_:felt) = get_caller_address()
-    let (assetManager_:felt) = IFuccount.get_manager_account(_fund)
+    let (assetManager_:felt) = IFuccount.getManagerAccount(_fund)
     with_attr error_message("add_allowed_depositors: caller is not asset manager"):
         assert caller_ = assetManager_
     end
@@ -448,13 +448,13 @@ end
 
 @view
 func getCloseFundRequest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_fund: felt) -> (res: felt):
-    let(closeFundRequest_:felt) = closeFundRequest.read(_fund)
+    let(closeFundRequest_:felt) = close_fund_request.read(_fund)
     return (res=closeFundRequest_)
 end
 
 @view
 func getManagerGuaanteeRatio{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_fund: felt) -> (res: felt):
-    let (baseGuaranteeRatio_) = guaranteeRatio.read()
+    let (baseGuaranteeRatio_) = guarantee_ratio.read()
     ##TODO KYC + soulbound consideration
     return (res=baseGuaranteeRatio_)
 end
@@ -685,7 +685,7 @@ func add_allowed_depositors{
     alloc_locals
     only_asset_manager(_fund)
     let (policy_manager_:felt) = policy_manager.read()
-    let (isPublic_:felt) = Ipolicy_manager.checkIsPublic(policy_manager_, _fund)
+    let (isPublic_:felt) = IPolicyManager.checkIsPublic(policy_manager_, _fund)
     with_attr error_message("add_allowed_depositors: the fund is already public"):
         assert isPublic_ = 0
     end
@@ -728,7 +728,7 @@ func initialize_fund{
         assert_not_zero(_fund * _fundName * _fundSymbol * _denominationAsset)
     end
 
-    let (isAllowedDenominationAsset:felt) = Iintegration_manager.checkIsAssetAvailable(integration_manager_, _denominationAsset)
+    let (isAllowedDenominationAsset:felt) = IIntegrationManager.checkIsAssetAvailable(integration_manager_, _denominationAsset)
     with_attr error_message("initialize_fund: can not set value to 0"):
         assert isAllowedDenominationAsset = 1
     end
@@ -764,12 +764,12 @@ func initialize_fund{
      
     ##register the position
     let (share_price_feed_:felt) = get_share_price_feed()
-    Ivalue_interpretor.addDerivative(value_interpretor_, _fund, share_price_feed_)
+    IValueInterpretor.addDerivative(value_interpretor_, _fund, share_price_feed_)
 
 
     # shares have 18 decimals
-    let (amountPow18_:Uint256, _) = SafeUint256.mul(_amount, Uint256(POW18,0))
-    let (sharePricePurchased_:Uint256) = SafeUint256.div_rem(amountPow18_ , _shareAmount)
+    let (amountPow18_:Uint256) = SafeUint256.mul(_amount, Uint256(POW18,0))
+    let (sharePricePurchased_:Uint256,_) = SafeUint256.div_rem(amountPow18_ , _shareAmount)
 
     #Fuccount activater
     IFuccount.activater(_fund, _fundName, _fundSymbol, _fundLevel, _denominationAsset, assetManager_, _shareAmount, sharePricePurchased_)
@@ -779,88 +779,88 @@ func initialize_fund{
     let entrance_fee = _feeConfig[0]
     let (is_entrance_fee_not_enabled) = __is_zero(entrance_fee)
     if is_entrance_fee_not_enabled == 1 :
-        Ifee_manager.setFeeConfig(fee_manager_, _fund, FeeConfig.ENTRANCE_FEE_ENABLED, 0)
+        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.ENTRANCE_FEE_ENABLED, 0)
     else:
         with_attr error_message("initialize_fund: entrance fee must be between 0 and 10"):
             assert_le(entrance_fee, 10)
         end
-        Ifee_manager.setFeeConfig(fee_manager_, _fund, FeeConfig.ENTRANCE_FEE_ENABLED, 1)
-        Ifee_manager.setFeeConfig(fee_manager_, _fund, FeeConfig.ENTRANCE_FEE, entrance_fee)
+        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.ENTRANCE_FEE_ENABLED, 1)
+        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.ENTRANCE_FEE, entrance_fee)
     end
 
     let exit_fee = _feeConfig[1]
     let (is_exit_fee_not_enabled) = __is_zero(exit_fee)
     if is_exit_fee_not_enabled == 1 :
-        Ifee_manager.setFeeConfig(fee_manager_, _fund, FeeConfig.EXIT_FEE_ENABLED, 0)
+        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.EXIT_FEE_ENABLED, 0)
     else:
         with_attr error_message("initialize_fund: exit fee must be between 0 and 10"):
             assert_le(exit_fee, 10)
         end
-        Ifee_manager.setFeeConfig(fee_manager_, _fund, FeeConfig.EXIT_FEE_ENABLED, 1)
-        Ifee_manager.setFeeConfig(fee_manager_, _fund, FeeConfig.EXIT_FEE, exit_fee)
+        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.EXIT_FEE_ENABLED, 1)
+        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.EXIT_FEE, exit_fee)
     end
 
     let performance_fee = _feeConfig[2]
     let (is_performance_fee_not_enabled) = __is_zero(performance_fee)
     if is_performance_fee_not_enabled == 1 :
-        Ifee_manager.setFeeConfig(fee_manager_, _fund, FeeConfig.PERFORMANCE_FEE_ENABLED, 0)
+        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.PERFORMANCE_FEE_ENABLED, 0)
     else:
         with_attr error_message("initialize_fund: performance fee must be between 0 and 20"):
             assert_le(performance_fee, 20)
         end
-        Ifee_manager.setFeeConfig(fee_manager_, _fund, FeeConfig.PERFORMANCE_FEE_ENABLED, 1)
-        Ifee_manager.setFeeConfig(fee_manager_, _fund, FeeConfig.PERFORMANCE_FEE, performance_fee)
+        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.PERFORMANCE_FEE_ENABLED, 1)
+        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.PERFORMANCE_FEE, performance_fee)
     end
 
     let management_fee = _feeConfig[3]
     let (is_management_fee_not_enabled) = __is_zero(management_fee)
     if is_management_fee_not_enabled == 1 :
-        Ifee_manager.setFeeConfig(fee_manager_, _fund, FeeConfig.MANAGEMENT_FEE, 0)
+        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.MANAGEMENT_FEE, 0)
     else:
         with_attr error_message("initialize_fund: management fee must be between 0 and 20"):
             assert_le(management_fee, 60)
         end
-        Ifee_manager.setFeeConfig(fee_manager_, _fund, FeeConfig.MANAGEMENT_FEE_ENABLED, 1)
-        Ifee_manager.setFeeConfig(fee_manager_, _fund, FeeConfig.MANAGEMENT_FEE, management_fee)
+        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.MANAGEMENT_FEE_ENABLED, 1)
+        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.MANAGEMENT_FEE, management_fee)
     end
 
     # Policy config for fund
-    Ipolicy_manager.setIsPublic(policy_manager_, _fund, _isPublic)
+    IPolicyManager.setIsPublic(policy_manager_, _fund, _isPublic)
     return ()
 end
 
 @external
 func request_close_fund{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         _fund: felt)-> ():
-        onlyAssetManager(_fund)
-        let (notLiquidGav_:Uint256) = calculNotLiquidGav(_fund)
+        only_asset_manager(_fund)
+        let (notLiquidGav_:Uint256) = IFuccount.calculNotLiquidGav(_fund)
         with_attr error_message("request_close_fund: remove your positions first"):
             assert_not_zero(notLiquidGav_.low)
         end
         let (currentTimesTamp_) = get_block_timestamp()
         close_fund_request.write(_fund, currentTimesTamp_)
-        IFuccount.removeManagerAccess(_fund)
+        IFuccount.close(_fund)
     return ()
 end
 
-@external
-func execute_close_fund{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _fund: felt)-> ():
-        onlyAssetManager(_fund)
-        let (timestampRequest:felt) = close_fund_request.read(_fund)
-        with_attr error_message("execute_close_fund: no request registered"):
-            assert_not_zero(timestampRequest)
-        end
-        let (currentTimesTamp_) = get_block_timestamp()
-        let (timestampRequest:felt) = close_fund_request.read(_fund)
-        let (exitTimestamp_:felt) = exitTimestamp
-        with_attr error_message("execute_close_fund: execute request time not reached"):
-            assert_le(timestampRequest + exitTimestamp_, currentTimesTamp_)
-        end
-        IFuccount.closeFund(_fund)
-        close_fund_request.write(_fund, 0)
-    return ()
-end
+# @external
+# func execute_close_fund{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+#         _fund: felt)-> ():
+#         only_asset_manager(_fund)
+#         let (timestampRequest:felt) = close_fund_request.read(_fund)
+#         with_attr error_message("execute_close_fund: no request registered"):
+#             assert_not_zero(timestampRequest)
+#         end
+#         let (currentTimesTamp_) = get_block_timestamp()
+#         let (timestampRequest:felt) = close_fund_request.read(_fund)
+#         let (exitTimestamp_:felt) = exitTimestamp
+#         with_attr error_message("execute_close_fund: execute request time not reached"):
+#             assert_le(timestampRequest + exitTimestamp_, currentTimesTamp_)
+#         end
+#         IFuccount.closeFund(_fund)
+#         close_fund_request.write(_fund, 0)
+#     return ()
+# end
 
 func __is_zero{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         x: felt)-> (res:felt):
@@ -885,15 +885,15 @@ func __add_global_allowed_asset{
     let (VI_:felt) = value_interpretor.read()
     let (PPF_:felt) = primitive_price_feed.read()
     let (isSupportedPrimitiveAsset_) = IOraclePriceFeedMixin.checkIsSupportedPrimitiveAsset(PPF_,asset_)
-    let (isSupportedDerivativeAsset_) = Ivalue_interpretor.checkIsSupportedDerivativeAsset(VI_,asset_)
+    let (isSupportedDerivativeAsset_) = IValueInterpretor.checkIsSupportedDerivativeAsset(VI_,asset_)
     let (notAllowed_) = __is_zero(isSupportedPrimitiveAsset_ + isSupportedDerivativeAsset_)
     with_attr error_message("only_dependencies_set:Dependencies not set"):
         assert notAllowed_ = 0
     end
     
     let (approve_prelogic_:felt) = get_approve_prelogic()
-    Iintegration_manager.setAvailableAsset(_integration_manager, asset_)
-    Iintegration_manager.setAvailableIntegration(_integration_manager, asset_, APPROVE_SELECTOR, approve_prelogic_, 1)
+    IIntegrationManager.setAvailableAsset(_integration_manager, asset_)
+    IIntegrationManager.setAvailableIntegration(_integration_manager, asset_, APPROVE_SELECTOR, approve_prelogic_, 1)
 
     let newAssetList_len:felt = _assetList_len -1
     let newAssetList:felt* = _assetList + 1
@@ -917,12 +917,12 @@ func __add_global_allowed_external_position{
     end
     let externalPosition_:felt = [_externalPositionList]
     let (VI_:felt) = value_interpretor.read()
-    let (isSupportedExternalPosition_) = Ivalue_interpretor.checkIsSupportedExternalPosition(VI_,externalPosition_)
+    let (isSupportedExternalPosition_) = IValueInterpretor.checkIsSupportedExternalPosition(VI_,externalPosition_)
     with_attr error_message("__add_global_allowed_external_position: PriceFeed not set"):
         assert isSupportedExternalPosition_ = 1
     end
 
-    Iintegration_manager.setAvailableExternalPosition(_integration_manager, externalPosition_)
+    IIntegrationManager.setAvailableExternalPosition(_integration_manager, externalPosition_)
     
     let newExternalPositionList_len:felt = _externalPositionList_len -1
     let newExternalPositionList:felt* = _externalPositionList + 1
@@ -945,7 +945,7 @@ func __add_global_allowed_integration{
     end
 
     let integration_:Integration = [_integrationList]
-    Iintegration_manager.setAvailableIntegration(_integration_manager, integration_.contract, integration_.selector, integration_.integration, integration_.level)
+    IIntegrationManager.setAvailableIntegration(_integration_manager, integration_.contract, integration_.selector, integration_.integration, integration_.level)
 
     return __add_global_allowed_integration(
         _integrationList_len= _integrationList_len - 1,
@@ -965,7 +965,7 @@ func __add_allowed_depositors{
     end
     let (policy_manager_:felt) = policy_manager.read()
     let depositor_:felt = [_depositors]
-    Ipolicy_manager.setAllowedDepositor(policy_manager_, _fund, depositor_)
+    IPolicyManager.setAllowedDepositor(policy_manager_, _fund, depositor_)
 
     let newDepositors_len:felt = _depositors_len -1
     let newDepositors:felt* = _depositors + 1

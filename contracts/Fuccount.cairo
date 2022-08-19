@@ -313,6 +313,18 @@ func activater{
     return ()
 end
 
+
+
+@external
+func close{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    }():
+    FuccountLib.close()
+    return ()
+end
+
 @external
 func set_public_key{
         syscall_ptr : felt*,
@@ -391,6 +403,7 @@ func reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     FuccountLib.reedem(id, amount, assets_len, assets, shares_len, shares)
     return ()
 end
+
 
 
 #Shares
