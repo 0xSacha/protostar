@@ -655,7 +655,6 @@ func preview_reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
     shares : ShareWithdraw*,
 ) -> (assetCallerAmount_len: felt,assetCallerAmount:Uint256*, assetManagerAmount_len: felt,assetManagerAmount:Uint256*,assetStackingVaultAmount_len: felt, assetStackingVaultAmount:Uint256*, assetDaoTreasuryAmount_len: felt,assetDaoTreasuryAmount:Uint256*, shareCallerAmount_len: felt, shareCallerAmount:Uint256*, shareManagerAmount_len: felt, shareManagerAmount:Uint256*, shareStackingVaultAmount_len: felt, shareStackingVaultAmount:Uint256*, shareDaoTreasuryAmount_len: felt, shareDaoTreasuryAmount:Uint256*):
     alloc_locals
-
     let (is_available_reedem_) = is_available_reedem(amount)
     with_attr error_message("preview_reedem: Not enought liquid positions"):
             assert is_available_reedem_ = 1
@@ -669,8 +668,14 @@ func preview_reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
         end
         let (policyManager_:felt) = _get_policy_manager()
         _assert_allowed_asset_to_reedem(assets_len, assets, policyManager_, fund_)
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+    else:
+    tempvar syscall_ptr = syscall_ptr
+    tempvar pedersen_ptr = pedersen_ptr
+    tempvar range_check_ptr = range_check_ptr
     end
-
     let (denomination_asset_:felt) = denomination_asset.read()
     let (sharePrice_) = get_share_price()
     let (sharesValuePow_:Uint256,_) = uint256_mul(sharePrice_, amount)
@@ -903,16 +908,12 @@ func reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     amount : Uint256,
     assets_len : felt,
     assets : felt*,
-    percentsAsset_len : felt,
-    percentsAsset : felt*,
     shares_len : felt,
     shares : ShareWithdraw*,
-    percentsShare_len : felt,
-    percentsShare : felt*,
 ):
     alloc_locals
-    let (len: felt,assetCallerAmount:Uint256*, len: felt,assetManagerAmount:Uint256*, len: felt, assetStackingVaultAmount:Uint256*,  len: felt, assetDaoTreasuryAmount:Uint256*, len2: felt, shareCallerAmount:Uint256*,  len2: felt, shareManagerAmount:Uint256*,  len2: felt, shareStackingVaultAmount:Uint256*,  len2: felt, shareDaoTreasuryAmount:Uint256*) = preview_reedem( id,amount,assets_len,assets,percentsAsset_len,percentsAsset, shares_len, shares, percentsShare_len, percentsShare )
-   
+    let (len: felt,assetCallerAmount:Uint256*, len: felt,assetManagerAmount:Uint256*, len: felt, assetStackingVaultAmount:Uint256*,  len: felt, assetDaoTreasuryAmount:Uint256*, len2: felt, shareCallerAmount:Uint256*,  len2: felt, shareManagerAmount:Uint256*,  len2: felt, shareStackingVaultAmount:Uint256*,  len2: felt, shareDaoTreasuryAmount:Uint256*) = preview_reedem( id,amount,assets_len,assets, shares_len, shares )
+
     let (caller_:felt) = get_caller_address()
     let (fund_:felt) = get_contract_address()
 
@@ -925,6 +926,13 @@ func reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         with_attr error_message("reedem: timelock not reached"):
             assert_le(reedemTime_, currentTimesTamp_)
         end
+        tempvar syscall_ptr = syscall_ptr
+        tempvar range_check_ptr = range_check_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+    else:
+    tempvar syscall_ptr = syscall_ptr
+        tempvar range_check_ptr = range_check_ptr
+        tempvar pedersen_ptr = pedersen_ptr
     end
 
     # burn share
@@ -1029,6 +1037,7 @@ func burn{
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
     }(from_: felt, id: Uint256, amount: Uint256):
+    alloc_locals
     assert_owner_or_approved(owner=from_)
     let (caller) = get_caller_address()
     with_attr error_message("ERC1155: called from zero address"):
@@ -1153,6 +1162,7 @@ func _sum_value_in_deno{
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
     }(asset_len: felt, asset: felt*, denomination_asset: felt) -> (valueInDeno: Uint256):
+    alloc_locals
     if asset_len == 0:
         return(Uint256(0,0))
     end
@@ -1391,13 +1401,13 @@ end
 func _calc_amount_of_each_asset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     totalValue : Uint256, asset_len : felt, asset : felt*, assetAmount_len: felt, assetAmount: Uint256*,denomination_asset: felt) -> (remainingValue:Uint256, len : felt):
     alloc_locals
-    if len == 0:
+    if asset_len == 0:
         return (totalValue, assetAmount_len)
     end
     let (assetFundbalance_: Uint256) = get_asset_balance(asset[0])
     let (isAssetFundBalanceNul_ : felt) = uint256_eq(assetFundbalance_, Uint256(0,0))
     if isAssetFundBalanceNul_ == 1:
-        return _calc_amount_of_each_asset(totalValue, asset_len - 1, asset + 1, assetAmount_len, assetAmount)
+        return _calc_amount_of_each_asset(totalValue, asset_len - 1, asset + 1, assetAmount_len, assetAmount, denomination_asset)
     else:
         let (assetvalueInDeno_: Uint256) = get_asset_value(asset[0], assetFundbalance_, denomination_asset)
         let (isAssetFundBalanceEnought: felt) = uint256_le(totalValue, assetvalueInDeno_)
@@ -1408,34 +1418,34 @@ func _calc_amount_of_each_asset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*
         else:
             let (remainingAmount_:Uint256) = SafeUint256.sub_le(totalValue, assetvalueInDeno_)
             assert assetAmount[assetAmount_len] = assetFundbalance_
-            return _calc_amount_of_each_asset(remainingAmount_, asset_len - 1, asset + 1, assetAmount_len + 1, assetAmount)
+            return _calc_amount_of_each_asset(remainingAmount_, asset_len - 1, asset + 1, assetAmount_len + 1, assetAmount, denomination_asset)
         end
     end
 end
 
 func _calc_amount_of_each_share{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    totalValue : Uint256, share_len : felt, share : ShareWithdraw*, shareAmount_len : felt*, shareAmount : Uint256*, denomination_asset: felt) -> (remainingValue:Uint256, len : felt):
+    totalValue : Uint256, share_len : felt, share : ShareWithdraw*, shareAmount_len : felt, shareAmount : Uint256*, denomination_asset: felt) -> (remainingValue:Uint256, len : felt):
     alloc_locals
-    if len == 0:
+    if share_len == 0:
         return (totalValue, shareAmount_len)
     end
     let (shareFundbalance_: Uint256) = get_share_balance(share[0].address, share[0].id)
     let (isShareFundBalanceNul_ : felt) = uint256_eq(shareFundbalance_, Uint256(0,0))
     if isShareFundBalanceNul_ == 1:
-        return _calc_amount_of_each_share(totalValue, share_len - 1, share + ShareWithdraw.SIZE, shareAmount_len, shareAmount)
+        return _calc_amount_of_each_share(totalValue, share_len - 1, share + ShareWithdraw.SIZE, shareAmount_len, shareAmount, denomination_asset)
     else:
         let (sharevalueInDeno_: Uint256) = getShareValue(share[0].address, share[0].id,shareFundbalance_, denomination_asset)
         let (isShareFundBalanceEnought: felt) = uint256_le(totalValue, sharevalueInDeno_)
         if isShareFundBalanceEnought == 1:
             let (oneSharevalueInDeno_: Uint256) = getShareValue(share[0].address, share[0].id,Uint256(POW18,0), denomination_asset)
-            let (totalValuePow_:Uint256) = uint256_mul(totalValuePow_, POW18)
+            let (totalValuePow_:Uint256,_) = uint256_mul(totalValue, Uint256(POW18,0))
             let (requiredAmount: Uint256) = uint256_div(totalValuePow_, oneSharevalueInDeno_)
             assert shareAmount[shareAmount_len] = requiredAmount
             return(Uint256(0,0), shareAmount_len + 1)
         else:
             let (remainingAmount_:Uint256) = SafeUint256.sub_le(totalValue, sharevalueInDeno_)
             assert shareAmount[shareAmount_len] = shareFundbalance_
-            return _calc_amount_of_each_share(remainingAmount_, share_len - 1, share + ShareWithdraw.SIZE, shareAmount_len + 1, shareAmount)
+            return _calc_amount_of_each_share(remainingAmount_, share_len - 1, share + ShareWithdraw.SIZE, shareAmount_len + 1, shareAmount, denomination_asset)
         end
     end
 end
@@ -1479,10 +1489,10 @@ func _transfer_each_share{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, rang
     let daoTreasuryAmount_ = daoTreasuryAmount[0]
     let (local data : felt*) = alloc()
 
-    _withdraw_share_to(fund, caller, shareAddress, shareId, callerAmount_, 0, data)
-    _withdraw_share_to(fund, manager, shareAddress, shareId, callerAmount_, 0, data)
-    _withdraw_share_to(fund, stackingVault, shareAddress, shareId, callerAmount_, 0, data)
-    _withdraw_share_to(fund, daoTreasury, shareAddress, shareId, callerAmount_, 0, data)
+    _withdraw_share_to(fund, caller, shareAddress, shareId, callerAmount_)
+    _withdraw_share_to(fund, manager, shareAddress, shareId, managerAmount_)
+    _withdraw_share_to(fund, stackingVault, shareAddress, shareId, stackingVaultAmount_)
+    _withdraw_share_to(fund, daoTreasury, shareAddress, shareId, daoTreasuryAmount_)
 
     return _transfer_each_share(fund, caller, manager, stackingVault, daoTreasury, shares_len - 1, shares + ShareWithdraw.SIZE, callerAmount + Uint256.SIZE, managerAmount + Uint256.SIZE, stackingVaultAmount + Uint256.SIZE, daoTreasuryAmount + Uint256.SIZE)
 end

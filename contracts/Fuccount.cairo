@@ -160,26 +160,13 @@ func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     amount : Uint256,
     assets_len : felt,
     assets : felt*,
-    percentsAsset_len : felt,
-    percentsAsset : felt*,
     shares_len : felt,
     shares : ShareWithdraw*,
-    percentsShare_len : felt,
-    percentsShare : felt*,
 ) -> (assetCallerAmount_len: felt,assetCallerAmount:Uint256*, assetManagerAmount_len: felt,assetManagerAmount:Uint256*,assetStackingVaultAmount_len: felt, assetStackingVaultAmount:Uint256*, assetDaoTreasuryAmount_len: felt,assetDaoTreasuryAmount:Uint256*, shareCallerAmount_len: felt, shareCallerAmount:Uint256*, shareManagerAmount_len: felt, shareManagerAmount:Uint256*, shareStackingVaultAmount_len: felt, shareStackingVaultAmount:Uint256*, shareDaoTreasuryAmount_len: felt, shareDaoTreasuryAmount:Uint256*):
-    let (assetCallerAmount_len: felt,assetCallerAmount:Uint256*, assetManagerAmount_len: felt,assetManagerAmount:Uint256*,assetStackingVaultAmount_len: felt, assetStackingVaultAmount:Uint256*, assetDaoTreasuryAmount_len: felt,assetDaoTreasuryAmount:Uint256*, shareCallerAmount_len: felt, shareCallerAmount:Uint256*, shareManagerAmount_len: felt, shareManagerAmount:Uint256*, shareStackingVaultAmount_len: felt, shareStackingVaultAmount:Uint256*, shareDaoTreasuryAmount_len: felt, shareDaoTreasuryAmount:Uint256*) = FuccountLib.preview_reedem(id,
-    amount,
-    assets_len,
-    assets,
-    percentsAsset_len,
-    percentsAsset,
-    shares_len,
-    shares,
-    percentsShare_len,
-    percentsShare,
-    )
-    return(assetCallerAmount_len,assetCallerAmount, assetManagerAmount_len,assetManagerAmount,assetStackingVaultAmount_len, assetStackingVaultAmount, assetDaoTreasuryAmount_len,assetDaoTreasuryAmount, shareCallerAmount_len, shareCallerAmount, shareManagerAmount_len, shareManagerAmount, shareStackingVaultAmount_len, shareStackingVaultAmount, shareDaoTreasuryAmount_len, shareDaoTreasuryAmount)
+    return FuccountLib.preview_reedem(id,amount, assets_len,assets,shares_len, shares)
 end
+
+
 
 func previewDeposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
      _amount: Uint256
@@ -398,14 +385,10 @@ func reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     amount : Uint256,
     assets_len : felt,
     assets : felt*,
-    percentsAsset_len : felt,
-    percentsAsset : felt*,
     shares_len : felt,
     shares : ShareWithdraw*,
-    percentsShare_len : felt,
-    percentsShare : felt*,
 ):
-    FuccountLib.reedem(id, amount, assets_len, assets, percentsAsset_len, percentsAsset, shares_len, shares, percentsShare_len, percentsShare)
+    FuccountLib.reedem(id, amount, assets_len, assets, shares_len, shares)
     return ()
 end
 
