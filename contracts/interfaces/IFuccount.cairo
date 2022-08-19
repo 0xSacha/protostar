@@ -128,7 +128,7 @@ namespace IFuccount:
     func isApprovedForAll(account: felt, operator: felt) -> (isApproved: felt):
     end
 
-    func ownerShares(account: felt) -> (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*):
+    func owner_shares(account: felt) -> (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*):
     end
 
     func getSharePricePurchased(tokenId : Uint256) -> (res : Uint256):
