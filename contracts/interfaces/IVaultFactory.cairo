@@ -56,7 +56,7 @@ namespace IVaultFactory:
     func getExitTimestamp() -> (res : felt):
     end
 
-    func getCloseFundRequest() -> (res : felt):
+    func getCloseFundRequest(fund: felt) -> (res : felt):
     end
 
     func getManagerGuaanteeRatio(account: felt) -> (res : felt):
@@ -66,12 +66,12 @@ namespace IVaultFactory:
 
     ##Business
 
+
     func initializeFund(
     _fund: felt,
     _fundLevel: felt,
     _fundName:felt,
     _fundSymbol:felt,
-    _uri:felt,
     _denominationAsset:felt,
     _amount: Uint256,
     _shareAmount: Uint256,

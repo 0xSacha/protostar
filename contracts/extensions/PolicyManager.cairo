@@ -163,14 +163,14 @@ func _completeAllowedAssetToReedem{
         return ()
     end
     let (asset_:felt) = idToAllowedAssetToReedem.read(_fund, index)
-    assert [_allowedDepositor + index] = depositor_
+    assert [_allowedAssetToReedem + index] = asset_
     let new_index_:felt = index + 1
-    let newAllowedDepositor_len:felt = _allowedDepositor_len -1
+    let newAllowedAssetToReedem_len:felt = _allowedAssetToReedem_len -1
 
-    return __completeAllowedDepositor(
+    return _completeAllowedAssetToReedem(
         _fund = _fund,
-        _allowedDepositor_len=newAllowedDepositor_len,
-        _allowedDepositor= _allowedDepositor,
+        _allowedAssetToReedem_len=newAllowedAssetToReedem_len,
+        _allowedAssetToReedem= _allowedAssetToReedem,
         index=new_index_,
     )
 end
@@ -208,11 +208,10 @@ func setAllowedAssetToReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, r
     let (currentAllowedAssetToReedemLength_:felt) = allowedAssetToReedemLength.read(_fund)
     idToAllowedAssetToReedem.write(_fund, currentAllowedAssetToReedemLength_, _asset)
     allowedAssetToReedemToId.write(_fund, _asset, currentAllowedAssetToReedemLength_)
-    allowedAssetToReedemLength.write(_fund, currentAllowedAssetToReedem_ + 1)
+    allowedAssetToReedemLength.write(_fund, currentAllowedAssetToReedemLength_ + 1)
     return ()
+    end
 end
-
-
 
 
 @external
@@ -222,5 +221,3 @@ func setIsPublic{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     isPublic.write(_fund, _isPublic)
     return ()
 end
-
-

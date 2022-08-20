@@ -93,7 +93,7 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
 
     #stackingDispute
     %{ 
-    context.SD = deploy_contract("./contracts/StackingDipsute.cairo",[context.VF]).contract_address 
+    context.SD = deploy_contract("./contracts/StackingDispute.cairo",[context.VF]).contract_address 
     ids.sd_contract = context.SD
     %}
 
@@ -218,13 +218,14 @@ alloc_locals
     %{ stop_prank = start_prank(ids.ADMIN, ids.vf_contract) %}
     let (name_) = IFuccountMock.getName(f1_contract)
     IVaultFactory.initializeFund(
-    vf_contract, f1_contract, 1, 420, 42, 24, eth_contract, Uint256(1000000000000000000,0), Uint256(10000000000000000000,0), 0, data, 4, feeConfig, Uint256(100000000000000000000,0), Uint256(10000000000000000,0), 100, 1)
+    vf_contract, f1_contract, 1, 420, 42, eth_contract, Uint256(1000000000000000000,0), Uint256(10000000000000000000,0), 4, feeConfig, 1)
     %{ stop_prank()  %}
 
     let (entranceFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.ENTRANCE_FEE)
     let (exitFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.EXIT_FEE)
     let (managementFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.MANAGEMENT_FEE)
     let (performanceFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.PERFORMANCE_FEE)
+
     assert entranceFee = 10
     assert exitFee = 10
     assert managementFee = 10

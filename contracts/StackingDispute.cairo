@@ -11,14 +11,27 @@ from starkware.starknet.common.syscalls import (
     get_block_number
 )
 
+from starkware.cairo.common.uint256 import (
+    Uint256,
+    uint256_sub,
+    uint256_check,
+    uint256_le,
+    uint256_eq,
+    uint256_add,
+    uint256_mul,
+    uint256_unsigned_div_rem,
+)
+
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 
 from contracts.utils.utils import felt_to_uint256, uint256_div, uint256_percent, uint256_pow
 
 from contracts.interfaces.IFuccount import IFuccount
-
+from contracts.interfaces.IVaultFactory import IVaultFactory
 
 from openzeppelin.security.safemath.library import SafeUint256
+from starkware.cairo.common.math_cmp import is_le, is_not_zero
+
 
 
 #
@@ -134,7 +147,8 @@ end
 @view
 func isGuaranteeWithdrawable{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         _fund: felt)-> (isGuaranteeWithdrawable_:felt):
-        let (timestampRequest_:felt) = IVaultFactory.getCloseFundRequest.read(_fund)
+        let (VF_) = vault_factory.read()
+        let (timestampRequest_:felt) = IVaultFactory.getCloseFundRequest(VF_, _fund)
         if timestampRequest == 0:
             return(0)
         end
@@ -156,7 +170,6 @@ end
 
 @external
 func deposit_to_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(vault_address : felt,token_id : felt, amount_to_deposit: Uint256) -> ():
-    
     let (caller_addr) = get_caller_address()
     let (vault_status) = is_fund_disputed.read(vault_address)
     if vault_status == TRUE:
@@ -181,71 +194,82 @@ func deposit_to_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, 
 end
 
 @external
-func withdraw_to_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(vault_address : felt, token_id : felt,amount_to_withdraw : Uint256) -> ():
-    let (caller_addr) = get_caller_address()
-    let (vault_status) = is_fund_disputed.read(vault_address)
-    if vault_status == TRUE:
-        return()
-    end
+func withdraw_to_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt, token_id : Uint256,amount_to_withdraw : Uint256) -> ():
+    
+    let (is_guarantee_withdrawable) = isGuaranteeWithdrawable()
 
-    let (balance_user) = ERC1155_balances.read(vault_address,caller_addr,token_id)
-    let (dispute_fund) = report_fund.read(vault_address)
+    let (caller_addr) = get_caller_address()
+    let (balance_user) = ERC1155_balances.read(fund,caller_addr,token_id)
+    let (dispute_fund_balance_) = report_fund_balance.read(fund)
     let(contract_address) = get_contract_address()
-    IFuccount.safeTransferFrom(contract_address,caller_addr,token_id,amount_to_withdraw,0,0)
-    ERC1155_balances.write(vault_address,caller_addr,token_id, balance_user - amount_to_withdraw)
-    withdrawFromDisputeFund.emit(vault_address,caller_addr,token_id,amount_to_deposit)
-    report_fund_balance.write(caller_addr,token_id, dispute_fund - amount_to_withdraw)
+    let (new_dispute_fund_balance) = SafeUint256.sub_le(dispute_fund_balance_, amount_to_withdraw)
+    let (new_user_balancer) = SafeUint256.sub_le(balance_user, amount_to_withdraw)
+    IFuccount.safeTransferFrom(contract_address,caller_addr,token_id,amount_to_withdraw)
+
+    ERC1155_balances.write(fund,caller_addr,token_id, new_user_balancer)
+    report_fund_balance.write(caller_addr, new_dispute_fund_balance)
+
+     withdrawFromDisputeFund.emit(fund,caller_addr,token_id,amount_to_withdraw)
     return()
 end
 
-func asset_manager_deposit {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(vault_address : felt, token_id : Uint256, amount:Uint256):
-    let (asset_man) = IFuccount.getManagerAccount(vault_address)
+func asset_manager_deposit {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt, token_id : Uint256, amount:Uint256):
+    let (asset_man) = IFuccount.getManagerAccount(fund)
     let (caller_addr) = get_caller_address()
+
     with_attr error_message("Only asset Manager can call this function"):
         assert asset_man = caller_addr
     end
-    let (vault_status) = is_fund_disputed.read(vault_address)
+
+    let (vault_status) = is_fund_disputed.read(fund)
     if vault_status == TRUE:
         return()
     end
-    let (balance_user) = ERC1155_balances.read(vault_address,caller_addr,token_id)
-    let (security_balance) = security_fund_balance.read(vault_address)
+
+    let (balance_user) = ERC1155_balances.read(fund,caller_addr,token_id)
+    let (new_balancer_user) = SafeUint256.add(balance_user, amount)
+
+    let (security_balance) = security_fund_balance.read(fund)
+    let (new_security_balance) = SafeUint256.add(security_balance, amount)
+    
+
     let(contract_address) = get_contract_address()
-    IFuccount.safeTransferFrom(caller_addr,contract_address,token_id,amount_to_deposit,0,0)
-    ERC1155_balances.write(vault_address,caller_addr,token_id,amount_to_deposit + balance_user)
-    depositToSecurityFund.emit(vault_address,caller_addr,token_id,amount_to_deposit)
-    security_fund_balance.write(vault_address, security_balance + amount_to_deposit)
+
+    IFuccount.safeTransferFrom(caller_addr,contract_address,token_id,amount)
+    ERC1155_balances.write(fund,caller_addr,token_id,new_balancer_user)
+    security_fund_balance.write(fund,caller_addr,new_balancer_user)
+
+    depositToSecurityFund.emit(fund,caller_addr,token_id,amount)
     return()
 end
 
 @external
-func withdraw_asset_manager_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(vault_address : felt, token_id : felt,amount_to_withdraw : Uint256) -> ():
-    let (asset_man) = IFuccount.getManagerAccount(vault_address)
+func withdraw_asset_manager_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt, token_id : felt,amount_to_withdraw : Uint256) -> ():
+    
+    let (asset_man) = IFuccount.getManagerAccount(fund)
+    let(contract_address) = get_contract_address()
     let (caller_addr) = get_caller_address()
     with_attr error_message("Only asset Manager can call this function"):
         assert asset_man = caller_addr
     end
-    let (balance_user) = ERC1155_balances.read(vault_address,caller_addr,token_id)
-    let(contract_address) = get_contract_address()
-    let (isGuaranteeWithdrawable_) = isGuaranteeWithdrawable(vault_address)
-    if isGuaranteeWithdrawable_ == 0:
-        let (vault_factory_) = vault_factory.read()
-        ## uint256 - uin256 Not Possible  
-        let theorical_balance = balance_user - amount_to_withdraw
-        let (sharesTotalSupply_) = IFuccount.sharesTotalSupply()
-        ## uint256_percent(IFuccount.sharesTotalSupply(),theorical_balance) forbidden
-        ##Percent suckkk, not precise enought 
-        let (percent) = uint256_percent(sharesTotalSupply_,theorical_balance) 
-        let (guaranteeRatio) = IVaultFactory.getManagerGuaanteeRatio(vault_factory_, caller_addr)
-        with_attr error_message("You can't withdraw more than the guarantee ratio in this fund"):
-        assert is_le(guaranteeRatio,percent) = 1
-        end
-    end
+
+    let (balance_user) = ERC1155_balances.read(fund,caller_addr,token_id)
+    let (new_balance_user) = SafeUint256.sub_le(balance_user, amount_to_withdraw)
+    let (security_balance) = security_fund_balance.read()
+    let (new_security_balance) = SafeUint256.sub_le(security_balance, amount_to_withdraw)
+
     
-    IFuccount.safeTransferFrom(contract_address,caller_addr,token_id,amount_to_withdraw,0,0)
-    ERC1155_balances.write(vault_address,caller_addr,token_id, balance_user - amount_to_withdraw)
-    withdrawFromSecurityFund.emit(vault_address,caller_addr,token_id,amount_to_deposit)
-    security_balance.write(caller_addr,token_id, balance_user - amount_to_withdraw)
+    IFuccount.safeTransferFrom(contract_address,caller_addr,token_id,amount_to_withdraw)
+
+    ERC1155_balances.write(fund,caller_addr,token_id, new_balance_user)
+    security_balance.write(caller_addr,new_security_balance)
+
+    let (isGuaranteeWithdrawable_) = isGuaranteeWithdrawable(fund)
+    if is_guarantee_withdrawable == 0:
+        _assert_enought_guarantee(fund)
+    end
+
+    withdrawFromSecurityFund.emit(fund,caller_addr,token_id,amount_to_withdraw)
     return()
 end
 
@@ -276,7 +300,7 @@ end
 
 #AM = Asset Manager
 #WAM = Without Asset Manager
-func get_all_shares_from_dispute_fund(assetIdAll_len:felt, assetIdAll:Uint256*, assetAmountAll_len:felt,assetAmountAll:Uint256*, assetIdAM_len:felt, assetIdAM:Uint256*, assetAmountAM_len:felt,assetAmountAM:Uint256*,assetIdWAM_len:felt, assetIdWAM:Uint256*, assetAmountWAM_len:felt,assetAmountWAM:Uint256*) -> (assetIdWAM_len : felt, assetAmountWAM : Uint256*, assetAmountWAM_len : felt, assetAmountWAM : Uint256*):
+func get_all_shares_from_dispute_fund(assetIdAll_len:felt, assetIdAll:Uint256*, assetAmountAll_len:felt,assetAmountAll:Uint256*, assetIdAM_len:felt, assetIdAM:Uint256*, assetAmountAM_len:felt,assetAmountAM:Uint256*) -> (assetIdWAM_len:felt, assetIdWAM:Uint256*, assetAmountWAM_len:felt, assetAmountWAM:Uint256*):
     alloc_locals
     if assetIdAll_len == 0:
         return (assetIdWAM,assetIdWAM_len)
@@ -320,7 +344,7 @@ func completeMultiAssetTab{
     if totalId.low == 0:
         return (tabSize=assetId_len)
     end
-    let (newTotalId_) =  uint256_sub( totalId, Uint256(1,0))
+    let (newTotalId_) =  SafeUint256.sub_le( totalId, Uint256(1,0))
     let (balance_) = ERC1155_balances.read(vault_address,account, newTotalId_)
     let (isZero_) = __is_zero(balance_.low)
     if isZero_ == 0:
@@ -361,3 +385,19 @@ func __sumTab{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}
     let res:felt = [_percents] + _previousElem
     return (res=res)
 end
+
+
+func _assert_enought_guarantee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund: felt):
+    alloc_locals
+   let (shareSupply_) = IFuccount.get_shares_total_supply(fund)
+   let (vault_factory_) = vault_factory.read()
+   let (securityFundBalance_)  = getSecurityFundBalance(fund)
+   let (guaranteeRatio_) = IVaultFactory.getGuaranteeRatio(vault_factory_)
+   let (minGuarantee_) =  uint256_percent(shareSupply_, Uint256(guaranteeRatio_,0))
+   let (isEnoughtGuarantee_) = uint256_le(minGuarantee_, securityFundBalance_)
+   with_attr error_message("_assert_enought_guarantee: Asser manager need to provide more guarantee "):
+        assert_not_zero(isEnoughtGuarantee_)
+    end
+   return()
+end
+
