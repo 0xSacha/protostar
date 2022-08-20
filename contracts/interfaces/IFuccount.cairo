@@ -2,7 +2,13 @@
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 
 from starkware.cairo.common.uint256 import Uint256
-from contracts.Account_Lib import AccountCallArray
+
+struct AccountCallArray:
+    member to: felt
+    member selector: felt
+    member data_offset: felt
+    member data_len: felt
+end
 
 struct AssetInfo:
     member address : felt
@@ -134,6 +140,9 @@ namespace IFuccount:
     end
 
     func getMintedTimesTamp(tokenId : Uint256) -> (res : felt):
+    end
+
+    func get_shares_total_supply() -> (res: Uint256):
     end
 
     ## Business 

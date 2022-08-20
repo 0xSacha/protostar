@@ -4,7 +4,7 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.uint256 import Uint256
 from starkware.cairo.common.bool import TRUE
 
-from openzeppelin.access.ownable.library import Ownable
+from openzeppelin.access.ownable import Ownable
 from openzeppelin.token.erc20.library import ERC20
 
 
@@ -27,9 +27,8 @@ func constructor{
         recipient: felt,
         owner: felt
     ):
-    uint256_check(_max_supply)
-    let (validMaxSupply_) = uint256_le(_max_supply, Uint256(0, 0))
-    assert_not_zero(1 - validMaxSupply_)
+    Uint256.uint256_check(_max_supply)
+    let (validMaxSupply_) = Uint256.uint256_le(_max_supply, Uint256(0, 0))
     max_supply.write(_max_supply)
     ERC20.initializer(name, symbol, decimals)
     ERC20._mint(recipient, initial_supply)
@@ -72,7 +71,7 @@ func total_supply{
 end
 
 @view
-func max_supply{
+func get_max_supply{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
