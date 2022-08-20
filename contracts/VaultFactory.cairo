@@ -1,9 +1,16 @@
 %lang starknet
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
+
+from starkware.cairo.common.alloc import alloc
+from starkware.cairo.common.bool import TRUE, FALSE
 from starkware.starknet.common.syscalls import (
-    get_caller_address, get_contract_address, get_block_timestamp
+    get_caller_address,
+    get_contract_address,
+    get_block_timestamp,
+    get_block_number
 )
+
 from contracts.utils.utils import felt_to_uint256, uint256_div, uint256_percent, uint256_pow
 
 
