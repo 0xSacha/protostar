@@ -278,7 +278,6 @@ end
 
 ## internal
 
-
 func complete_available_shares_tab{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
