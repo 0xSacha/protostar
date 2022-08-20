@@ -14,11 +14,11 @@ from contracts.interfaces.IFeeManager import FeeConfig
 
 
 @storage_var
-func feeConfig(vault : felt, key : felt) -> (res : felt):
+func fee_config(vault : felt, key : felt) -> (res : felt):
 end
 
 @storage_var
-func vaultFactory() -> (vaultFactoryAddress : felt):
+func vault_factory() -> (vaultFactoryAddress : felt):
 end
 
 
@@ -45,9 +45,9 @@ func constructor{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }(
-        _vaultFactory: felt,
+        vault_factory_address: felt,
     ):
-    vaultFactory.write(_vaultFactory)
+    vault_factory.write(vault_factory_address)
     return ()
 end
 
@@ -56,159 +56,80 @@ end
 #
 
 @view
-func getFeeConfig{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    vault : felt, key : felt
-) -> (value : felt):
-    let (value) = feeConfig.read(vault, key)
-    return (value=value)
-end
-
-
-@view
-func getEntranceFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    vault : felt
-) -> (fee : felt):
-    let (fee) = feeConfig.read(vault, FeeConfig.ENTRANCE_FEE)
-    return (fee=fee)
+func getFeeConfig{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt, key : felt) -> (fee_config : felt):
+    let (fee_config_) = fee_config.read(fund, key)
+    return (fee_config_)
 end
 
 @view
-func isEntranceFeeEnabled{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    vault : felt
-) -> (is_enabled : felt):
-    let (is_enabled) = feeConfig.read(vault, FeeConfig.ENTRANCE_FEE_ENABLED)
-    return (is_enabled=is_enabled)
+func getEntranceFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt) -> (entrance_fee : felt):
+    let (entrance_fee_) = fee_config.read(fund, FeeConfig.ENTRANCE_FEE)
+    return (entrance_fee_)
 end
 
 @view
-func getExitFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    vault : felt
-) -> (fee : felt):
-    let (fee) = feeConfig.read(vault, FeeConfig.EXIT_FEE)
-    return (fee=fee)
+func getExitFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt) -> (exit_fee : felt):
+    let (exit_fee_) = fee_config.read(fund, FeeConfig.EXIT_FEE)
+    return (exit_fee_)
 end
 
 @view
-func isExitFeeEnabled{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    vault : felt
-) -> (is_enabled : felt):
-    let (is_enabled) = feeConfig.read(vault, FeeConfig.EXIT_FEE_ENABLED)
-    return (is_enabled=is_enabled)
+func getPerformanceFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt) -> (fee : felt):
+    let (performance_fee_) = feeConfig.read(fund, FeeConfig.PERFORMANCE_FEE)
+    return (performance_fee_)
 end
 
 @view
-func getPerformanceFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    vault : felt
-) -> (fee : felt):
-    let (fee) = feeConfig.read(vault, FeeConfig.PERFORMANCE_FEE)
-    return (fee=fee)
-end
-
-@view
-func isPerformanceFeeEnabled{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    vault : felt
-) -> (is_enabled : felt):
-    let (is_enabled) = feeConfig.read(vault, FeeConfig.PERFORMANCE_FEE_ENABLED)
-    return (is_enabled=is_enabled)
-end
-
-@view
-func getManagementFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    vault : felt
-) -> (fee : felt):
-    let (fee) = feeConfig.read(vault, FeeConfig.MANAGEMENT_FEE)
-    return (fee=fee)
-end
-
-@view
-func isManagementFeeEnabled{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    vault : felt
-) -> (is_enabled : felt):
-    let (is_enabled) = feeConfig.read(vault, FeeConfig.MANAGEMENT_FEE_ENABLED)
-    return (is_enabled=is_enabled)
+func getManagementFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt) -> (fee : felt):
+    let (management_fee_) = feeConfig.read(fund, FeeConfig.MANAGEMENT_FEE)
+    return (management_fee_)
 end
 
 #Setters
 
 @external
 func setFeeConfig{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    vault : felt, key : felt, value : felt
+    fund : felt, key : felt, value : felt
 ):
     onlyVaultFactory()
-    feeConfig.write(vault, key, value)
+    feeConfig.write(fund, key, value)
     return ()
 end
-
 
 @external
 func setEntranceFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    vault : felt, fee : felt
+    fund : felt, fee : felt
 ):
     onlyVaultFactory()
-    feeConfig.write(vault, FeeConfig.ENTRANCE_FEE, fee)
-    return ()
-end
-
-@external
-func setEntranceFeeEnabled{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    vault : felt, is_enabled : felt
-):
-    onlyVaultFactory()
-    feeConfig.write(vault, FeeConfig.ENTRANCE_FEE_ENABLED, is_enabled)
+    feeConfig.write(fund, FeeConfig.ENTRANCE_FEE, fee)
     return ()
 end
 
 @external
 func setExitFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    vault : felt, fee : felt
+    fund : felt, fee : felt
 ):
     onlyVaultFactory()
-    feeConfig.write(vault, FeeConfig.EXIT_FEE, fee)
-    return ()
-end
-
-@external
-func setExitFeeEnabled{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    vault : felt, is_enabled : felt
-):
-    onlyVaultFactory()
-    feeConfig.write(vault, FeeConfig.EXIT_FEE_ENABLED, is_enabled)
+    feeConfig.write(fund, FeeConfig.EXIT_FEE, fee)
     return ()
 end
 
 @external
 func setPerformanceFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    vault : felt, fee : felt
+    fund : felt, fee : felt
 ):
     onlyVaultFactory()
-    feeConfig.write(vault, FeeConfig.PERFORMANCE_FEE, fee)
-    return ()
-end
-
-@external
-func setPerformanceFeeEnabled{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    vault : felt, is_enabled : felt
-):
-    onlyVaultFactory()
-    feeConfig.write(vault, FeeConfig.PERFORMANCE_FEE_ENABLED, is_enabled)
+    feeConfig.write(fund, FeeConfig.PERFORMANCE_FEE, fee)
     return ()
 end
 
 @external
 func setManagementFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    vault : felt, fee : felt
+    fund : felt, fee : felt
 ):
     onlyVaultFactory()
-    feeConfig.write(vault, FeeConfig.MANAGEMENT_FEE, fee)
+    feeConfig.write(fund, FeeConfig.MANAGEMENT_FEE, fee)
     return ()
 end
 
-@external
-func setManagementFeeEnabled{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    vault : felt, is_enabled : felt
-):
-    onlyVaultFactory()
-    feeConfig.write(vault, FeeConfig.MANAGEMENT_FEE_ENABLED, is_enabled)
-    return ()
-end
 
