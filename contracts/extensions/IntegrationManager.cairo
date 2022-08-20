@@ -10,55 +10,42 @@ from starkware.cairo.common.alloc import (
 
 from contracts.interfaces.IIntegrationManager import IIntegrationManager
 
-struct integration:
+struct Integration:
     member contract : felt
     member selector : felt
 end
 
 @storage_var
-func vaultFactory() -> (res: felt):
+func vault_factory() -> (res: felt):
 end
 
 
-## External Position
-
-@storage_var
-func externalPositionAvailableLength() -> (res: felt):
-end
-
-@storage_var
-func idToExternalPositionAvailable(id: felt) -> (res: felt):
-end
-
-@storage_var
-func isExternalPositionAvailable(externalPositionAddress: felt) -> (res: felt):
-end
 
 ## Integration
 
 @storage_var
-func integrationAvailableLength() -> (res: felt):
+func available_integrations_length() -> (available_integrations_length : felt):
 end
 
 @storage_var
-func idToIntegrationAvailable(id: felt) -> (res: integration):
+func id_to_available_integration(id : felt) -> (integration : Integration):
 end
 
 @storage_var
-func isIntegrationAvailable(_integration: integration) -> (res: felt):
+func is_available_integration(integration : Integration) -> (is_available_integration : felt):
 end
 
 @storage_var
-func integrationContract(_integration: integration) -> (res: felt):
+func integration_to_prelogic(integration : Integration) -> (prelogic : felt):
 end
 
 @storage_var
-func integrationRequiredLevel(_integration: integration) -> (res: felt):
+func integration_required_fund_level(integration : Integration) -> (res : felt):
 end
 
 
 @storage_var
-func isContractIntergrated(_contract: felt) -> (res: felt):
+func is_integrated_contract(contract : felt) -> (res : felt):
 end
 
 
@@ -66,42 +53,55 @@ end
 ## Asset
 
 @storage_var
-func assetAvailableLength() -> (res: felt):
+func available_assets_length() -> (available_assets_length : felt):
 end
 
 @storage_var
-func idToAssetAvailable(id: felt) -> (res: felt):
+func id_to_available_asset(id : felt) -> (available_asset : felt):
 end
 
 @storage_var
-func isAssetAvailable(assetAddress: felt) -> (res: felt):
+func is_available_asset(assetAddress : felt) -> (is_asset_available : felt):
 end
 
 
 ## Shares
 
 @storage_var
-func shareAvailableLength() -> (res: felt):
+func available_shares_length() -> (res : felt):
 end
 
 @storage_var
-func idToShareAvailable(id: felt) -> (res: felt):
+func id_to_available_share(id : felt) -> (res : felt):
 end
 
 @storage_var
-func isShareAvailable(assetAddress: felt) -> (res: felt):
+func is_available_share(assetAddress : felt) -> (res : felt):
 end
 
+## External Position
+
+@storage_var
+func available_external_positions_length() -> (res : felt):
+end
+
+@storage_var
+func id_to_available_external_position(id : felt) -> (external_position : felt):
+end
+
+@storage_var
+func is_available_external_position(externalPositionAddress : felt) -> (res: felt):
+end
 
 #
 # Modifiers
 #
 
-func onlyVaultFactory{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}():
-    let (vaultFactory_) = vaultFactory.read()
+func only_vault_factory{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}():
+    let (vault_factory_) = vault_factory.read()
     let (caller_) = get_caller_address()
-    with_attr error_message("onlyVaultFactory: only callable by the vaultFactory"):
-        assert (vaultFactory_ - caller_) = 0
+    with_attr error_message("only_vault_factory: only callable by the vaultFactory"):
+        assert (vault_factory_ - caller_) = 0
     end
     return ()
 end
@@ -116,9 +116,9 @@ func constructor{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }(
-        _vaultFactory: felt,
+        vault_factory_address: felt,
     ):
-    vaultFactory.write(_vaultFactory)
+    vault_factory.write(vault_factory_address)
     return ()
 end
 
@@ -127,234 +127,220 @@ end
 #
 
 @view
-func checkIsShareAvailable{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_share: felt) -> (res: felt): 
-    let (res) = isShareAvailable.read(_share)
-    return (res=res)
+func isAvailableShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(share: felt) -> (is_vailable_share : felt): 
+    let (is_vailable_share_) = is_available_share.read(share)
+    return (is_vailable_share_)
 end
 
 @view
-func checkIsAssetAvailable{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_asset: felt) -> (res: felt): 
-    let (res) = isAssetAvailable.read(_asset)
-    return (res=res)
+func isAvailableAsset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(asset: felt) -> (is_available_asset : felt): 
+    let (is_available_asset_) = is_available_asset.read(asset)
+    return (is_available_asset_)
 end
 
 @view
-func checkIsExternalPositionAvailable{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_externalPosition: felt) -> (res: felt): 
-    let (res) = isExternalPositionAvailable.read(_externalPosition)
-    return (res=res)
+func isAvailableExternalPosition{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(external_position: felt) -> (is_available_external_position: felt): 
+    let (is_available_external_position_) = is_available_external_position.read(external_position)
+    return (is_available_external_position_)
 end
 
 @view
-func checkIsIntegrationAvailable{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_contract: felt, _selector:felt) -> (res: felt): 
-    let (res) = isIntegrationAvailable.read(integration(_contract, _selector))
-    return (res=res)
+func isAvailableIntegration{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(contract: felt, selector:felt) -> (res: felt): 
+    let (is_available_integration_) = is_available_integration.read(Integration(contract, selector))
+    return (is_available_integration_)
 end
 
 @view
-func getIntegration{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_contract: felt, _selector:felt) -> (res: felt): 
-    let (res) = integrationContract.read(integration(_contract, _selector))
-    return (res=res)
-end
-
-@view
-func getIntegrationRequiredLevel{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_contract: felt, _selector:felt) -> (res: felt): 
-    let (res) = integrationRequiredLevel.read(integration(_contract, _selector))
-    return (res=res)
-end
-
-@view
-func checkIsContractIntegrated{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_contract: felt) -> (res: felt): 
-    let (res) = isContractIntergrated.read(_contract)
-    return (res=res)
+func isIntegratedContract{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(contract: felt) -> (res: felt): 
+    let (is_integrated_contract_) = is_integrated_contract.read(contract)
+    return (is_integrated_contract_)
 end
 
 
+@view
+func prelogicContract{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_contract: felt, _selector:felt) -> (prelogic: felt): 
+    let (prelogic_) = integration_to_prelogic.read(Integration(_contract, _selector))
+    return (prelogic_)
+end
 
 @view
-func getAvailableAssets{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (availableAssets_len: felt, availableAssets:felt*): 
+func integrationRequiredFundLevel{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_contract: felt, _selector:felt) -> (res: felt): 
+    let (integration_required_fund_level_) = integration_required_fund_level.read(Integration(_contract, _selector))
+    return (integration_required_fund_level_)
+end
+
+
+@view
+func availableAssets{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (availableAssets_len: felt, availableAssets:felt*): 
     alloc_locals
-    let (availableAssets_len:felt) = assetAvailableLength.read()
-    let (local availableAssets : felt*) = alloc()
-    __completeAssetTab(availableAssets_len, availableAssets, 0)
-    return(availableAssets_len, availableAssets)
-end
-
-func __completeAssetTab{
-        syscall_ptr: felt*,
-        pedersen_ptr: HashBuiltin*,
-        range_check_ptr
-    }(_availableAssets_len:felt, _availableAssets:felt*, index:felt) -> ():
-    if _availableAssets_len == 0:
-        return ()
-    end
-    let (asset_:felt) = idToAssetAvailable.read(index)
-    assert [_availableAssets + index] = asset_
-
-    let new_index_:felt = index + 1
-    let newAvailableAssets_len:felt = _availableAssets_len -1
-
-    return __completeAssetTab(
-        _availableAssets_len=newAvailableAssets_len,
-        _availableAssets= _availableAssets,
-        index=new_index_,
-    )
+    let (available_assets_len:felt) = available_assets_length.read()
+    let (local available_assets : felt*) = alloc()
+    complete_available_assets_tab(available_assets_len, available_assets)
+    return(available_assets_len, available_assets)
 end
 
 @view
-func getAvailableExternalPositions{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (availableExternalPositions_len: felt, availableExternalPositions:felt*): 
+func availableExternalPositions{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (available_external_positions_len : felt, available_external_positions :felt*): 
     alloc_locals
-    let (availableExternalPositions_len:felt) = externalPositionAvailableLength.read()
-    let (local availableExternalPositions : felt*) = alloc()
-    __completeExternalPositionTab(availableExternalPositions_len, availableExternalPositions, 0)
-    return(availableExternalPositions_len, availableExternalPositions)
-end
-
-func __completeExternalPositionTab{
-        syscall_ptr: felt*,
-        pedersen_ptr: HashBuiltin*,
-        range_check_ptr
-    }(_availableExternalPositions_len:felt, _availableExternalPositions:felt*, index:felt) -> ():
-    if _availableExternalPositions_len == 0:
-        return ()
-    end
-    let (externalPosition_:felt) = idToExternalPositionAvailable.read(index)
-    assert [_availableExternalPositions + index] = externalPosition_
-
-    let new_index_:felt = index + 1
-    let newAvailableExternalPositions_len:felt = _availableExternalPositions_len -1
-
-    return __completeExternalPositionTab(
-        _availableExternalPositions_len=newAvailableExternalPositions_len,
-        _availableExternalPositions= _availableExternalPositions,
-        index=new_index_,
-    )
-end
-
-@view
-func getAvailableIntegrations{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (availableIntegrations_len:felt, availableIntegrations: integration*): 
-    alloc_locals
-    let (availableIntegrations_len:felt) = integrationAvailableLength.read()
-    let (local availableIntegrations : integration*) = alloc()
-    __completeIntegrationTab(availableIntegrations_len, availableIntegrations, 0)
-    return(availableIntegrations_len, availableIntegrations)
-end
-
-func __completeIntegrationTab{
-        syscall_ptr: felt*,
-        pedersen_ptr: HashBuiltin*,
-        range_check_ptr
-    }(_availableIntegrations_len:felt, _availableIntegrations:integration*, index:felt) -> ():
-    if _availableIntegrations_len == 0:
-        return ()
-    end
-
-    let (integration_:integration) = idToIntegrationAvailable.read(index)
-    assert [_availableIntegrations + index*2] = integration_
-
-    let new_index_:felt = index + 1
-    let newAvailableIntegrations_len:felt = _availableIntegrations_len -1
-
-    return __completeIntegrationTab(
-        _availableIntegrations_len=newAvailableIntegrations_len,
-        _availableIntegrations= _availableIntegrations,
-        index=new_index_,
-    )
+    let (available_external_positions_len:felt) = available_external_positions_length.read()
+    let (local available_external_positions : felt*) = alloc()
+    complete_available_external_positions_tab(available_external_positions_len, available_external_positions)
+    return(available_external_positions_len, available_external_positions)
 end
 
 
 @view
-func getAvailableShares{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (availableShares_len: felt, availableShares:felt*): 
+func availableIntegrations{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (available_integrations_len:felt, available_integrations: Integration*): 
     alloc_locals
-    let (availableShares_len:felt) = shareAvailableLength.read()
-    let (local availableShares : felt*) = alloc()
-    __completeShareTab(availableShares_len, availableShares)
-    return(availableShares_len, availableShares)
+    let (available_integrations_len:felt) = available_integrations_length.read()
+    let (local available_integrations : Integration*) = alloc()
+    complete_available_integrations_tab(available_integrations_len, available_integrations)
+    return(available_integrations_len, available_integrations)
 end
 
-func __completeShareTab{
-        syscall_ptr: felt*,
-        pedersen_ptr: HashBuiltin*,
-        range_check_ptr
-    }(_availableShares_len:felt, _availableShares:felt*) -> ():
-    if _availableShares_len == 0:
-        return ()
-    end
-    let (share_:felt) = idToShareAvailable.read(_availableShares_len - 1)
-    assert _availableShares[_availableShares_len] = share_
-
-    return __completeShareTab(
-        _availableShares_len=_availableShares_len - 1,
-        _availableShares= _availableShares,
-    )
+@view
+func availableShares{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (share_available_len: felt, share_available:felt*): 
+    alloc_locals
+    let (available_shares_len:felt) = available_shares_length.read()
+    let (local available_shares : felt*) = alloc()
+    complete_available_shares_tab(available_shares_len, available_shares)
+    return(available_shares_len, available_shares)
 end
+
 
 #
 # Setters
 #
 
 @external
-func setAvailableAsset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _asset: felt):
-    onlyVaultFactory()
-    let (isAssetAvailable_:felt) = isAssetAvailable.read(_asset)
-    if isAssetAvailable_ == 1:
+func setAvailableAsset{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(asset: felt):
+    only_vault_factory()
+    let (is_available_asset_:felt) = is_available_asset.read(asset)
+    if is_available_asset_ == 1:
     return()
     else:
-    isAssetAvailable.write(_asset, 1)
-    let (currentAssetAvailableLength_:felt) = assetAvailableLength.read()
-    idToAssetAvailable.write(currentAssetAvailableLength_, _asset)
-    assetAvailableLength.write(currentAssetAvailableLength_ + 1)
+    is_available_asset.write(asset, 1)
+    let (available_assets_lenght_:felt) = available_assets_length.read()
+    id_to_available_asset.write(available_assets_lenght_, asset)
+    available_assets_length.write(available_assets_lenght_ + 1)
     return ()
     end
 end
 
 @external
-func setAvailableShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _share: felt):
-    onlyVaultFactory()
-    let (isShareAvailable_:felt) = isShareAvailable.read(_share)
-    if isShareAvailable_ == 1:
+func setAvailableShare{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(share: felt):
+    only_vault_factory()
+    let (is_available_share_:felt) = is_available_share.read(share)
+    if is_available_share_ == 1:
     return()
     else:
-    isShareAvailable.write(_share, 1)
-    let (currentShareAvailableLength_:felt) = shareAvailableLength.read()
-    idToShareAvailable.write(currentShareAvailableLength_, _share)
-    shareAvailableLength.write(currentShareAvailableLength_ + 1)
+    is_available_share.write(share, 1)
+    let (available_shares_length_:felt) = available_shares_length.read()
+    id_to_available_share.write(available_shares_length_, share)
+    available_shares_length.write(available_shares_length_ + 1)
     return ()
     end
 end
 
 @external
-func setAvailableExternalPosition{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _externalPosition: felt):
-    onlyVaultFactory()
-    let (isExternalPositionAvailable_:felt) = isExternalPositionAvailable.read(_externalPosition)
-    if isExternalPositionAvailable_ == 1:
+func setAvailableExternalPosition{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(externalPosition: felt):
+    only_vault_factory()
+    let (is_available_external_position_:felt) = is_available_external_position.read(externalPosition)
+    if is_available_external_position_ == 1:
     return()
     else:
-    isExternalPositionAvailable.write(_externalPosition, 1)
-    let (currentExternalPositionAvailableLength_:felt) = externalPositionAvailableLength.read()
-    idToExternalPositionAvailable.write(currentExternalPositionAvailableLength_, _externalPosition)
-    externalPositionAvailableLength.write(currentExternalPositionAvailableLength_ + 1)
+    is_available_external_position.write(externalPosition, 1)
+    let (available_external_positions_length_:felt) = available_external_positions_length.read()
+    id_to_available_external_position.write(available_external_positions_length_, externalPosition)
+    available_external_positions_length.write(available_external_positions_length_ + 1)
     return ()
     end
 end
 
 @external
-func setAvailableIntegration{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _contract: felt, _selector: felt, _integration: felt, _level: felt):
-    onlyVaultFactory()
-    let (isIntegrationAvailable_:felt) = isIntegrationAvailable.read(integration(_contract, _selector))
-    if isIntegrationAvailable_ == 1:
+func setAvailableIntegration{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(contract: felt, selector: felt, integration: felt, level: felt):
+    only_vault_factory()
+    let (is_available_integration_:felt) = is_available_integration.read(Integration(contract, selector))
+    if is_available_integration_ == 1:
     return()
     else:
-    isContractIntergrated.write(_contract, 1)
-    isIntegrationAvailable.write(integration(_contract, _selector), 1)
-    integrationContract.write(integration(_contract, _selector), _integration)
-    let (currentIntegrationAvailableLength_:felt) = integrationAvailableLength.read()
-    idToIntegrationAvailable.write(currentIntegrationAvailableLength_, integration(_contract, _selector))
-    integrationAvailableLength.write(currentIntegrationAvailableLength_ + 1)
-    integrationRequiredLevel.write(integration(_contract, _selector), _level)
+    is_integrated_contract.write(contract, 1)
+    is_available_integration.write(Integration(contract, selector), 1)
+    integration_to_prelogic.write(Integration(contract, selector), integration)
+    let (available_integrations_length_:felt) = available_integrations_length.read()
+    id_to_available_integration.write(available_integrations_length_, Integration(contract, selector))
+    available_integrations_length.write(available_integrations_length_ + 1)
+    integration_required_fund_level.write(Integration(contract, selector), level)
     return ()
     end
+end
+
+
+## internal
+
+
+func complete_available_shares_tab{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(available_shares_len:felt, available_shares:felt*) -> ():
+    if available_shares_len == 0:
+        return ()
+    end
+    let (share_available_:felt) = id_to_available_share.read(available_shares_len - 1)
+    assert available_shares[available_shares_len] = share_available_
+    return complete_available_shares_tab(
+        available_shares_len=available_shares_len - 1,
+        available_shares= available_shares,
+    )
+end
+
+
+## Internal
+func complete_available_assets_tab{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(available_assets_len:felt, available_assets:felt*) -> ():
+    if available_assets_len == 0:
+        return ()
+    end
+    let (asset_:felt) = id_to_available_asset.read(available_assets_len - 1)
+    assert available_assets[available_assets_len] = asset_
+    return complete_available_assets_tab(
+        available_assets_len=available_assets_len - 1,
+        available_assets= available_assets,
+    )
+end
+
+func complete_available_external_positions_tab{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(available_external_positions_len:felt, available_external_positions:felt*) -> ():
+    if available_external_positions_len == 0:
+        return ()
+    end
+    let (external_position_:felt) = id_to_available_external_position.read(available_external_positions_len - 1)
+    assert available_external_positions[available_external_positions_len] = external_position_
+    return complete_available_external_positions_tab(
+        available_external_positions_len= available_external_positions_len - 1,
+        available_external_positions= available_external_positions,
+    )
+end
+
+func complete_available_integrations_tab{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(available_integrations_len:felt, available_integrations:Integration*) -> ():
+    if available_integrations_len == 0:
+        return ()
+    end
+    let (integration_:Integration) = id_to_available_integration.read(available_integrations_len - 1)
+    assert available_integrations[available_integrations_len] = integration_
+    return complete_available_integrations_tab(
+        available_integrations_len=available_integrations_len - 1,
+        available_integrations= available_integrations,
+    )
 end
