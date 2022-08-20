@@ -16,47 +16,47 @@ struct integration:
     member selector : felt
 end
 
-# Define a storage variable.
+
+## STORAGE
+
 @storage_var
-func vaultFactory() -> (vaultFactoryAddress : felt):
+func vault_factory() -> (vault_factory : felt):
 end
 
 @storage_var
-func isPublic(vault: felt) -> (res : felt):
+func is_public(vault: felt) -> (is_public : felt):
 end
 
 @storage_var
-func idToAllowedDepositor(vault: felt, id:felt) -> (res : felt):
+func id_to_allowed_depositor(vault : felt, id : felt) -> (id_to_allowed_depositor : felt):
 end
 
 @storage_var
-func allowedDepositorToId(vault: felt, depositor:felt) -> (res : felt):
+func allowed_depositor_to_id(vault: felt, depositor:felt) -> (allowed_depositor_to_id : felt):
 end
 
 @storage_var
-func allowedDepositorLength(vault: felt) -> (res : felt):
+func allowed_depositors_length(vault: felt) -> (allowed_depositors_length : felt):
 end
 
 @storage_var
-func isAllowedDepositor(vault: felt, depositor:felt) -> (res : felt):
-end
-
-
-
-@storage_var
-func idToAllowedAssetToReedem(vault: felt, id:felt) -> (res : felt):
+func is_allowed_depositor(vault: felt, depositor:felt) -> (is_allowed_depositor : felt):
 end
 
 @storage_var
-func allowedAssetToReedemToId(vault: felt, id:felt) -> (res : felt):
+func id_to_allowed_asset_to_reedem(vault: felt, id:felt) -> (allowed_asset_to_reedem : felt):
 end
 
 @storage_var
-func allowedAssetToReedemLength(vault: felt) -> (res : felt):
+func allowed_asset_to_reedem_to_id(vault: felt, id:felt) -> (id : felt):
 end
 
 @storage_var
-func isAllowedAssetToReedem(vault: felt, depositor:felt) -> (res : felt):
+func allowed_assets_to_reedem_length(vault: felt) -> (allowed_asset_to_reedem_length : felt):
+end
+
+@storage_var
+func is_allowed_asset_to_reedem(vault: felt, depositor:felt) -> (is_allowed_asset_to_reedem : felt):
 end
 
 
@@ -66,10 +66,10 @@ end
 # Modifiers
 #
 
-func onlyVaultFactory{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}():
-    let (vaultFactory_) = vaultFactory.read()
+func only_vault_factory{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}():
+    let (vaultFactory_) = vault_factory.read()
     let (caller_) = get_caller_address()
-    with_attr error_message("onlyVaultFactory: only callable by the vaultFactory"):
+    with_attr error_message("only_vault_factory: only callable by the vaultFactory"):
         assert (vaultFactory_ - caller_) = 0
     end
     return ()
@@ -85,139 +85,129 @@ func constructor{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }(
-        _vaultFactory: felt,
+        vault_factory: felt,
     ):
-    vaultFactory.write(_vaultFactory)
+    vault_factory.write(vault_factory)
     return ()
 end
 
 
 @view
-func checkIsPublic{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_fund: felt) -> (
-        res:felt):
-    let (res) = isPublic.read(_fund)
-    return (res=res)
-end
-
-
-@view
-func checkIsAllowedDepositor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_fund: felt, _depositor: felt,
-        ) -> (res: felt): 
-    let (res) = isAllowedDepositor.read(_fund, _depositor)
-    return (res=res)
+func isPublic{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt) -> (is_public : felt):
+    let (is_public_) = is_public.read(_fund)
+    return (is_public_)
 end
 
 @view
-func checkIsAllowedAssetToReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_fund: felt, _asset: felt,
-        ) -> (res: felt): 
-    let (res) = isAllowedAssetToReedem.read(_fund, _asset)
-    return (res=res)
+func isAllowedDepositor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt, depositor : felt) -> (is_allowed_depositor : felt): 
+    let (is_allowed_depositor_) = is_allowed_depositor.read(fund, depositor)
+    return (is_allowed_depositor_)
 end
 
 @view
-func getAllowedDepositor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_fund:felt) -> (allowedDepositor_len: felt, allowedDepositor:felt*): 
+func allowedDepositors{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund:felt) -> (allowedDepositor_len: felt, allowedDepositor:felt*): 
     alloc_locals
-    let (allowedDepositor_len:felt) = allowedDepositorLength.read(_fund)
-    let (local allowedDepositor : felt*) = alloc()
-    _completeAllowedDepositor(_fund, allowedDepositor_len, allowedDepositor, 0)
+    let (allowed_depositors_len:felt) = allowed_depositors_length.read(fund)
+    let (local allowed_depositors : felt*) = alloc()
+    complete_allowed_depositor_tab(fund, allowedDepositor_len, allowed_depositor, 0)
     return(allowedDepositor_len, allowedDepositor)
 end
 
-func _completeAllowedDepositor{
-        syscall_ptr: felt*,
-        pedersen_ptr: HashBuiltin*,
-        range_check_ptr
-    }(_fund:felt, _allowedDepositor_len:felt, _allowedDepositor:felt*, index:felt) -> ():
-    if _allowedDepositor_len == 0:
-        return ()
-    end
-    let (depositor_:felt) = idToAllowedDepositor.read(_fund, index)
-    assert [_allowedDepositor + index] = depositor_
 
-    let new_index_:felt = index + 1
-    let newAllowedDepositor_len:felt = _allowedDepositor_len -1
-
-    return _completeAllowedDepositor(
-        _fund = _fund,
-        _allowedDepositor_len=newAllowedDepositor_len,
-        _allowedDepositor= _allowedDepositor,
-        index=new_index_,
-    )
+@view
+func isAllowedAssetToReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt, asset : felt) -> (is_allowed_asset_to_reedem : felt): 
+    let (is_allowed_asset_to_reedem_) = is_allowed_asset_to_reedem.read(fund, asset)
+    return (is_allowed_asset_to_reedem_)
 end
 
 @view
-func getAllowedAssetToReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_fund:felt) -> (allowedAssetToReedem_len: felt, allowedAssetToReedem:felt*): 
+func allowedAssetsToReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund:felt) -> (allowed_assets_to_reedem_len: felt, allowed_assets_to_reedem:felt*): 
     alloc_locals
-    let (allowedAssetToReedem_len:felt) = allowedAssetToReedemLength.read(_fund)
-    let (local allowedAssetToReedem : felt*) = alloc()
-    _completeAllowedAssetToReedem(_fund, allowedAssetToReedem_len, allowedAssetToReedem, 0)
-    return(allowedAssetToReedem_len, allowedAssetToReedem)
+    let (allowed_assets_to_reedem_len:felt) = allowed_assets_to_reedem_length.read(fund)
+    let (local allowed_asset_to_reedem : felt*) = alloc()
+    complete_allowed_assets_to_reedem_tab(fund, allowed_assets_to_reedem_len, allowed_assets_to_reedem, 0)
+    return(allowed_asset_to_reedem_len, allowed_assets_to_reedem)
 end
-
-func _completeAllowedAssetToReedem{
-        syscall_ptr: felt*,
-        pedersen_ptr: HashBuiltin*,
-        range_check_ptr
-    }(_fund:felt, _allowedAssetToReedem_len:felt, _allowedAssetToReedem:felt*, index:felt) -> ():
-    if _allowedAssetToReedem_len == 0:
-        return ()
-    end
-    let (asset_:felt) = idToAllowedAssetToReedem.read(_fund, index)
-    assert [_allowedAssetToReedem + index] = asset_
-    let new_index_:felt = index + 1
-    let newAllowedAssetToReedem_len:felt = _allowedAssetToReedem_len -1
-
-    return _completeAllowedAssetToReedem(
-        _fund = _fund,
-        _allowedAssetToReedem_len=newAllowedAssetToReedem_len,
-        _allowedAssetToReedem= _allowedAssetToReedem,
-        index=new_index_,
-    )
-end
-
 
 
 # Setters 
 
 @external
-func setAllowedDepositor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _fund: felt, _depositor: felt):
-    onlyVaultFactory()
-    let (isAllowedDepositor_:felt) = isAllowedDepositor.read(_fund, _depositor)
-    if isAllowedDepositor_ == 1:
+func setAllowedDepositor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund: felt, depositor: felt):
+    only_vault_factory()
+    let (is_allowed_depositor_:felt) = is_allowed_depositor.read(fund, depositor)
+    if is_allowed_depositor_ == 1:
     return()
     else:
-    isAllowedDepositor.write(_fund, _depositor, 1)
-    let (currentAllowedDepositorLength_:felt) = allowedDepositorLength.read(_fund)
-    idToAllowedDepositor.write(_fund, currentAllowedDepositorLength_, _depositor)
-    allowedDepositorToId.write(_fund, _depositor, currentAllowedDepositorLength_)
-    allowedDepositorLength.write(_fund, currentAllowedDepositorLength_ + 1)
+    is_allowed_depositor.write(fund, depositor, 1)
+    let (allowed_depositors_len:felt) = allowed_depositors_length.read(_fund)
+    id_to_allowed_depositor.write(fund, allowed_depositors_len, depositor)
+    allowed_depositor_to_id.write(fund, depositor, allowed_depositors_len)
+    allowed_depositors_len.write(_fund, allowed_depositors_len + 1)
     return ()
     end
 end
 
 @external
-func setAllowedAssetToReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _fund: felt, _asset: felt):
-    onlyVaultFactory()
-    let (isAllowedAssetToReedem_:felt) = isAllowedAssetToReedem.read(_fund, _asset)
-    if isAllowedAssetToReedem_ == 1:
+func setAllowedAssetToReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund: felt, asset: felt):
+    only_vault_factory()
+    let (is_allowed_asset_to_reedem_:felt) = is_allowed_asset_to_reedem.read(fund, asset)
+    if is_allowed_asset_to_reedem_ == 1:
     return()
     else:
-    isAllowedAssetToReedem.write(_fund, _asset, 1)
-    let (currentAllowedAssetToReedemLength_:felt) = allowedAssetToReedemLength.read(_fund)
-    idToAllowedAssetToReedem.write(_fund, currentAllowedAssetToReedemLength_, _asset)
-    allowedAssetToReedemToId.write(_fund, _asset, currentAllowedAssetToReedemLength_)
-    allowedAssetToReedemLength.write(_fund, currentAllowedAssetToReedemLength_ + 1)
+    is_allowed_asset_to_reedem.write(fund, asset, 1)
+    let (allowed_assets_to_reedem_len:felt) = allowed_assets_to_reedem_length.read(fund)
+    id_to_allowed_asset_to_reedem.write(fund, allowed_assets_to_reedem_len, asset)
+    allowed_asset_to_reedem_to_id.write(fund, asset, allowed_assets_to_reedem_len)
+    allowed_asset_to_reedem_length.write(fund, allowed_assets_to_reedem_len + 1)
     return ()
     end
 end
 
 
 @external
-func setIsPublic{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _fund: felt, _isPublic: felt):
-    onlyVaultFactory()
-    isPublic.write(_fund, _isPublic)
+func setIsPublic{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund: felt, is_public: felt):
+    only_vault_factory()
+    is_public.write(fund, is_public)
     return ()
 end
+
+## INTERALS - HELPERS
+
+func complete_allowed_depositors_tab{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(fund:felt, allowed_depositors_len:felt, allowed_depositors:felt*, index:felt) -> ():
+    if allowed_depositors_len == 0:
+        return ()
+    end
+    let (depositor_:felt) = idToAllowedDepositor.read(fund, index)
+    assert allowed_depositors[index] = depositor_
+    return complete_allowed_depositors_tab(
+        fund = fund,
+        allowed_depositors_len=allowed_depositors_len - 1,
+        allowed_depositors= allowed_depositors,
+        index= index + 1,
+    )
+end
+
+func complete_allowed_assets_to_reedem_tab{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(fund:felt, allowed_assets_to_reedem_len:felt, allowed_assets_to_reedem:felt*, index:felt) -> ():
+    if allowed_asset_to_reedem_len == 0:
+        return ()
+    end
+    let (asset_:felt) = id_to_allowed_asset_to_reedem.read(_fund, index)
+    assert allowed_assets_to_reedem[index] = asset_
+    return complete_allowed_assets_to_reedem_tab(
+        _fund = _fund,
+        allowed_assets_to_reedem_len=allowed_assets_to_reedem_len - 1,
+        allowed_assets_to_reedem= allowed_assets_to_reedem,
+        index=index + 1,
+    )
+end
+
+
