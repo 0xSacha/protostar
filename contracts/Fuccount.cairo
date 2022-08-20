@@ -207,7 +207,7 @@ func totalId{
 end
 
 @view
-func sharesTotalSupply{
+func shares_total_supply{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
