@@ -322,7 +322,7 @@ end
 
 #AM = Asset Manager
 #WAM = Without Asset Manager
-func get_all_shares_from_dispute_fund(assetIdAll_len:felt, assetIdAll:Uint256*, assetAmountAll_len:felt,assetAmountAll:Uint256*, assetIdAM_len:felt, assetIdAM:Uint256*, assetAmountAM_len:felt,assetAmountAM:Uint256*,assetIdWAM_len:felt, assetIdWAM:Uint256*, assetAmountWAM_len:felt, assetAmountWAM:Uint256*) -> (assetIdWAM_len:felt, assetIdWAM:Uint256*, assetAmountWAM_len:felt, assetAmountWAM:Uint256*):
+func get_all_shares_from_dispute_fund{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(assetIdAll_len:felt, assetIdAll:Uint256*, assetAmountAll_len:felt,assetAmountAll:Uint256*, assetIdAM_len:felt, assetIdAM:Uint256*, assetAmountAM_len:felt,assetAmountAM:Uint256*,assetIdWAM_len:felt, assetIdWAM:Uint256*, assetAmountWAM_len:felt, assetAmountWAM:Uint256*) -> (assetIdWAM_len:felt, assetIdWAM:Uint256*, assetAmountWAM_len:felt, assetAmountWAM:Uint256*):
     alloc_locals
     if assetIdAll_len == 0:
         return (assetIdWAM_len, assetIdWAM, assetAmountWAM_len, assetAmountWAM)
@@ -337,14 +337,13 @@ func get_all_shares_from_dispute_fund(assetIdAll_len:felt, assetIdAll:Uint256*, 
             let current_idAM = [assetIdAM]
             let current_ammountAM = [assetAmountAM]
             let (condition1) = uint256_eq(current_id,current_idAM)
-            let (condiiton2) = uint256_eq(current_ammount,current_ammountAM)
-            if uint256_eq(current_idAM,current_id) == 1:
-                if uint256_eq(current_ammountAM, current_ammount) == 1:
-                    return get_all_shares_from_dispute_fund(assetIdAll_len = assetIdAll_len - 1, assetIdAll = assetIdAll + 2, assetAmountAll_len = assetAmountAll_len - 1, assetAmountAll = assetAmountAll + assetAmountAll.SIZE, assetIdAM_len, assetIdAM, assetAmountAM_len,assetAmountAM,assetIdWAM_len = assetIdWAM_len  , assetIdWAM = assetIdWAM, assetAmountWAM_len = assetAmountWAM_len,assetAmountWAM = assetAmountWAM)
-                end
+            let (condition2) = uint256_eq(current_ammount,current_ammountAM)
+            if condition1 * condition2 == 1 :
+                    return get_all_shares_from_dispute_fund(assetIdAll_len = assetIdAll_len - 1, assetIdAll = assetIdAll + 2, assetAmountAll_len = assetAmountAll_len - 1, assetAmountAll = assetAmountAll + 2 , assetIdAM_len = assetIdAM_len, assetIdAM = assetIdAM, assetAmountAM_len = assetAmountAM_len,assetAmountAM = assetAmountAM,assetIdWAM_len = assetIdWAM_len  , assetIdWAM = assetIdWAM, assetAmountWAM_len = assetAmountWAM_len,assetAmountWAM = assetAmountWAM)
             end
+        end
     end
-    return get_all_shares_from_dispute_fund(assetIdAll_len = assetIdAll_len , assetIdAll = assetIdAll , assetAmountAll_len = assetAmountAll_len , assetAmountAll = assetAmountAll , assetIdAM_len = assetIdAM_len - 1, assetIdAM = assetIdAM + assetIdAM.SIZE, assetAmountAM_len = assetAmountAll_len - 1,assetAmountAM = assetAmountAM + assetAmountAM.SIZE ,assetIdWAM_len = assetIdWAM_len , assetIdWAM = assetIdWAM , assetAmountWAM_len = assetAmountWAM_len ,assetAmountWAM = assetAmountWAM)
+    return get_all_shares_from_dispute_fund(assetIdAll_len = assetIdAll_len , assetIdAll = assetIdAll , assetAmountAll_len = assetAmountAll_len , assetAmountAll = assetAmountAll , assetIdAM_len = assetIdAM_len - 1, assetIdAM = assetIdAM + 2, assetAmountAM_len = assetAmountAll_len - 1,assetAmountAM = assetAmountAM + 2 ,assetIdWAM_len = assetIdWAM_len , assetIdWAM = assetIdWAM , assetAmountWAM_len = assetAmountWAM_len ,assetAmountWAM = assetAmountWAM)
 end
 
 func ownerShares{
@@ -371,8 +370,8 @@ func completeMultiAssetTab{
     end
     let (newTotalId_) =  SafeUint256.sub_le( totalId, Uint256(1,0))
     let (balance_) = ERC1155_balances.read(vault_address,account, newTotalId_)
-    let (isZero_) = __is_zero(balance_.low)
-    if isZero_ == 0:
+    let (isZero_) = is_not_zero(balance_.low)
+    if isZero_ == 1:
         # assert assetId[assetId_len*Uint256.SIZE] = newTotalId_
         # assert assetAmount[assetId_len*Uint256.SIZE] = balance_
         assert assetId[assetId_len] = newTotalId_
@@ -398,20 +397,6 @@ func completeMultiAssetTab{
         )
 end
 
-func __sumTab{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    _percents_len : felt, _percents : felt*) -> (res:felt):
-    alloc_locals
-    if _percents_len == 0:
-        return (0)
-    end
-    let newPercents_len:felt = _percents_len - 1
-    let newPercents:felt* = _percents + 1
-    let (_previousElem:felt) = __calculTab100(newPercents_len, newPercents)
-    let res:felt = [_percents] + _previousElem
-    return (res=res)
-end
-
-
 func _assert_enought_guarantee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund: felt):
     alloc_locals
     let (shareSupply_) = IFuccount.get_shares_total_supply(fund)
@@ -421,7 +406,7 @@ func _assert_enought_guarantee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
     let (minGuarantee_) =  uint256_percent(shareSupply_, Uint256(guaranteeRatio_,0))
     let (isEnoughtGuarantee_) = uint256_le(minGuarantee_, securityFundBalance_)
     with_attr error_message("_assert_enought_guarantee: Asser manager need to provide more guarantee "):
-            is_not_zero(isEnoughtGuarantee_)
-        end
+        is_not_zero(isEnoughtGuarantee_)
+    end
     return()
 end
