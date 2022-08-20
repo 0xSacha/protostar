@@ -1,7 +1,5 @@
 %lang starknet
 
-from contracts.ERC1155Shares import ERC1155Shares
-
 from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.bool import TRUE, FALSE
 from starkware.starknet.common.syscalls import (
@@ -303,7 +301,7 @@ end
 func get_all_shares_from_dispute_fund(assetIdAll_len:felt, assetIdAll:Uint256*, assetAmountAll_len:felt,assetAmountAll:Uint256*, assetIdAM_len:felt, assetIdAM:Uint256*, assetAmountAM_len:felt,assetAmountAM:Uint256*) -> (assetIdWAM_len:felt, assetIdWAM:Uint256*, assetAmountWAM_len:felt, assetAmountWAM:Uint256*):
     alloc_locals
     if assetIdAll_len == 0:
-        return (assetIdWAM,assetIdWAM_len)
+        return (assetIdWAM_len, assetIdWAM, assetAmountWAM_len, assetAmountWAM)
     end
     if assetIdAM_len == 0:
         assert [assetIdWAM] = [assetIdAll]
