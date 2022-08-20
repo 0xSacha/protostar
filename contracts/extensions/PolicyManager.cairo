@@ -67,10 +67,10 @@ end
 #
 
 func only_vault_factory{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}():
-    let (vaultFactory_) = vault_factory.read()
+    let (vault_factory_) = vault_factory.read()
     let (caller_) = get_caller_address()
     with_attr error_message("only_vault_factory: only callable by the vaultFactory"):
-        assert (vaultFactory_ - caller_) = 0
+        assert (vault_factory_ - caller_) = 0
     end
     return ()
 end
@@ -85,16 +85,16 @@ func constructor{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }(
-        vault_factory: felt,
+        vault_factory_address: felt,
     ):
-    vault_factory.write(vault_factory)
+    vault_factory.write(vault_factory_address)
     return ()
 end
 
 
 @view
 func isPublic{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt) -> (is_public : felt):
-    let (is_public_) = is_public.read(_fund)
+    let (is_public_) = is_public.read(fund)
     return (is_public_)
 end
 
@@ -109,8 +109,8 @@ func allowedDepositors{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_c
     alloc_locals
     let (allowed_depositors_len:felt) = allowed_depositors_length.read(fund)
     let (local allowed_depositors : felt*) = alloc()
-    complete_allowed_depositor_tab(fund, allowedDepositor_len, allowed_depositor, 0)
-    return(allowedDepositor_len, allowedDepositor)
+    complete_allowed_depositors_tab(fund, allowed_depositors_len, allowed_depositors, 0)
+    return(allowed_depositors_len, allowed_depositors)
 end
 
 
@@ -124,9 +124,9 @@ end
 func allowedAssetsToReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund:felt) -> (allowed_assets_to_reedem_len: felt, allowed_assets_to_reedem:felt*): 
     alloc_locals
     let (allowed_assets_to_reedem_len:felt) = allowed_assets_to_reedem_length.read(fund)
-    let (local allowed_asset_to_reedem : felt*) = alloc()
+    let (local allowed_assets_to_reedem : felt*) = alloc()
     complete_allowed_assets_to_reedem_tab(fund, allowed_assets_to_reedem_len, allowed_assets_to_reedem, 0)
-    return(allowed_asset_to_reedem_len, allowed_assets_to_reedem)
+    return(allowed_assets_to_reedem_len, allowed_assets_to_reedem)
 end
 
 
@@ -140,10 +140,10 @@ func setAllowedDepositor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range
     return()
     else:
     is_allowed_depositor.write(fund, depositor, 1)
-    let (allowed_depositors_len:felt) = allowed_depositors_length.read(_fund)
+    let (allowed_depositors_len:felt) = allowed_depositors_length.read(fund)
     id_to_allowed_depositor.write(fund, allowed_depositors_len, depositor)
     allowed_depositor_to_id.write(fund, depositor, allowed_depositors_len)
-    allowed_depositors_len.write(_fund, allowed_depositors_len + 1)
+    allowed_depositors_length.write(fund, allowed_depositors_len + 1)
     return ()
     end
 end
@@ -159,16 +159,16 @@ func setAllowedAssetToReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, r
     let (allowed_assets_to_reedem_len:felt) = allowed_assets_to_reedem_length.read(fund)
     id_to_allowed_asset_to_reedem.write(fund, allowed_assets_to_reedem_len, asset)
     allowed_asset_to_reedem_to_id.write(fund, asset, allowed_assets_to_reedem_len)
-    allowed_asset_to_reedem_length.write(fund, allowed_assets_to_reedem_len + 1)
+    allowed_assets_to_reedem_length.write(fund, allowed_assets_to_reedem_len + 1)
     return ()
     end
 end
 
 
 @external
-func setIsPublic{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund: felt, is_public: felt):
+func setIsPublic{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund: felt, is_public_bool: felt):
     only_vault_factory()
-    is_public.write(fund, is_public)
+    is_public.write(fund, is_public_bool)
     return ()
 end
 
@@ -182,7 +182,7 @@ func complete_allowed_depositors_tab{
     if allowed_depositors_len == 0:
         return ()
     end
-    let (depositor_:felt) = idToAllowedDepositor.read(fund, index)
+    let (depositor_:felt) = id_to_allowed_depositor.read(fund, index)
     assert allowed_depositors[index] = depositor_
     return complete_allowed_depositors_tab(
         fund = fund,
@@ -197,13 +197,13 @@ func complete_allowed_assets_to_reedem_tab{
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
     }(fund:felt, allowed_assets_to_reedem_len:felt, allowed_assets_to_reedem:felt*, index:felt) -> ():
-    if allowed_asset_to_reedem_len == 0:
+    if allowed_assets_to_reedem_len == 0:
         return ()
     end
-    let (asset_:felt) = id_to_allowed_asset_to_reedem.read(_fund, index)
+    let (asset_:felt) = id_to_allowed_asset_to_reedem.read(fund, index)
     assert allowed_assets_to_reedem[index] = asset_
     return complete_allowed_assets_to_reedem_tab(
-        _fund = _fund,
+        fund = fund,
         allowed_assets_to_reedem_len=allowed_assets_to_reedem_len - 1,
         allowed_assets_to_reedem= allowed_assets_to_reedem,
         index=index + 1,
