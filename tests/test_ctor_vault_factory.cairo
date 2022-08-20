@@ -100,13 +100,14 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     %{ stop_pranks = [start_prank(ids.ADMIN, contract) for contract in [ids.vf_contract] ] %}
 
     
-     IVaultFactory.setFeeManager(vf_contract, fm_contract)
-     IVaultFactory.setPolicyManager(vf_contract, pm_contract)
-     IVaultFactory.setIntegrationManager(vf_contract, im_contract)
-     IVaultFactory.setMaxFundLevel(vf_contract, 2)
-     IVaultFactory.setStackingDispute(vf_contract, sd_contract)
-     IVaultFactory.setGuaranteeRatio(vf_contract, 5)
-     IVaultFactory.setExitTimestamp(vf_contract, DAY)
+     IVaultFactory.set_fee_manager(vf_contract, fm_contract)
+     IVaultFactory.set_policy_manager(vf_contract, pm_contract)
+     IVaultFactory.set_integration_manager(vf_contract, im_contract)
+     IVaultFactory.set_max_fund_level(vf_contract, 2)
+     IVaultFactory.set_stacking_dispute(vf_contract, sd_contract)
+     IVaultFactory.set_guarantee_ratio(vf_contract, 50000)
+     IVaultFactory.set_exit_timestamp(vf_contract, DAY)
+     
 
     %{ [stop_prank() for stop_prank in stop_pranks] %}
 
@@ -134,13 +135,13 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
 
     %{ stop_pranks = [start_prank(ids.ADMIN, contract) for contract in [ids.vf_contract, ids.or_contract, ids.pp_contract] ] %}
     
-     IVaultFactory.setValueInterpretor(vf_contract, vi_contract)
-     IVaultFactory.setOracle(vf_contract, or_contract)
+     IVaultFactory.set_value_interpretor(vf_contract, vi_contract)
+     IVaultFactory.set_orcale(vf_contract, or_contract)
      IEmpiricOracle.set_value(or_contract,ETHkey, 2000000000000000000000, 18)
      IEmpiricOracle.set_value(or_contract,BTCkey, 25000000000000000000000, 18)
      IEmpiricOracle.set_value(or_contract,DAIkey, 1000000, 6)
 
-     IVaultFactory.setPrimitivePriceFeed(vf_contract, pp_contract)
+     IVaultFactory.set_primitive_price_feed(vf_contract, pp_contract)
      IOraclePriceFeedMixin.addPrimitive(pp_contract, eth_contract, ETHkey)
      IOraclePriceFeedMixin.addPrimitive(pp_contract, btc_contract, BTCkey)
      IOraclePriceFeedMixin.addPrimitive(pp_contract, dai_contract, DAIkey)
@@ -159,16 +160,16 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     %}
 
     %{ stop_pranks = [start_prank(ids.ADMIN, contract) for contract in [ids.vf_contract] ] %}
-    IVaultFactory.setSharePriceFeed(vf_contract, sp_contract)
-    IVaultFactory.setApprovePreLogic(vf_contract, la_contract)
+    IVaultFactory.set_share_price_feed(vf_contract, sp_contract)
+    IVaultFactory.set_approve_prelogic(vf_contract, la_contract)
     %{ [stop_prank() for stop_prank in stop_pranks] %}
 
     #Initial PreLogic
     %{ stop_pranks = [start_prank(ids.ADMIN, contract) for contract in [ids.vf_contract] ] %}
-    IVaultFactory.setStackingVault(vf_contract, STACKINGVAULT)
-    IVaultFactory.setDaoTreasury(vf_contract, DAOTREASURY)
-    IVaultFactory.setStackingVaultFee(vf_contract, 16)
-    IVaultFactory.setDaoTreasuryFee(vf_contract, 4)
+    IVaultFactory.set_stacking_vault(vf_contract, STACKINGVAULT)
+    IVaultFactory.set_dao_treasury(vf_contract, DAOTREASURY)
+    IVaultFactory.set_stacking_vault_fee(vf_contract, 16)
+    IVaultFactory.set_dao_treasury_fee(vf_contract, 4)
     %{ [stop_prank() for stop_prank in stop_pranks] %}
 
 

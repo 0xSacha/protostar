@@ -68,77 +68,78 @@ namespace IVaultFactory:
 
 
     func initializeFund(
-    _fund: felt,
-    _fundLevel: felt,
-    _fundName:felt,
-    _fundSymbol:felt,
-    _denominationAsset:felt,
-    _amount: Uint256,
-    _shareAmount: Uint256,
-    _feeConfig_len: felt,
-    _feeConfig: felt*,
-    _isPublic:felt,
+    fund: felt,
+    fundLevel: felt,
+    fundName:felt,
+    fundSymbol:felt,
+    denominationAsset:felt,
+    amount: Uint256,
+    shareAmount: Uint256,
+    feeConfig_len: felt,
+    feeConfig: felt*,
+    isPublic:felt,
     ):
     end
 
-    func addAllowedDepositors(_fund:felt, _depositors_len:felt, _depositors:felt*):
+    func add_allowed_depositors(_fund:felt, _depositors_len:felt, _depositors:felt*):
     end
 
-    func addGlobalAllowedIntegration(_integrationList_len:felt, _integrationList:Integration*):
+    func add_global_allowed_integration(allowed_integrations_len:felt, allowed_integrations:Integration*):
     end
 
-    func addGlobalAllowedExternalPosition(_externalPositionList_len:felt, _externalPositionList:felt*):
+    func add_global_allowed_external_position(externalPositionList_len:felt, externalPositionList:felt*):
     end
 
-    func addGlobalAllowedAsset(_assetList_len:felt, _assetList:felt*):
+    func add_global_allowed_asset(assetList_len:felt, assetList:felt*):
     end
 
-    func setFeeManager(_feeManager:felt):
+
+    func set_fee_manager(fee_manager:felt):
     end
 
-    func setPolicyManager(_policyManager:felt):
+    func set_policy_manager(policy_manager:felt):
     end
 
-    func setIntegrationManager(_integrationManager:felt):
+    func set_integration_manager(integration_manager:felt):
     end
 
-    func setValueInterpretor(_valueInterpretor:felt):
+    func set_value_interpretor(value_interpretor:felt):
     end
 
-    func setOracle(_oracle:felt):
+    func set_orcale(oracle:felt):
     end
 
-    func setPrimitivePriceFeed(_primitivePriceFeed:felt):
+    func set_primitive_price_feed(primitive_price_feed:felt):
     end
 
-    func setApprovePreLogic(_approvePreLogic:felt):
+    func set_approve_prelogic(approve_prelogic:felt):
     end
 
-    func setSharePriceFeed(_sharePriceFeed:felt):
+    func set_share_price_feed(share_price_feed:felt):
     end
 
-    func setStackingVault(_stackingVault:felt):
+    func set_stacking_vault(stacking_vault:felt):
     end
 
-    func setDaoTreasury(_daoTreasury:felt):
+    func set_dao_treasury(dao_treasury:felt):
     end
 
-    func setStackingVaultFee(_stackingVault:felt):
+    func set_stacking_vault_fee(stacking_vault_fee:felt):
     end
 
-    func setDaoTreasuryFee(_daoTreasury:felt):
+    func set_dao_treasury_fee(dao_treasury_fee:felt):
     end
 
-    func setMaxFundLevel(_maxFundLevel:felt):
+    func set_max_fund_level(max_fund_level:felt):
     end
 
-    func setStackingDispute(_stackingDispute:felt):
+    func set_stacking_dispute(stacking_dispute:felt):
     end
 
-    func setGuaranteeRatio(_guaranteeRatio:felt):
+    func set_guarantee_ratio(guarantee_ratio:felt):
     end
 
-    func setExitTimestamp(_exitTimestamp:felt):
+    func set_exit_timestamp(exit_timestamp:felt):
     end
 
 end

@@ -51,9 +51,9 @@ from contracts.PreLogic.interfaces.IValueInterpretor import IValueInterpretor
 
 from contracts.interfaces.IERC20 import IERC20
 
-from openzeppelin.access.ownable import Ownable
+from openzeppelin.access.ownable.library import Ownable
 
-from openzeppelin.security.safemath import SafeUint256
+from openzeppelin.security.safemath.library import SafeUint256
 
 #
 # Events
@@ -588,8 +588,6 @@ func set_stacking_vault_fee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
     return ()
 end
 
-# TO continue
-
 @external
 func set_dao_treasury_fee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         _dao_treasuryFee : felt):
@@ -665,12 +663,12 @@ func add_global_allowed_integration{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }(_integrationList_len:felt, _integrationList:Integration*) -> ():
+    }(allowed_integrations_len:felt, allowed_integrations:Integration*) -> ():
     alloc_locals
     Ownable.assert_only_owner()
     only_dependencies_set()
     let (integration_manager_:felt) = integration_manager.read()
-    __add_global_allowed_integration(_integrationList_len, _integrationList, integration_manager_)
+    add_global_allowed_integration(allowed_integrations_len, allowed_integrations, integration_manager_)
     return()
 end
 
@@ -683,15 +681,15 @@ func add_allowed_depositors{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }(_fund:felt, _depositors_len:felt, _depositors:felt*) -> ():
+    }(fund:felt, depositors_len:felt, depositors:felt*) -> ():
     alloc_locals
-    only_asset_manager(_fund)
+    only_asset_manager(fund)
     let (policy_manager_:felt) = policy_manager.read()
-    let (isPublic_:felt) = IPolicyManager.checkIsPublic(policy_manager_, _fund)
+    let (is_public_:felt) = IPolicyManager.isPublic(policy_manager_, fund)
     with_attr error_message("add_allowed_depositors: the fund is already public"):
-        assert isPublic_ = 0
+        assert is_public_ = 0
     end
-   __add_allowed_depositors(_fund, _depositors_len, _depositors)
+   add_allowed_depositors(fund, depositors_len, depositors)
     return ()
 end
 
@@ -762,7 +760,7 @@ func initialize_fund{
     assert _integrationList[0] = Integration(_fund, DEPOSIT_SELECTOR, 0, _fundLevel)
     assert _integrationList[1] = Integration(_fund, REEDEM_SELECTOR, 0, _fundLevel)
 
-     __add_global_allowed_integration(_integrationList_len, _integrationList, integration_manager_)
+     add_global_allowed_integration(_integrationList_len, _integrationList, integration_manager_)
      
     ##register the position
     let (share_price_feed_:felt) = get_share_price_feed()
@@ -936,7 +934,7 @@ func __add_global_allowed_external_position{
         )
 end
 
-func __add_global_allowed_integration{
+func add_global_allowed_integration{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -949,14 +947,14 @@ func __add_global_allowed_integration{
     let integration_:Integration = [_integrationList]
     IIntegrationManager.setAvailableIntegration(_integration_manager, integration_.contract, integration_.selector, integration_.integration, integration_.level)
 
-    return __add_global_allowed_integration(
+    return add_global_allowed_integration(
         _integrationList_len= _integrationList_len - 1,
         _integrationList= _integrationList + Integration.SIZE,
         _integration_manager=_integration_manager
         )
 end
 
-func __add_allowed_depositors{
+func add_allowed_depositors{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -972,7 +970,7 @@ func __add_allowed_depositors{
     let newDepositors_len:felt = _depositors_len -1
     let newDepositors:felt* = _depositors + 1
 
-    return __add_allowed_depositors(
+    return add_allowed_depositors(
         _fund = _fund,
         _depositors_len= newDepositors_len,
         _depositors= newDepositors,

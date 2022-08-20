@@ -27,7 +27,7 @@ end
 #
 
 func onlyVaultFactory{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}():
-    let (vaultFactory_) = vaultFactory.read()
+    let (vaultFactory_) = vault_factory.read()
     let (caller_) = get_caller_address()
     with_attr error_message("onlyVaultFactory: only callable by the vaultFactory"):
         assert (vaultFactory_ - caller_) = 0
@@ -75,13 +75,13 @@ end
 
 @view
 func getPerformanceFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt) -> (fee : felt):
-    let (performance_fee_) = feeConfig.read(fund, FeeConfig.PERFORMANCE_FEE)
+    let (performance_fee_) = fee_config.read(fund, FeeConfig.PERFORMANCE_FEE)
     return (performance_fee_)
 end
 
 @view
 func getManagementFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt) -> (fee : felt):
-    let (management_fee_) = feeConfig.read(fund, FeeConfig.MANAGEMENT_FEE)
+    let (management_fee_) = fee_config.read(fund, FeeConfig.MANAGEMENT_FEE)
     return (management_fee_)
 end
 
@@ -92,7 +92,7 @@ func setFeeConfig{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
     fund : felt, key : felt, value : felt
 ):
     onlyVaultFactory()
-    feeConfig.write(fund, key, value)
+    fee_config.write(fund, key, value)
     return ()
 end
 
@@ -101,7 +101,7 @@ func setEntranceFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
     fund : felt, fee : felt
 ):
     onlyVaultFactory()
-    feeConfig.write(fund, FeeConfig.ENTRANCE_FEE, fee)
+    fee_config.write(fund, FeeConfig.ENTRANCE_FEE, fee)
     return ()
 end
 
@@ -110,7 +110,7 @@ func setExitFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_pt
     fund : felt, fee : felt
 ):
     onlyVaultFactory()
-    feeConfig.write(fund, FeeConfig.EXIT_FEE, fee)
+    fee_config.write(fund, FeeConfig.EXIT_FEE, fee)
     return ()
 end
 
@@ -119,7 +119,7 @@ func setPerformanceFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_c
     fund : felt, fee : felt
 ):
     onlyVaultFactory()
-    feeConfig.write(fund, FeeConfig.PERFORMANCE_FEE, fee)
+    fee_config.write(fund, FeeConfig.PERFORMANCE_FEE, fee)
     return ()
 end
 
@@ -128,7 +128,7 @@ func setManagementFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
     fund : felt, fee : felt
 ):
     onlyVaultFactory()
-    feeConfig.write(fund, FeeConfig.MANAGEMENT_FEE, fee)
+    fee_config.write(fund, FeeConfig.MANAGEMENT_FEE, fee)
     return ()
 end
 
