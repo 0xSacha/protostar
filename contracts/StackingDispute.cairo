@@ -27,7 +27,7 @@ from contracts.utils.utils import felt_to_uint256, uint256_div, uint256_percent,
 from contracts.interfaces.IFuccount import IFuccount
 from contracts.interfaces.IVaultFactory import IVaultFactory
 
-from openzeppelin.security.safemath.library import SafeUint256
+from openzeppelin.security.safemath import SafeUint256
 from starkware.cairo.common.math_cmp import is_le, is_not_zero
 
 
@@ -45,7 +45,7 @@ end
 func depositToDisputeFund(
     vault_address : felt,
     caller_address : felt,
-    token_id : felt,
+    token_id : Uint256,
     amount_to_deposit: Uint256
     ):
 end
@@ -54,7 +54,7 @@ end
 func withdrawFromDisputeFund(
     vault_address : felt,
     caller_address : felt,
-    token_id : felt,
+    token_id : Uint256,
     amount_to_deposit: Uint256
     ):
 end
@@ -63,7 +63,7 @@ end
 func depositToSecurityFund(
     vault_address : felt,
     caller_address : felt,
-    token_id : felt,
+    token_id : Uint256,
     amount_to_deposit: Uint256
     ):
 end
@@ -72,7 +72,7 @@ end
 func withdrawFromSecurityFund(
     vault_address : felt,
     caller_address : felt,
-    token_id : felt,
+    token_id : Uint256,
     amount_to_deposit: Uint256
     ):
 end
@@ -86,14 +86,13 @@ func fundResultLegit (vault_address : felt):
 end
 
 
-@storage_var
-func is_fund_disputed(vault : felt) -> (bool : felt):
-end
-
-
 #
 # Storage Var
 #
+
+@storage_var
+func is_fund_disputed(vault : felt) -> (bool : felt):
+end
 
 @storage_var
 func vault_factory() -> (res : felt):
@@ -143,17 +142,30 @@ func balanceOf{
 end
 
 @view
+func getSecurityFundBalance{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(fund : felt) -> (balance: Uint256):
+    let (balances) = security_fund_balance.read(fund)
+    return (balances)
+end
+
+@view
 func isGuaranteeWithdrawable{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         _fund: felt)-> (isGuaranteeWithdrawable_:felt):
+        alloc_locals
+        let (contract_address) = get_contract_address()
         let (VF_) = vault_factory.read()
         let (timestampRequest_:felt) = IVaultFactory.getCloseFundRequest(VF_, _fund)
-        if timestampRequest == 0:
+        if timestampRequest_ == 0:
             return(0)
         end
         let (currentTimesTamp_) = get_block_timestamp()
         let (vaultFactory_) = vault_factory.read()
-        let (exitTimestamp_:felt) = IVaultFactory.getExitTimestamp()
-        if is_le(currentTimesTamp_ , exitTimestamp_ + timestampRequest_) == 1:
+        let (exitTimestamp_:felt) = IVaultFactory.getExitTimestamp(contract_address)
+        let (condition_:felt) = is_le(exitTimestamp_, currentTimesTamp_)
+        if condition_ == 1:
             return(0)
         else:
             return (1)
@@ -167,7 +179,8 @@ end
 
 
 @external
-func deposit_to_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(vault_address : felt,token_id : felt, amount_to_deposit: Uint256) -> ():
+func deposit_to_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(vault_address : felt,token_id : Uint256, amount_to_deposit: Uint256) -> ():
+    alloc_locals
     let (caller_addr) = get_caller_address()
     let (vault_status) = is_fund_disputed.read(vault_address)
     if vault_status == TRUE:
@@ -176,25 +189,34 @@ func deposit_to_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, 
     let (balance_user) = ERC1155_balances.read(vault_address,caller_addr,token_id)
     let (balance_report) = report_fund_balance.read(vault_address)
     let(contract_address) = get_contract_address()
-    IFuccount.safeTransferFrom(caller_addr,contract_address,token_id,amount_to_deposit,0,0)
+    IFuccount.safeTransferFrom(contract_address,caller_addr,contract_address,token_id,amount_to_deposit)
     ### Balance user is UINT256, to change everywhere
-    ERC1155_balances.write(vault_address,caller_addr,token_id,amount_to_deposit + balance_user)
+    let (new_balance_user) = SafeUint256.add(amount_to_deposit,balance_user)
+    ERC1155_balances.write(vault_address,caller_addr,token_id,new_balance_user)
     depositToDisputeFund.emit(vault_address,caller_addr,token_id,amount_to_deposit)
-    report_fund_balance.write(vault_address, balance_report + amount_to_deposit)
+    let (new_balance_fund) = SafeUint256.add(amount_to_deposit,balance_report)
+    report_fund_balance.write(vault_address, new_balance_fund)
 
     let (balance_complains_user) = report_fund_balance.read(vault_address)
-    let (percent) = uint256_percent(IFuccount.sharesTotalSupply(),balance_complains_user) 
-    if is_le(5,percent) == 1:
+    let (sharesTotalSupply) = IFuccount.get_shares_total_supply(vault_address)
+    let (percent) = uint256_percent(sharesTotalSupply,balance_complains_user) 
+    let (condiiton) = uint256_le(Uint256(5, 0),percent)
+    if condiiton == 1:
         is_fund_disputed.write(vault_address,1)
         fundFroze.emit(vault_address)
+        return()
+    else:
+        return ()
     end
-    return()
 end
 
 @external
 func withdraw_to_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt, token_id : Uint256,amount_to_withdraw : Uint256) -> ():
-    
-    let (is_guarantee_withdrawable) = isGuaranteeWithdrawable()
+    alloc_locals 
+    let (is_guarantee_withdrawable) = isGuaranteeWithdrawable(fund)
+    with_attr error_message("Guarantee is not withdrawable yet"):
+        assert is_guarantee_withdrawable = 1
+    end
 
     let (caller_addr) = get_caller_address()
     let (balance_user) = ERC1155_balances.read(fund,caller_addr,token_id)
@@ -202,12 +224,12 @@ func withdraw_to_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
     let(contract_address) = get_contract_address()
     let (new_dispute_fund_balance) = SafeUint256.sub_le(dispute_fund_balance_, amount_to_withdraw)
     let (new_user_balancer) = SafeUint256.sub_le(balance_user, amount_to_withdraw)
-    IFuccount.safeTransferFrom(contract_address,caller_addr,token_id,amount_to_withdraw)
+    IFuccount.safeTransferFrom(fund,contract_address,caller_addr,token_id,amount_to_withdraw)
 
     ERC1155_balances.write(fund,caller_addr,token_id, new_user_balancer)
     report_fund_balance.write(caller_addr, new_dispute_fund_balance)
 
-     withdrawFromDisputeFund.emit(fund,caller_addr,token_id,amount_to_withdraw)
+    withdrawFromDisputeFund.emit(fund,caller_addr,token_id,amount_to_withdraw)
     return()
 end
 
@@ -233,19 +255,18 @@ func asset_manager_deposit {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
 
     let(contract_address) = get_contract_address()
 
-    IFuccount.safeTransferFrom(caller_addr,contract_address,token_id,amount)
+    IFuccount.safeTransferFrom(fund,caller_addr,contract_address,token_id,amount)
     ERC1155_balances.write(fund,caller_addr,token_id,new_balancer_user)
-    security_fund_balance.write(fund,caller_addr,new_balancer_user)
+    security_fund_balance.write(fund,new_balancer_user)
 
     depositToSecurityFund.emit(fund,caller_addr,token_id,amount)
     return()
 end
 
 @external
-func withdraw_asset_manager_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt, token_id : felt,amount_to_withdraw : Uint256) -> ():
-    
+func withdraw_asset_manager_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt, token_id : Uint256,amount_to_withdraw : Uint256) -> ():
+    alloc_locals 
     let (asset_man) = IFuccount.getManagerAccount(fund)
-    let(contract_address) = get_contract_address()
     let (caller_addr) = get_caller_address()
     with_attr error_message("Only asset Manager can call this function"):
         assert asset_man = caller_addr
@@ -253,18 +274,20 @@ func withdraw_asset_manager_dispute_fund {syscall_ptr : felt*, pedersen_ptr : Ha
 
     let (balance_user) = ERC1155_balances.read(fund,caller_addr,token_id)
     let (new_balance_user) = SafeUint256.sub_le(balance_user, amount_to_withdraw)
-    let (security_balance) = security_fund_balance.read()
+    let (security_balance) = security_fund_balance.read(fund)
     let (new_security_balance) = SafeUint256.sub_le(security_balance, amount_to_withdraw)
-
     
-    IFuccount.safeTransferFrom(contract_address,caller_addr,token_id,amount_to_withdraw)
+    let(contract_address) = get_contract_address()
+    IFuccount.safeTransferFrom(fund,contract_address,caller_addr,token_id,amount_to_withdraw)
 
     ERC1155_balances.write(fund,caller_addr,token_id, new_balance_user)
-    security_balance.write(caller_addr,new_security_balance)
+    security_fund_balance.write(caller_addr,new_security_balance)
 
     let (isGuaranteeWithdrawable_) = isGuaranteeWithdrawable(fund)
-    if is_guarantee_withdrawable == 0:
+    if isGuaranteeWithdrawable_ == 0:
         _assert_enought_guarantee(fund)
+    else:
+        return ()
     end
 
     withdrawFromSecurityFund.emit(fund,caller_addr,token_id,amount_to_withdraw)
@@ -272,7 +295,8 @@ func withdraw_asset_manager_dispute_fund {syscall_ptr : felt*, pedersen_ptr : Ha
 end
 
 func resultDispute {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(bool : felt, vault_address : felt):
-    let (dispute_fund) = is_fund_disputed(vault_address)
+    alloc_locals
+    let (dispute_fund) = is_fund_disputed.read(vault_address)
     let (contract_address) = get_contract_address()
     with_attr error_message("Fund is not in dispute"):
        assert dispute_fund = TRUE
@@ -280,44 +304,47 @@ func resultDispute {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
     if bool == TRUE:
         let (asset_manager) = IFuccount.getManagerAccount(vault_address)
         let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = ownerShares(vault_address,asset_manager)
-        IFuccount.burnBatch(contract_address, assetId_len, assetId, assetAmount_len, assetAmount)
+        IFuccount.burnBatch(vault_address,contract_address, assetId_len, assetId, assetAmount_len, assetAmount)
         fundResultBan.emit(vault_address)
         return ()
     else:
         let (asset_manager) = IFuccount.getManagerAccount(vault_address)
         let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = IFuccount.ownerShares(vault_address,contract_address)
-        let (assetId_lenAM:felt, assetIdAM:Uint256*, assetAmountAM_len:felt,assetAmountAM:Uint256*) = ownerShares(vault_address,asset_manager)
-        let (assetIdWAM_len, assetIdWAM, assetAmountWAM_len, assetAmountWAM) = get_all_shares_from_dispute_fund(assetId_len, assetId, assetAmount_len,assetAmount, assetAmount, assetIdAM, assetAmountAM_len,assetAmountAM,assetIdWAM_len, assetIdWAM, assetAmountWAM_len,assetAmountWAM)
-        IFuccount.burnBatch(contract_address, assetIdWAM_len, assetIdWAM, assetIdWAM_len, assetAmountWAM)
+        let (assetIdAM_len:felt, assetIdAM:Uint256*, assetAmountAM_len:felt,assetAmountAM:Uint256*) = ownerShares(vault_address,asset_manager)
+        let (local assetIdwam : Uint256*) = alloc()
+        let (local assetAmountWam : Uint256*) = alloc()
+        let (assetIdWAM_len, assetIdWAM, assetAmountWAM_len, assetAmountWAM) = get_all_shares_from_dispute_fund(assetId_len, assetId, assetAmount_len,assetAmount,assetIdAM_len, assetIdAM, assetAmountAM_len,assetAmountAM,0, assetIdwam, 0, assetAmountWam)
+        IFuccount.burnBatch(vault_address,contract_address, assetIdWAM_len, assetIdWAM, assetIdWAM_len, assetAmountWAM)
         fundResultLegit.emit(vault_address)
         return ()
-
     end
-    return()
 end
 
 #AM = Asset Manager
 #WAM = Without Asset Manager
-func get_all_shares_from_dispute_fund(assetIdAll_len:felt, assetIdAll:Uint256*, assetAmountAll_len:felt,assetAmountAll:Uint256*, assetIdAM_len:felt, assetIdAM:Uint256*, assetAmountAM_len:felt,assetAmountAM:Uint256*) -> (assetIdWAM_len:felt, assetIdWAM:Uint256*, assetAmountWAM_len:felt, assetAmountWAM:Uint256*):
+func get_all_shares_from_dispute_fund(assetIdAll_len:felt, assetIdAll:Uint256*, assetAmountAll_len:felt,assetAmountAll:Uint256*, assetIdAM_len:felt, assetIdAM:Uint256*, assetAmountAM_len:felt,assetAmountAM:Uint256*,assetIdWAM_len:felt, assetIdWAM:Uint256*, assetAmountWAM_len:felt, assetAmountWAM:Uint256*) -> (assetIdWAM_len:felt, assetIdWAM:Uint256*, assetAmountWAM_len:felt, assetAmountWAM:Uint256*):
     alloc_locals
     if assetIdAll_len == 0:
         return (assetIdWAM_len, assetIdWAM, assetAmountWAM_len, assetAmountWAM)
+    else:
+        if assetIdAM_len == 0:
+            assert [assetIdWAM] = [assetIdAll]
+            assert [assetAmountAM] = [assetAmountAll]
+            return get_all_shares_from_dispute_fund(assetIdAll_len = assetIdAll_len - 1, assetIdAll = assetIdAll + 2, assetAmountAll_len = assetAmountAll_len - 1, assetAmountAll = assetAmountAll + 2, assetIdAM_len = assetIdAM_len, assetIdAM = assetIdAM, assetAmountAM_len = assetAmountAM_len,assetAmountAM = assetAmountAM,assetIdWAM_len = assetIdWAM_len + 1 , assetIdWAM = assetIdWAM + 2, assetAmountWAM_len = assetAmountWAM_len + 1,assetAmountWAM = assetAmountWAM + 2)
+        else:
+            let current_id = [assetIdAll]
+            let current_ammount = [assetAmountAll]
+            let current_idAM = [assetIdAM]
+            let current_ammountAM = [assetAmountAM]
+            let (condition1) = uint256_eq(current_id,current_idAM)
+            let (condiiton2) = uint256_eq(current_ammount,current_ammountAM)
+            if uint256_eq(current_idAM,current_id) == 1:
+                if uint256_eq(current_ammountAM, current_ammount) == 1:
+                    return get_all_shares_from_dispute_fund(assetIdAll_len = assetIdAll_len - 1, assetIdAll = assetIdAll + 2, assetAmountAll_len = assetAmountAll_len - 1, assetAmountAll = assetAmountAll + assetAmountAll.SIZE, assetIdAM_len, assetIdAM, assetAmountAM_len,assetAmountAM,assetIdWAM_len = assetIdWAM_len  , assetIdWAM = assetIdWAM, assetAmountWAM_len = assetAmountWAM_len,assetAmountWAM = assetAmountWAM)
+                end
+            end
     end
-    if assetIdAM_len == 0:
-        assert [assetIdWAM] = [assetIdAll]
-        assert [assetAmountAM] = [assetAmountAll]
-        return get_all_shares_from_dispute_fund(assetIdAll_len = assetIdAll_len - 1, assetIdAll = assetIdAll + assetIdAll.SIZE, assetAmountAll_len = assetAmountAll_len - 1, assetAmountAll = assetAmountAll + assetAmountAll.SIZE, assetIdAM_len, assetIdAM, assetAmountAM_len,assetAmountAM,assetIdWAM_len = assetIdWAM_len + 1 , assetIdWAM = assetIdWAM + assetIdWAM.SIZE, assetAmountWAM_len = assetAmountWAM_len + 1,assetAmountWAM = assetAmountWAM + assetAmountWAM.SIZE, vault_address)
-    end
-    let current_id = [assetIdAll]
-    let current_ammount = [assetAmountAll]
-    let current_idAM = [assetIdAM]
-    let current_ammountAM = [assetAmountAM]
-    if current_idAM == current_id:
-        if current_ammountAM == current_ammount:
-            return get_all_shares_from_dispute_fund(assetIdAll_len = assetIdAll_len - 1, assetIdAll = assetIdAll + assetIdAll.SIZE, assetAmountAll_len = assetAmountAll_len - 1, assetAmountAll = assetAmountAll + assetAmountAll.SIZE, assetIdAM_len, assetIdAM, assetAmountAM_len,assetAmountAM,assetIdWAM_len = assetIdWAM_len  , assetIdWAM = assetIdWAM, assetAmountWAM_len = assetAmountWAM_len,assetAmountWAM = assetAmountWAM , vault_address)
-        end
-    end
-    return get_all_shares_from_dispute_fund(assetIdAll_len = assetIdAll_len , assetIdAll = assetIdAll , assetAmountAll_len = assetAmountAll_len , assetAmountAll = assetAmountAll , assetIdAM_len = assetIdAM_len - 1, assetIdAM = assetIdAM + assetIdAM.SIZE, assetAmountAM_len = assetAmountAll_len - 1,assetAmountAM = assetAmountAM + assetAmountAM.SIZE ,assetIdWAM_len = assetIdWAM_len , assetIdWAM = assetIdWAM , assetAmountWAM_len = assetAmountWAM_len ,assetAmountWAM = assetAmountWAM , vault_address)
+    return get_all_shares_from_dispute_fund(assetIdAll_len = assetIdAll_len , assetIdAll = assetIdAll , assetAmountAll_len = assetAmountAll_len , assetAmountAll = assetAmountAll , assetIdAM_len = assetIdAM_len - 1, assetIdAM = assetIdAM + assetIdAM.SIZE, assetAmountAM_len = assetAmountAll_len - 1,assetAmountAM = assetAmountAM + assetAmountAM.SIZE ,assetIdWAM_len = assetIdWAM_len , assetIdWAM = assetIdWAM , assetAmountWAM_len = assetAmountWAM_len ,assetAmountWAM = assetAmountWAM)
 end
 
 func ownerShares{
@@ -387,15 +414,14 @@ end
 
 func _assert_enought_guarantee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund: felt):
     alloc_locals
-   let (shareSupply_) = IFuccount.get_shares_total_supply(fund)
-   let (vault_factory_) = vault_factory.read()
-   let (securityFundBalance_)  = getSecurityFundBalance(fund)
-   let (guaranteeRatio_) = IVaultFactory.getGuaranteeRatio(vault_factory_)
-   let (minGuarantee_) =  uint256_percent(shareSupply_, Uint256(guaranteeRatio_,0))
-   let (isEnoughtGuarantee_) = uint256_le(minGuarantee_, securityFundBalance_)
-   with_attr error_message("_assert_enought_guarantee: Asser manager need to provide more guarantee "):
-        assert_not_zero(isEnoughtGuarantee_)
-    end
-   return()
+    let (shareSupply_) = IFuccount.get_shares_total_supply(fund)
+    let (vault_factory_) = vault_factory.read()
+    let (securityFundBalance_)  = getSecurityFundBalance(fund)
+    let (guaranteeRatio_) = IVaultFactory.getGuaranteeRatio(vault_factory_)
+    let (minGuarantee_) =  uint256_percent(shareSupply_, Uint256(guaranteeRatio_,0))
+    let (isEnoughtGuarantee_) = uint256_le(minGuarantee_, securityFundBalance_)
+    with_attr error_message("_assert_enought_guarantee: Asser manager need to provide more guarantee "):
+            is_not_zero(isEnoughtGuarantee_)
+        end
+    return()
 end
-
