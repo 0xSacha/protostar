@@ -20,11 +20,6 @@ from starkware.cairo.common.math import (
     assert_le,
 )
 
-
-from starkware.cairo.common.alloc import (
-    alloc,
-)
-
 from starkware.cairo.common.find_element import (
     find_element,
 )
@@ -50,15 +45,15 @@ from contracts.interfaces.IPolicyManager import IPolicyManager
 
 from contracts.interfaces.IIntegrationManager import IIntegrationManager
 
-from contracts.interfaces.IOraclePriceFeedMixin import IOraclePriceFeedMixin
+from contracts.PreLogic.interfaces.IOraclePriceFeedMixin import IOraclePriceFeedMixin
 
-from contracts.interfaces.IValueInterpretor import IValueInterpretor
+from contracts.PreLogic.interfaces.IValueInterpretor import IValueInterpretor
 
 from contracts.interfaces.IERC20 import IERC20
 
-from openzeppelin.access.ownable.library import Ownable
+from openzeppelin.access.ownable import Ownable
 
-from openzeppelin.security.safemath.library import SafeUint256
+from openzeppelin.security.safemath import SafeUint256
 
 #
 # Events
