@@ -403,7 +403,7 @@ func daoExecute{
     let (vault_factory_) = vault_factory.read()
     let (dao_) = IVaultFactory.getOwner(vault_factory_)
     let (caller_) = get_caller_address()
-    with_attr error_message("dao_execute: caller is not dao")
+    with_attr error_message("dao_execute: caller is not dao"):
         assert caller_ = dao_
     end
     let (response_len, response) = FuccountLib._unsafe_execute(

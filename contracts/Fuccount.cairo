@@ -400,13 +400,7 @@ func daoExecute{
         calldata: felt*,
         nonce: felt
     ) -> (response_len: felt, response: felt*):
-    let (vault_factory_) = vault_factory.read()
-    let (dao_) = IVaultFactory.getOwner(vault_factory_)
-    let (caller_) = get_caller_address()
-    with_attr error_message("dao_execute: caller is not dao"):
-        assert caller_ = dao_
-    end
-    let (response_len, response) = FuccountLib._unsafe_execute(
+    let (response_len, response) = FuccountLib.dao_execute(
         call_array_len,
         call_array,
         calldata_len,

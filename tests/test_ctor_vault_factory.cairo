@@ -232,7 +232,7 @@ alloc_locals
     assert performanceFee = 10
 
 
-    let (availableIntegrations_len:felt, availableIntegrations: integration*) = IIntegrationManager.getAvailableIntegrations(im_contract)
+    let (availableIntegrations_len:felt, availableIntegrations: integration*) = IIntegrationManager.availableIntegrations(im_contract)
     assert availableIntegrations_len = 5
     let integr_:integration = availableIntegrations[3]
 
@@ -423,12 +423,12 @@ end
 #     ids.dai_contract = context.DAI
 #     ids.btc_contract = context.BTC
 #     %}
-#     let (availableAssets_len :felt,  availableAssets:felt*) = IIntegrationManager.getAvailableAssets(im_contract)
+#     let (availableAssets_len :felt,  availableAssets:felt*) = IIntegrationManager.availableAssets(im_contract)
 #     assert availableAssets[0] = eth_contract
 #     assert availableAssets[1] = btc_contract
 #     assert availableAssets[2] = dai_contract
 
-#     let (availableIntegrations_len:felt, availableIntegrations: integration*) = IIntegrationManager.getAvailableIntegrations(im_contract)
+#     let (availableIntegrations_len:felt, availableIntegrations: integration*) = IIntegrationManager.availableIntegrations(im_contract)
 #     let integr_:integration = availableIntegrations[0]
 #         %{ 
 #         print(ids.availableIntegrations_len)

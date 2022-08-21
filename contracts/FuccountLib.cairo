@@ -21,7 +21,7 @@ from openzeppelin.introspection.erc165.IERC165 import IERC165
 from openzeppelin.introspection.erc165.library import ERC165
 from contracts.interfaces.IERC1155Receiver import IERC1155_Receiver
 from openzeppelin.security.safemath.library import SafeUint256
-from openzeppelin.security.reentrancyguard import ReentrancyGuard
+from openzeppelin.security.reentrancyguard.library import ReentrancyGuard
 
 from starkware.cairo.common.uint256 import (
     Uint256,
@@ -34,7 +34,7 @@ from starkware.cairo.common.uint256 import (
 )
 from contracts.utils.utils import felt_to_uint256, uint256_div, uint256_percent, uint256_pow, uint256_mul_low
 
-from openzeppelin.token.erc20.interfaces.IERC20 import IERC20
+from openzeppelin.token.erc20.IERC20 import IERC20
 from contracts.interfaces.IVaultFactory import IVaultFactory
 from contracts.interfaces.IFeeManager import FeeConfig, IFeeManager
 from contracts.interfaces.IPolicyManager import IPolicyManager
@@ -459,7 +459,7 @@ func get_not_nul_assets{
     }() -> (notNulAssets_len:felt, notNulAssets: AssetInfo*):
     alloc_locals
     let (IM_:felt) = _get_integration_manager()
-    let (availableAssets_len: felt, availableAssets:felt*) = IIntegrationManager.getAvailableAssets(IM_)
+    let (availableAssets_len: felt, availableAssets:felt*) = IIntegrationManager.availableAssets(IM_)
     let (local notNulAssets : AssetInfo*) = alloc()
     let (notNulAssets_len:felt) = _complete_non_nul_asset_tab(availableAssets_len, availableAssets, 0, notNulAssets)    
     return(notNulAssets_len, notNulAssets)
@@ -475,7 +475,7 @@ func get_not_nul_shares{
     let (IM_:felt) = _get_integration_manager()
     let (selfAddress) = get_contract_address()
     let (denomination_asset_) = get_denomination_asset()
-    let (availableAShares_len: felt, availableShares:felt*) = IIntegrationManager.getAvailableShares(IM_)
+    let (availableAShares_len: felt, availableShares:felt*) = IIntegrationManager.availableShares(IM_)
     let (local notNulShares : ShareInfo*) = alloc()
     let (notNulShares_len:felt) = _complete_non_nul_shares_tab(availableAShares_len, availableShares, 0, notNulShares, selfAddress, denomination_asset_)    
     return(notNulShares_len, notNulShares)
@@ -488,7 +488,7 @@ func get_not_nul_positions{
     }() -> (notNulPositions_len:felt, notNulPositition: felt*):
     alloc_locals
     let (IM_:felt) = _get_integration_manager()
-    let (availableExternalPositions_len: felt, availableExternalPositions:felt*) = IIntegrationManager.getAvailableExternalPositions(IM_)
+    let (availableExternalPositions_len: felt, availableExternalPositions:felt*) = IIntegrationManager.availableExternalPositions(IM_)
     let (local notNulExternalPositions : PositionInfo*) = alloc()
     let (notNulExternalPositions_len:felt) = _complete_non_nul_position_tab(availableExternalPositions_len, availableExternalPositions, 0, notNulExternalPositions)    
     return(notNulExternalPositions_len, notNulExternalPositions)
@@ -567,7 +567,7 @@ func is_free_reedem{
     alloc_locals
     let (policyManager_:felt) = _get_policy_manager()
     let (contractAddress_:felt) = get_contract_address()
-    let (allowedAssetToReedem_len: felt, allowedAssetToReedem:felt*) = IPolicyManager.getAllowedAssetToReedem(policyManager_, contractAddress_)
+    let (allowedAssetToReedem_len: felt, allowedAssetToReedem:felt*) = IPolicyManager.allowedAssetsToReedem(policyManager_, contractAddress_)
     if allowedAssetToReedem_len == 0:
     return (1)
     else:
@@ -768,7 +768,7 @@ end
         if asset_len == 0:
             return()
         end
-        let (isAllowedAssetToReedem_) = IPolicyManager.checkIsAllowedAssetToReedem(policyManager, contractAddress, asset[0])
+        let (isAllowedAssetToReedem_) = IPolicyManager.isAllowedAssetToReedem(policyManager, contractAddress, asset[0])
         with_attr error_message("_assert_allowed_asset_to_reedem:  Only allowed assets can be reedem"):
             assert isAllowedAssetToReedem_ = 1
         end
@@ -920,12 +920,12 @@ func reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     #check timelock (fund lvl3)
     let (fund_level_:felt) = get_fund_level()
     if fund_level_ == 3:
-        let (policyManager_:felt) = _get_policy_manager()
-        let (currentTimesTamp_:felt) = get_block_timestamp()
-        let (reedemTime_:felt) = IPolicyManager.getReedemTime(policyManager_, fund_)
-        with_attr error_message("reedem: timelock not reached"):
-            assert_le(reedemTime_, currentTimesTamp_)
-        end
+        # let (policyManager_:felt) = _get_policy_manager()
+        # let (currentTimesTamp_:felt) = get_block_timestamp()
+        # let (reedemTime_:felt) = IPolicyManager.getReedemTime(policyManager_, fund_)
+        # with_attr error_message("reedem: timelock not reached"):
+        #     assert_le(reedemTime_, currentTimesTamp_)
+        # end
         tempvar syscall_ptr = syscall_ptr
         tempvar range_check_ptr = range_check_ptr
         tempvar pedersen_ptr = pedersen_ptr
@@ -1125,6 +1125,28 @@ func set_public_key{
         return _unsafe_execute(call_array_len, call_array, calldata_len, calldata, nonce)
     end
 
+func dao_execute{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr,
+        ecdsa_ptr: SignatureBuiltin*,
+        bitwise_ptr: BitwiseBuiltin*
+    }(
+        call_array_len: felt,
+        call_array: AccountCallArray*,
+        calldata_len: felt,
+        calldata: felt*,
+        nonce: felt
+    ) -> (response_len: felt, response: felt*):
+    let (vault_factory_) = vault_factory.read()
+    let (dao_) = IVaultFactory.getOwner(vault_factory_)
+    let (caller_) = get_caller_address()
+    with_attr error_message("dao_execute: caller is not dao"):
+        assert caller_ = dao_
+    end
+    return _unsafe_execute(call_array_len, call_array, calldata_len, calldata, nonce)
+end
+
     func eth_execute{
             syscall_ptr : felt*,
             pedersen_ptr : HashBuiltin*,
@@ -1275,19 +1297,19 @@ func _check_call{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     #check if allowed call
     let (vault_factory_:felt) = vault_factory.read()
     let (integrationManager_:felt) = IVaultFactory.getIntegrationManager(vault_factory_)
-    let (isIntegrationAvailable_) = IIntegrationManager.checkIsIntegrationAvailable(integrationManager_, _contract, _selector)
+    let (isIntegrationAvailable_) = IIntegrationManager.isAvailableIntegration(integrationManager_, _contract, _selector)
     with_attr error_message("the operation is not allowed on Magnety"):
         assert isIntegrationAvailable_ = 1
     end
 
     let (fund_level_) = get_fund_level()
-    let (integrationLevel_) = IIntegrationManager.getIntegrationRequiredLevel(integrationManager_, _contract, _selector)
+    let (integrationLevel_) = IIntegrationManager.integrationRequiredFundLevel(integrationManager_, _contract, _selector)
     with_attr error_message("the operation is not allowed for this fund"):
         assert_le(integrationLevel_, fund_level_)
     end
 
     #perform pre-call logic if necessary
-    let (preLogicContract:felt) = IIntegrationManager.getIntegration(integrationManager_, _contract, _selector)
+    let (preLogicContract:felt) = IIntegrationManager.prelogicContract(integrationManager_, _contract, _selector)
     let (isPreLogicNonRequired:felt) = _is_zero(preLogicContract)
     let (contractAddress_:felt) = get_contract_address()
     if isPreLogicNonRequired ==  0:
@@ -1631,11 +1653,11 @@ func _assert_allowed_depositor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
     alloc_locals
     let (policyManager_) = _get_policy_manager()
     let (fund_:felt) = get_contract_address()
-    let (isPublic_:felt) = IPolicyManager.checkIsPublic(policyManager_, fund_)
+    let (isPublic_:felt) = IPolicyManager.isPublic(policyManager_, fund_)
     if isPublic_ == 1:
         return()
     else:
-        let (isAllowedDepositor_:felt) = IPolicyManager.checkIsAllowedDepositor(policyManager_, fund_, _caller)
+        let (isAllowedDepositor_:felt) = IPolicyManager.isAllowedDepositor(policyManager_, fund_, _caller)
         with_attr error_message("_assert_allowed_depositor: not allowed depositor"):
         assert isAllowedDepositor_ = 1
         end

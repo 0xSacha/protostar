@@ -17,11 +17,11 @@ from starkware.cairo.common.math import (
     split_felt,
 )
 
-from openzeppelin.introspection.IERC165 import IERC165
-from openzeppelin.introspection.ERC165 import ERC165
+from openzeppelin.introspection.erc165.IERC165 import IERC165
+from openzeppelin.introspection.erc165.library import ERC165
 from contracts.interfaces.IERC1155Receiver import IERC1155_Receiver
-from openzeppelin.security.safemath import SafeUint256
-from openzeppelin.security.reentrancyguard import ReentrancyGuard
+from openzeppelin.security.safemath.library import SafeUint256
+from openzeppelin.security.reentrancyguard.library import ReentrancyGuard
 
 from starkware.cairo.common.uint256 import (
     Uint256,
@@ -34,7 +34,7 @@ from starkware.cairo.common.uint256 import (
 )
 from contracts.utils.utils import felt_to_uint256, uint256_div, uint256_percent, uint256_pow, uint256_mul_low
 
-from openzeppelin.token.erc20.interfaces.IERC20 import IERC20
+from openzeppelin.token.erc20.IERC20 import IERC20
 from contracts.interfaces.IVaultFactory import IVaultFactory
 from contracts.interfaces.IFeeManager import FeeConfig, IFeeManager
 from contracts.interfaces.IPolicyManager import IPolicyManager
@@ -567,7 +567,7 @@ func is_free_reedem{
     alloc_locals
     let (policyManager_:felt) = _get_policy_manager()
     let (contractAddress_:felt) = get_contract_address()
-    let (allowedAssetToReedem_len: felt, allowedAssetToReedem:felt*) = IPolicyManager.getAllowedAssetToReedem(policyManager_, contractAddress_)
+    let (allowedAssetToReedem_len: felt, allowedAssetToReedem:felt*) = IPolicyManager.allowedAssetsToReedem(policyManager_, contractAddress_)
     if allowedAssetToReedem_len == 0:
     return (1)
     else:

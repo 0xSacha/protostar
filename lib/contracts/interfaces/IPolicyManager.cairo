@@ -16,13 +16,13 @@ namespace IPolicyManager:
     end
 
     #getters
-    func isPublic(_fund:felt)-> (res : felt):
+    func isPublic(fund : felt) -> (is_public : felt):
     end
 
-    func isAllowedDepositor(_fund:felt, _depositor:felt)-> (res : felt):
+    func isAllowedDepositor(fund : felt, depositor : felt) -> (is_allowed_depositor : felt): 
     end
 
-    func allowedDepositors(_fund:felt) -> (allowedDepositor_len: felt, allowedDepositor:felt*):
+    func allowedDepositors(fund:felt) -> (allowedDepositor_len: felt, allowedDepositor:felt*): 
     end
 
     func isAllowedAssetToReedem(fund : felt, asset : felt) -> (is_allowed_asset_to_reedem : felt): 
