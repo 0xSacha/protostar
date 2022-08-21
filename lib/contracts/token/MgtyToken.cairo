@@ -4,12 +4,12 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.uint256 import Uint256
 from starkware.cairo.common.bool import TRUE
 
-from openzeppelin.access.ownable.library import Ownable
+from openzeppelin.access.ownable import Ownable
 from openzeppelin.token.erc20.library import ERC20
 
 
 @storage_var
-func maxSupply() -> (res : Uint256):
+func max_supply() -> (res : Uint256):
 end
 
 
@@ -23,14 +23,13 @@ func constructor{
         symbol: felt,
         decimals: felt,
         initial_supply: Uint256,
-        _maxSupply: Uint256,
+        _max_supply: Uint256,
         recipient: felt,
         owner: felt
     ):
-    uint256_check(_maxSupply)
-    let (validMaxSupply_) = uint256_le(_maxSupply, Uint256(0, 0))
-    assert_not_zero(1 - validMaxSupply_)
-    maxSupply.write(_maxSupply)
+    Uint256.uint256_check(_max_supply)
+    let (validMaxSupply_) = Uint256.uint256_le(_max_supply, Uint256(0, 0))
+    max_supply.write(_max_supply)
     ERC20.initializer(name, symbol, decimals)
     ERC20._mint(recipient, initial_supply)
     Ownable.initializer(owner)
@@ -62,23 +61,23 @@ func symbol{
 end
 
 @view
-func totalSupply{
+func total_supply{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-    }() -> (totalSupply: Uint256):
-    let (totalSupply: Uint256) = ERC20.total_supply()
-    return (totalSupply)
+    }() -> (total_supply: Uint256):
+    let (total_supply: Uint256) = ERC20.total_supply()
+    return (total_supply)
 end
 
 @view
-func maxSupply{
+func get_max_supply{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
-    }() -> (maxSupply: Uint256):
-    let (maxSupply: Uint256) = maxSupply.read()
-    return (maxSupply)
+    }() -> (max_supply: Uint256):
+    let (max_supply: Uint256) = max_supply.read()
+    return (max_supply)
 end
 
 @view
@@ -92,7 +91,7 @@ func decimals{
 end
 
 @view
-func balanceOf{
+func balance_of{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
@@ -136,7 +135,7 @@ func transfer{
 end
 
 @external
-func transferFrom{
+func transfer_from{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
@@ -160,7 +159,7 @@ func approve{
 end
 
 @external
-func increaseAllowance{
+func increase_allowance{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
@@ -170,7 +169,7 @@ func increaseAllowance{
 end
 
 @external
-func decreaseAllowance{
+func decrease_allowance{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
@@ -191,7 +190,7 @@ func mint{
 end
 
 @external
-func transferOwnership{
+func transfer_ownership{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -201,7 +200,7 @@ func transferOwnership{
 end
 
 @external
-func renounceOwnership{
+func renounce_ownership{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr

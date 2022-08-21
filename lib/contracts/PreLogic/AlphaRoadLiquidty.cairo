@@ -4,7 +4,7 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin
 from contracts.interfaces.IVaultFactory import IVaultFactory
 from contracts.interfaces.IIntegrationManager import IIntegrationManager
 
-from contracts.interfaces.IARFPoolFactory import IARFPoolFactory, PoolPair
+from contracts.PreLogic.interfaces.IARFPoolFactory import IARFPoolFactory, PoolPair
 from starkware.cairo.common.math import assert_not_zero
 
 @storage_var

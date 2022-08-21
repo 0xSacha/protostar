@@ -44,7 +44,7 @@ func runPreLogic{
     let spender_:felt = [_callData]
     let (VF_:felt) = vaultFactory.read()
     let (IM_:felt) = IVaultFactory.getIntegrationManager(VF_)
-    let (isAllowedSpender_:felt) = IIntegrationManager.checkIsContractIntegrated(IM_, spender_)
+    let (isAllowedSpender_:felt) = IIntegrationManager.isIntegratedContract(IM_, spender_)
     with_attr error_message("approve: Spender contract not integrated to Magnety"):
         assert_not_zero(isAllowedSpender_)
     end

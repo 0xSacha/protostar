@@ -206,17 +206,17 @@ end
 #
 
 func only_dependencies_set{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}():
-    let (are_dependencies_set_:felt) = are_dependencies_set()
+    let (are_dependencies_set_:felt) = areDependenciesSet()
     with_attr error_message("only_dependencies_set:Dependencies not set"):
         assert are_dependencies_set_ = 1
     end
     return ()
 end
 
-func only_asset_manager{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}(_fund:felt):
+func only_asset_manager{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}(fund:felt):
     let (caller_:felt) = get_caller_address()
-    let (assetManager_:felt) = IFuccount.getManagerAccount(_fund)
-    with_attr error_message("add_allowed_depositors: caller is not asset manager"):
+    let (assetManager_:felt) = IFuccount.manager(fund)
+    with_attr error_message("only_asset_manager: caller is not asset manager"):
         assert caller_ = assetManager_
     end
     return ()
@@ -227,25 +227,25 @@ end
 #
 
 @view
-func are_dependencies_set{
+func areDependenciesSet{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
     }() -> (res: felt):
     alloc_locals
-    let (oracle_:felt) = get_oracle()
-    let (fee_manager_:felt) = get_fee_manager()
-    let (policy_manager_:felt) = get_policy_manager()
-    let (integration_manager_:felt) = get_integration_manager()
-    let (value_interpretor_:felt) = get_value_interpretor()
-    let (primitive_price_feed_:felt) = get_primitive_price_feed()
-    let (approve_prelogic_:felt) = get_approve_prelogic()
-    let (max_fund_level_:felt) = get_max_fund_level()
-    let (stacking_dispute_: felt) = get_stacking_dispute()
-    let (guarantee_ratio_: felt) = get_guarantee_ratio()
-    let (exit_timestamp_: felt) = get_exit_timestamp()
+    let (oracle_:felt) = getOracle()
+    let (fee_manager_:felt) = getFeeManager()
+    let (policy_manager_:felt) = getPolicyManager()
+    let (integration_manager_:felt) = getIntegrationManager()
+    let (value_interpretor_:felt) = getValueInterpretor()
+    let (primitive_price_feed_:felt) = getPrimitivePriceFeed()
+    let (approve_prelogic_:felt) = getApprovePrelogic()
+    let (max_fund_level_:felt) = getMaxFundLevel()
+    let (stacking_dispute_: felt) = getStackingDispute()
+    let (guarantee_ratio_: felt) = getGuaranteeRatio()
+    let (exit_timestamp_: felt) = getExitTimestamp()
     let  mul_:felt = approve_prelogic_  * oracle_ * fee_manager_ * policy_manager_ * integration_manager_ * value_interpretor_ * primitive_price_feed_ * max_fund_level_ * stacking_dispute_ * exit_timestamp_
-    let (isZero_:felt) = __is_zero(mul_)
+    let (isZero_:felt) = is_zero(mul_)
     if isZero_ == 1:
         return (res = 0)
     else:
@@ -254,7 +254,7 @@ func are_dependencies_set{
 end
 
 @view
-func get_owner{
+func getOwner{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -266,7 +266,7 @@ end
 
 
 @view
-func get_oracle{
+func getOracle{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -277,7 +277,7 @@ end
 
 
 @view
-func get_fee_manager{
+func getFeeManager{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -287,7 +287,7 @@ func get_fee_manager{
 end
 
 @view
-func get_policy_manager{
+func getPolicyManager{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -297,7 +297,7 @@ func get_policy_manager{
 end
 
 @view
-func get_integration_manager{
+func getIntegrationManager{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -307,7 +307,7 @@ func get_integration_manager{
 end
 
 @view
-func get_value_interpretor{
+func getValueInterpretor{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -317,7 +317,7 @@ func get_value_interpretor{
 end
 
 @view
-func get_primitive_price_feed{
+func getPrimitivePriceFeed{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -327,7 +327,7 @@ func get_primitive_price_feed{
 end
 
 @view
-func get_approve_prelogic{
+func getApprovePrelogic{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -337,7 +337,7 @@ func get_approve_prelogic{
 end
 
 @view
-func get_share_price_feed{
+func getSharePriceFeed{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -347,7 +347,7 @@ func get_share_price_feed{
 end
 
 @view
-func get_dao_treasury{
+func getDaoTreasury{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -357,7 +357,7 @@ func get_dao_treasury{
 end
 
 @view
-func get_stacking_vault{
+func getStackingVault{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -367,7 +367,7 @@ func get_stacking_vault{
 end
 
 @view
-func get_stacking_vault_fee{
+func getStackingVaultFee{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -377,7 +377,7 @@ func get_stacking_vault_fee{
 end
 
 @view
-func get_dao_treasury_fee{
+func getDaoTreasuryFee{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -387,7 +387,7 @@ func get_dao_treasury_fee{
 end
 
 @view
-func get_max_fund_level{
+func getMaxFundLevel{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -397,54 +397,20 @@ func get_max_fund_level{
 end
 
 @view
-func get_stacking_dispute{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (res: felt):
+func getStackingDispute{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (res: felt):
     let(res:felt) = stacking_dispute.read()
     return (res=res)
 end
 
 @view
-func get_guarantee_ratio{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (res: felt):
+func getGuaranteeRatio{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (res: felt):
     let(res:felt) = guarantee_ratio.read()
     return (res=res)
 end
 
 @view
-func get_exit_timestamp{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (res: felt):
+func getExitTimestamp{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (res: felt):
     let(res:felt) = exit_timestamp.read()
-    return (res=res)
-end
-
-
-
-#get Vault info helper to fetch info for the frontend, to be removed once tracker is implemented
-
-@view
-func get_user_vault_amount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_user:felt) -> (res: felt):
-    let(res:felt) = asset_manager_vault_amount.read(_user)
-    return (res=res)
-end
-
-@view
-func get_user_vault{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_user:felt, _vaultId: felt) -> (res: felt):
-    let(res:felt) = asset_manager_vault.read(_user, _vaultId)
-    with_attr error_message("getVaultAddressFromCallerAndId: Vault not found"):
-        assert_not_zero(res)
-    end
-    return (res=res)
-end
-
-@view
-func get_vault_amount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (res: felt):
-    let(res:felt) = vault_amount.read()
-    return (res=res)
-end
-
-@view
-func get_vault_from_id{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_vaultId: felt) -> (res: felt):
-    let(res:felt) = id_to_vault.read(_vaultId)
-    with_attr error_message("getVaultAddressFromId: Vault not found"):
-        assert_not_zero(res)
-    end
     return (res=res)
 end
 
@@ -455,7 +421,7 @@ func getCloseFundRequest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range
 end
 
 @view
-func getManagerGuaanteeRatio{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_fund: felt) -> (res: felt):
+func getManagerGuaranteeRatio{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_fund: felt) -> (res: felt):
     let (baseGuaranteeRatio_) = guarantee_ratio.read()
     ##TODO KYC + soulbound consideration
     return (res=baseGuaranteeRatio_)
@@ -467,7 +433,7 @@ end
 #
 
 @external
-func transfer_ownership{
+func transferOwnership{
             syscall_ptr : felt*,
             pedersen_ptr : HashBuiltin*,
             range_check_ptr
@@ -479,205 +445,203 @@ end
 
 
 @external
-func set_orcale{
+func setOrcale{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
     }(
-        _oracle: felt,
+        oracle_address: felt,
     ):
     Ownable.assert_only_owner()
-    oracle.write(_oracle)
+    oracle.write(oracle_address)
     return ()
 end
 
 @external
-func set_fee_manager{
+func setFeeManager{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
     }(
-        _fee_manager: felt,
+        fee_manager_address: felt,
     ):
     Ownable.assert_only_owner()
-    fee_manager.write(_fee_manager)
+    fee_manager.write(fee_manager_address)
     return ()
 end
 
 
 @external
-func set_policy_manager{
+func setPolicyManager{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
     }(
-        _policy_manager: felt,
+        policy_manager_address: felt,
     ):
     Ownable.assert_only_owner()
-    policy_manager.write(_policy_manager)
+    policy_manager.write(policy_manager_address)
     return ()
 end
 
 @external
-func set_integration_manager{
+func setIntegrationManager{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
     }(
-        _integration_manager: felt,
+        integration_manager_address: felt,
     ):
     Ownable.assert_only_owner()
-    integration_manager.write(_integration_manager)
+    integration_manager.write(integration_manager_address)
     return ()
 end
 
 @external
-func set_value_interpretor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _value_interpretor : felt):
+func setValueInterpretor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        value_interpretor_address : felt):
     Ownable.assert_only_owner()
-    value_interpretor.write(_value_interpretor)
+    value_interpretor.write(value_interpretor_address)
     return ()
 end
 
 @external
-func set_primitive_price_feed{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _primitive_price_feed : felt):
+func setPrimitivePriceFeed{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        primitive_price_feed_address : felt):
     Ownable.assert_only_owner()
-    primitive_price_feed.write(_primitive_price_feed)
+    primitive_price_feed.write(primitive_price_feed_address)
     return ()
 end
 
 @external
-func set_approve_prelogic{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _approve_prelogic : felt):
+func setApprovePrelogic{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        approve_prelogic_address : felt):
     Ownable.assert_only_owner()
-    approve_prelogic.write(_approve_prelogic)
+    approve_prelogic.write(approve_prelogic_address)
     return ()
 end
 
 @external
-func set_share_price_feed{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _share_price_feed : felt):
+func setSharePriceFeed{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        share_price_feed_address : felt):
     Ownable.assert_only_owner()
-    share_price_feed.write(_share_price_feed)
+    share_price_feed.write(share_price_feed_address)
     return ()
 end
 
 
 @external
-func set_stacking_vault{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _stackingVault : felt):
+func setStackingVault{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        stacking_vault_address : felt):
     Ownable.assert_only_owner()
-    stacking_vault.write(_stackingVault)
+    stacking_vault.write(stacking_vault_address)
     return ()
 end
 
 @external
-func set_dao_treasury{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _dao_treasury : felt):
+func setDaoTreasury{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        dao_treasury_address : felt):
     Ownable.assert_only_owner()
-    dao_treasury.write(_dao_treasury)
+    dao_treasury.write(dao_treasury_address)
     return ()
 end
 
 @external
-func set_stacking_vault_fee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _stackingVaultFee : felt):
+func setStackingVaultFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        stacking_vault_fee_value : felt):
     Ownable.assert_only_owner()
-    stacking_vault_fee.write(_stackingVaultFee)
+    stacking_vault_fee.write(stacking_vault_fee_value)
     return ()
 end
 
 @external
-func set_dao_treasury_fee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _dao_treasuryFee : felt):
+func setDaoTreasuryFee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        dao_treasury_fee_value : felt):
     Ownable.assert_only_owner()
-    dao_treaury_fee.write(_dao_treasuryFee)
+    dao_treaury_fee.write(dao_treasury_fee_value)
     return ()
 end
 
 @external
-func set_max_fund_level{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _max_fund_level : felt):
+func setMaxFundLevel{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        max_fund_level_value : felt):
     Ownable.assert_only_owner()
-    max_fund_level.write(_max_fund_level)
+    max_fund_level.write(max_fund_level_value)
     return ()
 end
 
 @external
-func set_stacking_dispute{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _stacking_dispute : felt):
+func setStackingDispute{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        stacking_dispute_address : felt):
     Ownable.assert_only_owner()
-    stacking_dispute.write(_stacking_dispute)
+    stacking_dispute.write(stacking_dispute_address)
     return ()
 end
 
 @external
-func set_guarantee_ratio{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _guarantee_ratio : felt):
+func SetGuaranteeRatio{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        guarantee_ratio_value : felt):
     Ownable.assert_only_owner()
-    guarantee_ratio.write(_guarantee_ratio)
+    guarantee_ratio.write(guarantee_ratio_value)
     return ()
 end
 
 @external
-func set_exit_timestamp{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _exit_timestamp : felt):
+func setExitTimestamp{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+        exit_timestamp_value : felt):
     Ownable.assert_only_owner()
-    exit_timestamp.write(_exit_timestamp)
+    exit_timestamp.write(exit_timestamp_value)
     return ()
 end
 
 
 
 @external
-func add_global_allowed_asset{
+func addGlobalAllowedAssets{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }(_assetList_len:felt, _assetList:felt*) -> ():
+    }(assets_len:felt, assets:felt*) -> ():
     alloc_locals
     Ownable.assert_only_owner()
     only_dependencies_set()
     let (integration_manager_:felt) = integration_manager.read()
-    __add_global_allowed_asset(_assetList_len, _assetList, integration_manager_)
+    add_global_allowed_assets_from_tab(assets_len, assets, integration_manager_)
     return ()
 end
 
 @external
-func add_global_allowed_external_position{
+func addGlobalAllowedExternalPositions{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }(_externalPositionList_len:felt, _externalPositionList:felt*) -> ():
+    }(external_positions_len:felt, external_positions:felt*) -> ():
     alloc_locals
     Ownable.assert_only_owner()
     only_dependencies_set()
     let (integration_manager_:felt) = integration_manager.read()
-    __add_global_allowed_external_position(_externalPositionList_len, _externalPositionList, integration_manager_)
+    add_global_allowed_external_positions_from_tab(external_positions_len, external_positions, integration_manager_)
     return ()
 end
 
 @external
-func add_global_allowed_integration{
+func addGlobalAllowedIntegrations{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }(allowed_integrations_len:felt, allowed_integrations:Integration*) -> ():
+    }(integrations_len:felt, integrations:Integration*) -> ():
     alloc_locals
     Ownable.assert_only_owner()
     only_dependencies_set()
     let (integration_manager_:felt) = integration_manager.read()
-    add_global_allowed_integration(allowed_integrations_len, allowed_integrations, integration_manager_)
+    add_global_allowed_integration_from_tab(integrations_len, integrations, integration_manager_)
     return()
 end
-
-
 
 #asset manager
 
 @external
-func add_allowed_depositors{
+func addAllowedDepositors{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -689,28 +653,28 @@ func add_allowed_depositors{
     with_attr error_message("add_allowed_depositors: the fund is already public"):
         assert is_public_ = 0
     end
-   add_allowed_depositors(fund, depositors_len, depositors)
+   add_allowed_depositors_from_tab(fund, depositors_len, depositors)
     return ()
 end
 
 
 @external
-func initialize_fund{
+func initializeFund{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
         range_check_ptr
     }(
     #vault initializer
-    _fund: felt,
-    _fundLevel: felt,
-    _fundName:felt,
-    _fundSymbol:felt,
-    _denominationAsset:felt,
-    _amount: Uint256,
-    _shareAmount: Uint256,
-    _feeConfig_len: felt,
-    _feeConfig: felt*,
-    _isPublic:felt,
+    fund: felt,
+    level: felt,
+    name:felt,
+    symbol:felt,
+    denomination_asset:felt,
+    amount: Uint256,
+    shares_amount: Uint256,
+    fee_config_len: felt,
+    fee_config: felt*,
+    is_public:felt,
     ):
     alloc_locals
     only_dependencies_set()
@@ -719,150 +683,94 @@ func initialize_fund{
     let (integration_manager_:felt) = integration_manager.read()
     let (value_interpretor_:felt) = value_interpretor.read()
     let (primitive_price_feed_:felt) = primitive_price_feed.read()
-    let (name_:felt) = IFuccount.getName(_fund)
+    let (name_:felt) = IFuccount.name(fund)
 
     with_attr error_message("initialize_fund: vault already initialized"):
         assert name_ = 0
     end
+
     with_attr error_message("initialize_fund: can not set value to 0"):
-        assert_not_zero(_fund * _fundName * _fundSymbol * _denominationAsset)
+        assert_not_zero(fund * name * symbol * denomination_asset * level)
     end
 
-    let (isAllowedDenominationAsset:felt) = IIntegrationManager.checkIsAssetAvailable(integration_manager_, _denominationAsset)
+    let (is_available_denomination_asset:felt) = IIntegrationManager.isAvailableAsset(integration_manager_, denomination_asset)
     with_attr error_message("initialize_fund: can not set value to 0"):
-        assert isAllowedDenominationAsset = 1
+        assert is_available_denomination_asset = 1
     end
 
-    let (assetManager_: felt) = get_caller_address()
+    let (manager_: felt) = get_caller_address()
 
     #check allowed amount, min amount > decimal/1000 & share amount in [1, 100]
-    let (decimals_:felt) = IERC20.decimals(_denominationAsset)
-    let (minInitialAmount_:Uint256) = uint256_pow(Uint256(10,0), decimals_ - 3)
-    let (allowedAmount_:felt) = uint256_le(minInitialAmount_, _amount) 
-    let (allowedShareAmount1_:felt) = uint256_le(_shareAmount, Uint256(POW20,0))
-    let (allowedShareAmount2_:felt) = uint256_le(Uint256(POW18,0), _shareAmount)
+    let (decimals_:felt) = IERC20.decimals(denomination_asset)
+    let (minimum_initial_amount_:Uint256) = uint256_pow(Uint256(10,0), decimals_ - 3)
+    let (allowed_asset_amount:felt) = uint256_le(minimum_initial_amount_, amount) 
+    let (allowed_shares_amount_1_:felt) = uint256_le(shares_amount, Uint256(POW20,0))
+    let (allowed_shares_amount_2_:felt) = uint256_le(Uint256(POW18,0), shares_amount)
     with_attr error_message("initialize_fund: not allowed Amount"):
-        assert allowedAmount_ *  allowedShareAmount1_ * allowedShareAmount2_= 1
+        assert allowed_asset_amount *  allowed_shares_amount_1_ * allowed_shares_amount_2_ = 1
     end
-
-    #save fund and add it to the global allowed integrations
-    let (currentasset_manager_vault_amount_: felt) = asset_manager_vault_amount.read(assetManager_)
-    asset_manager_vault.write(assetManager_, currentasset_manager_vault_amount_, _fund)
-    asset_manager_vault_amount.write(assetManager_, currentasset_manager_vault_amount_ + 1)
-    let (currentvault_amount:felt) = vault_amount.read()
-    vault_amount.write(currentvault_amount + 1)
-    id_to_vault.write(currentvault_amount, _fund)
-
     
-    # ##add integration so other funds can buy/sell shares from it
-    let _integrationList_len:felt = 2
-    let (_integrationList:Integration*) = alloc()
-    assert _integrationList[0] = Integration(_fund, DEPOSIT_SELECTOR, 0, _fundLevel)
-    assert _integrationList[1] = Integration(_fund, REEDEM_SELECTOR, 0, _fundLevel)
-
-     add_global_allowed_integration(_integrationList_len, _integrationList, integration_manager_)
+    # add integration so other funds can buy/sell shares from it
+    let (integrations:Integration*) = alloc()
+    assert integrations[0] = Integration(fund, DEPOSIT_SELECTOR, 0, level)
+    assert integrations[1] = Integration(fund, REEDEM_SELECTOR, 0, level)
+    add_global_allowed_integration_from_tab(2, integrations, integration_manager_)
      
-    ##register the position
-    let (share_price_feed_:felt) = get_share_price_feed()
-    IValueInterpretor.addDerivative(value_interpretor_, _fund, share_price_feed_)
+    ## Add share derivative pricefeed for the new fund created
+    let (share_price_feed_:felt) = getSharePriceFeed()
+    IValueInterpretor.addDerivative(value_interpretor_, fund, share_price_feed_)
 
 
-    # shares have 18 decimals
-    let (amountPow18_:Uint256) = SafeUint256.mul(_amount, Uint256(POW18,0))
-    let (sharePricePurchased_:Uint256,_) = SafeUint256.div_rem(amountPow18_ , _shareAmount)
-
-    #Fuccount activater
-    IFuccount.activater(_fund, _fundName, _fundSymbol, _fundLevel, _denominationAsset, assetManager_, _shareAmount, sharePricePurchased_)
-    IERC20.transferFrom(_denominationAsset, assetManager_, _fund, _amount)
+    # Activate the fund and transfer asset to the fund
+    let (share_amount_pow18_ :Uint256) = SafeUint256.mul(amount, Uint256(POW18,0))
+    let (share_price_purchased_ :Uint256,_) = SafeUint256.div_rem(share_amount_pow18_ , shares_amount)
+    IFuccount.activater(fund, name, symbol, level, denomination_asset, manager_, shares_amount, share_price_purchased_)
+    IERC20.transferFrom(denomination_asset, manager_, fund, amount)
 
     #Set feeconfig for vault
-    let entrance_fee = _feeConfig[0]
-    let (is_entrance_fee_not_enabled) = __is_zero(entrance_fee)
-    if is_entrance_fee_not_enabled == 1 :
-        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.ENTRANCE_FEE_ENABLED, 0)
-    else:
-        with_attr error_message("initialize_fund: entrance fee must be between 0 and 10"):
+    let entrance_fee = fee_config[0]
+    with_attr error_message("initialize_fund: entrance fee must be between 0 and 10"):
             assert_le(entrance_fee, 10)
-        end
-        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.ENTRANCE_FEE_ENABLED, 1)
-        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.ENTRANCE_FEE, entrance_fee)
     end
+    IFeeManager.setFeeConfig(fee_manager_, fund, FeeConfig.ENTRANCE_FEE, entrance_fee)
+    
 
-    let exit_fee = _feeConfig[1]
-    let (is_exit_fee_not_enabled) = __is_zero(exit_fee)
-    if is_exit_fee_not_enabled == 1 :
-        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.EXIT_FEE_ENABLED, 0)
-    else:
-        with_attr error_message("initialize_fund: exit fee must be between 0 and 10"):
-            assert_le(exit_fee, 10)
-        end
-        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.EXIT_FEE_ENABLED, 1)
-        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.EXIT_FEE, exit_fee)
+    let exit_fee = fee_config[1]
+    with_attr error_message("initialize_fund: exit fee must be between 0 and 10"):
+        assert_le(exit_fee, 10)
     end
+    IFeeManager.setFeeConfig(fee_manager_, fund, FeeConfig.EXIT_FEE, exit_fee)
 
-    let performance_fee = _feeConfig[2]
-    let (is_performance_fee_not_enabled) = __is_zero(performance_fee)
-    if is_performance_fee_not_enabled == 1 :
-        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.PERFORMANCE_FEE_ENABLED, 0)
-    else:
-        with_attr error_message("initialize_fund: performance fee must be between 0 and 20"):
-            assert_le(performance_fee, 20)
-        end
-        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.PERFORMANCE_FEE_ENABLED, 1)
-        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.PERFORMANCE_FEE, performance_fee)
+    let performance_fee = fee_config[2]
+    with_attr error_message("initialize_fund: performance fee must be between 0 and 20"):
+        assert_le(performance_fee, 20)
     end
-
-    let management_fee = _feeConfig[3]
-    let (is_management_fee_not_enabled) = __is_zero(management_fee)
-    if is_management_fee_not_enabled == 1 :
-        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.MANAGEMENT_FEE, 0)
-    else:
-        with_attr error_message("initialize_fund: management fee must be between 0 and 20"):
-            assert_le(management_fee, 60)
-        end
-        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.MANAGEMENT_FEE_ENABLED, 1)
-        IFeeManager.setFeeConfig(fee_manager_, _fund, FeeConfig.MANAGEMENT_FEE, management_fee)
+    IFeeManager.setFeeConfig(fee_manager_, fund, FeeConfig.PERFORMANCE_FEE, performance_fee)
+    
+    let management_fee = fee_config[3]
+    with_attr error_message("initialize_fund: management fee must be between 0 and 20"):
+        assert_le(management_fee, 60)
     end
+    IFeeManager.setFeeConfig(fee_manager_, fund, FeeConfig.MANAGEMENT_FEE, management_fee)
 
-    # Policy config for fund
-    IPolicyManager.setIsPublic(policy_manager_, _fund, _isPublic)
+    IPolicyManager.setIsPublic(policy_manager_, fund, is_public)
     return ()
 end
 
 @external
-func request_close_fund{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _fund: felt)-> ():
-        only_asset_manager(_fund)
-        let (notLiquidGav_:Uint256) = IFuccount.calculNotLiquidGav(_fund)
+func closeFund{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund: felt)-> ():
+        only_asset_manager(fund)
+        let (notLiquidGav_:Uint256) = IFuccount.notLiquidGav(fund)
         with_attr error_message("request_close_fund: remove your positions first"):
             assert_not_zero(notLiquidGav_.low)
         end
         let (currentTimesTamp_) = get_block_timestamp()
-        close_fund_request.write(_fund, currentTimesTamp_)
-        IFuccount.close(_fund)
+        close_fund_request.write(fund, currentTimesTamp_)
+        IFuccount.close(fund)
     return ()
 end
 
-# @external
-# func execute_close_fund{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-#         _fund: felt)-> ():
-#         only_asset_manager(_fund)
-#         let (timestampRequest:felt) = close_fund_request.read(_fund)
-#         with_attr error_message("execute_close_fund: no request registered"):
-#             assert_not_zero(timestampRequest)
-#         end
-#         let (currentTimesTamp_) = get_block_timestamp()
-#         let (timestampRequest:felt) = close_fund_request.read(_fund)
-#         let (exitTimestamp_:felt) = exitTimestamp
-#         with_attr error_message("execute_close_fund: execute request time not reached"):
-#             assert_le(timestampRequest + exitTimestamp_, currentTimesTamp_)
-#         end
-#         IFuccount.closeFund(_fund)
-#         close_fund_request.write(_fund, 0)
-#     return ()
-# end
-
-func __is_zero{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+func is_zero{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         x: felt)-> (res:felt):
     if x == 0:
         return (res=1)
@@ -870,7 +778,7 @@ func __is_zero{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     return (res=0)
 end
 
-func __add_global_allowed_asset{
+func add_global_allowed_assets_from_tab{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -886,26 +794,26 @@ func __add_global_allowed_asset{
     let (PPF_:felt) = primitive_price_feed.read()
     let (isSupportedPrimitiveAsset_) = IOraclePriceFeedMixin.checkIsSupportedPrimitiveAsset(PPF_,asset_)
     let (isSupportedDerivativeAsset_) = IValueInterpretor.checkIsSupportedDerivativeAsset(VI_,asset_)
-    let (notAllowed_) = __is_zero(isSupportedPrimitiveAsset_ + isSupportedDerivativeAsset_)
+    let (notAllowed_) = is_zero(isSupportedPrimitiveAsset_ + isSupportedDerivativeAsset_)
     with_attr error_message("only_dependencies_set:Dependencies not set"):
         assert notAllowed_ = 0
     end
     
-    let (approve_prelogic_:felt) = get_approve_prelogic()
+    let (approve_prelogic_:felt) = getApprovePrelogic()
     IIntegrationManager.setAvailableAsset(_integration_manager, asset_)
     IIntegrationManager.setAvailableIntegration(_integration_manager, asset_, APPROVE_SELECTOR, approve_prelogic_, 1)
 
     let newAssetList_len:felt = _assetList_len -1
     let newAssetList:felt* = _assetList + 1
 
-    return __add_global_allowed_asset(
+    return add_global_allowed_assets_from_tab(
         _assetList_len= newAssetList_len,
         _assetList= newAssetList,
         _integration_manager= _integration_manager
         )
 end
 
-func __add_global_allowed_external_position{
+func add_global_allowed_external_positions_from_tab{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -927,14 +835,14 @@ func __add_global_allowed_external_position{
     let newExternalPositionList_len:felt = _externalPositionList_len -1
     let newExternalPositionList:felt* = _externalPositionList + 1
 
-    return __add_global_allowed_external_position(
+    return add_global_allowed_external_positions_from_tab(
         _externalPositionList_len= newExternalPositionList_len,
         _externalPositionList= newExternalPositionList,
         _integration_manager= _integration_manager
         )
 end
 
-func add_global_allowed_integration{
+func add_global_allowed_integration_from_tab{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -947,14 +855,14 @@ func add_global_allowed_integration{
     let integration_:Integration = [_integrationList]
     IIntegrationManager.setAvailableIntegration(_integration_manager, integration_.contract, integration_.selector, integration_.integration, integration_.level)
 
-    return add_global_allowed_integration(
+    return add_global_allowed_integration_from_tab(
         _integrationList_len= _integrationList_len - 1,
         _integrationList= _integrationList + Integration.SIZE,
         _integration_manager=_integration_manager
         )
 end
 
-func add_allowed_depositors{
+func add_allowed_depositors_from_tab{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -970,7 +878,7 @@ func add_allowed_depositors{
     let newDepositors_len:felt = _depositors_len -1
     let newDepositors:felt* = _depositors + 1
 
-    return add_allowed_depositors(
+    return add_allowed_depositors_from_tab(
         _fund = _fund,
         _depositors_len= newDepositors_len,
         _depositors= newDepositors,

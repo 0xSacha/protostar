@@ -13,70 +13,15 @@ from starkware.cairo.common.uint256 import (
 from starkware.starknet.common.syscalls import (
     get_block_timestamp, get_contract_address, get_caller_address
 )
-from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.math import assert_not_zero
 
 from contracts.erc1155 import ERC1155
-
 from openzeppelin.introspection.erc165.library import ERC165
-from openzeppelin.security.reentrancyguard.library import ReentrancyGuard
 
+from starkware.cairo.common.alloc import (
+    alloc,
+)
 
-#
-# Events
-#
-
-@event
-func singleTransferFrom (
-        from_: felt,
-        to: felt,
-        id: Uint256,
-        amount: Uint256,
-        data_len: felt,
-        data: felt*
-    ):
-end
-
-@event
-func batchTransferFrom(
-        from_: felt,
-        to: felt,
-        ids_len: felt,
-        ids: Uint256*,
-        amounts_len: felt,
-        amounts: Uint256*,
-        data_len: felt,
-        data: felt*
-    ):
-end
-
-@event
-func mint (
-    to: felt, 
-    sharesAmount: Uint256, 
-    _sharePricePurchased:Uint256,
-    data_len: felt,
-    data: felt*
-    ):
-end
-
-@event
-func singleBurn(
-    from_: felt,
-    id: Uint256,
-    amount: Uint256
-    ):
-end
-
-@event
-func batchBurn(
-    from_: felt,
-    ids_len: felt,
-    ids: Uint256*,
-    amounts_len: felt,
-    amounts: Uint256*
-    ):
-end
 
 #
 # Storage
@@ -194,8 +139,6 @@ func balanceOf{
     return ERC1155.balance_of(account, id)
 end
 
-
-
 func ownerShares{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
@@ -298,9 +241,7 @@ func setApprovalForAll{
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
     }(operator: felt, approved: felt):
-    ReentrancyGuard._start()
     ERC1155.set_approval_for_all(operator, approved)
-    ReentrancyGuard._end()
     return ()
 end
 
@@ -316,10 +257,7 @@ func safeTransferFrom{
         data_len: felt,
         data: felt*
     ):
-    ReentrancyGuard._start()
     ERC1155.safe_transfer_from(from_, to, id, amount, data_len, data)
-    singleTransferFrom.emit(from_, to, id, amount, data_len, data)
-    ReentrancyGuard._end()
     return ()
 end
 
@@ -339,11 +277,8 @@ func safeBatchTransferFrom{
         data_len: felt,
         data: felt*
     ):
-    ReentrancyGuard._start()
     ERC1155.safe_batch_transfer_from(
         from_, to, ids_len, ids, amounts_len, amounts, data_len, data)
-    batchTransferFrom.emit(from_, to, ids_len, ids, amounts_len, amounts, data_len, data)
-    ReentrancyGuard._end()
     return ()
 end
 
@@ -358,7 +293,6 @@ func mint{
         data_len: felt,
         data: felt*
     ):
-    ReentrancyGuard._start()
     let (totalId_) = totalId.read()
     sharePricePurchased.write(totalId_, _sharePricePurchased)
     let (currentTimesTamp_:felt) = get_block_timestamp()
@@ -369,8 +303,6 @@ func mint{
     let (newTotalId_,_) = uint256_add(totalId_, Uint256(1,0) )
     totalId.write(newTotalId_)
     ERC1155._mint(to, totalId_, sharesAmount, data_len, data)
-    mint.emit(to, totalId_, sharesAmount, data_len, data)
-    ReentrancyGuard._end()
     return ()
 end
 
@@ -379,7 +311,6 @@ func burn{
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
     }(from_: felt, id: Uint256, amount: Uint256):
-    ReentrancyGuard._start()
     ERC1155.assert_owner_or_approved(owner=from_)
     let (caller) = get_caller_address()
     with_attr error_message("ERC1155: called from zero address"):
@@ -389,8 +320,6 @@ func burn{
     let (currentTotalSupply_) = sharesTotalSupply.read()
     let (newTotalSupply_) = uint256_sub(currentTotalSupply_, amount )
     sharesTotalSupply.write(newTotalSupply_)
-    singleBurn.emit(from_, id, amount)
-    ReentrancyGuard._end()
     return ()
 end
 
@@ -405,7 +334,6 @@ func burnBatch{
         amounts_len: felt,
         amounts: Uint256*
     ):
-    ReentrancyGuard._start()
     ERC1155.assert_owner_or_approved(owner=from_)
     let (caller) = get_caller_address()
     with_attr error_message("ERC1155: called from zero address"):
@@ -413,8 +341,6 @@ func burnBatch{
     end
     ERC1155._burn_batch(from_, ids_len, ids, amounts_len, amounts)
     reduceSupplyBatch(amounts_len, amounts)
-    batchBurn.emit(from_, ids_len, ids, amounts_len, amounts)
-    ReentrancyGuard._end()
     return ()
 end
 
@@ -427,6 +353,7 @@ func reduceSupplyBatch{
         amounts_len: felt,
         amounts: Uint256*
     ):
+
         if amounts_len == 0 :
     return()
 end
@@ -437,6 +364,7 @@ end
         amounts_len= amounts_len - 1,
         amounts=amounts)
 end
+
 
     func __is_zero{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(x : felt) -> (
     res : felt

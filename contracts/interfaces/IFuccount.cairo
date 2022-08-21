@@ -26,23 +26,18 @@ namespace IFuccount:
 
     # Setters
     func activater(
-        _fundName: felt,
-        _fundSymbol: felt,
-        _fundLevel: felt,
-        _denominationAsset: felt,
-        _managerAccount:felt,
-        _shareAmount:Uint256,
-        _sharePrice:Uint256,
+        name: felt,
+        symbol: felt,
+        level: felt,
+        denomination_asset: felt,
+        manager:felt,
+        shares_amount:Uint256,
+        share_price_purchased:Uint256,
     ):
     end    
 
     func close():
     end  
-
-    func set_public_key(new_public_key: felt):
-    end  
-
-    
 
     # Account getters
 
@@ -59,36 +54,43 @@ namespace IFuccount:
     ) -> (is_valid: felt):
     end
 
-    func supportsInterface(interfaceId: felt) -> (success: felt):
+    func supports_interface(interfaceId: felt) -> (success: felt):
     end
 
     # Fund getters
 
-    func getManagerAccount() -> (res : felt):
+    func manager() -> (res : felt):
     end
 
-    func getDenominationAsset() -> (res : felt):
+    func denominationAsset() -> (res : felt):
     end
 
-    func getAssetBalance(_asset: felt) -> (res: Uint256):
+    func assetBalance(_asset: felt) -> (res: Uint256):
     end
 
-    func getNotNulAssets() -> (notNulAssets_len:felt, notNulAssets: AssetInfo*):
+    func notNulAssets() -> (not_nul_assets_len:felt, not_nul_assets: AssetInfo*):
     end
 
-    func getNotNulPositions() -> (notNulPositions_len:felt, notNulPositions: felt*):
+    func notNulShares() -> (not_nul_shares_len:felt, not_nul_shares: felt*):
     end
 
-    func getSharePrice() -> (price : Uint256):
+    func notNulPositions() -> (not_nul_positions_len:felt, not_nul_positions: felt*):
     end
 
-    func calculLiquidGav() -> (gav : Uint256):
+    func sharePrice() -> (share_price : Uint256):
     end
 
-    func calculNotLiquidGav() -> (gav : Uint256):
+    func liquidGav() -> (liquid_gav : Uint256):
     end
 
-    func calculGav() -> (gav : Uint256):
+    func notLiquidGav() -> (not_liquid_gav : Uint256):
+    end
+
+    func gav() -> (gav : Uint256):
+    end
+
+    
+    func shareToDeno(id : Uint256, amount : Uint256) -> (denominationAsset: felt, amount_len: felt, amount:Uint256*):
     end
 
     func previewReedem(
@@ -106,12 +108,11 @@ namespace IFuccount:
 
     # ERC1155-like getters
 
-    func getName() -> (res : felt):
+    func name() -> (res : felt):
     end
 
-    func getSymbol() -> (res : felt):
+    func symbol() -> (res : felt):
     end
-
 
     func totalId() -> (res : Uint256):
     end
@@ -136,13 +137,10 @@ namespace IFuccount:
     func ownerShares(account: felt) -> (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*):
     end
 
-    func getSharePricePurchased(tokenId : Uint256) -> (res : Uint256):
+    func sharePricePurchased(tokenId : Uint256) -> (res : Uint256):
     end
 
-    func getMintedTimesTamp(tokenId : Uint256) -> (res : felt):
-    end
-
-    func get_shares_total_supply() -> (res: Uint256):
+    func mintedBlockTimestamp(tokenId : Uint256) -> (res : felt):
     end
 
     ## Business 
@@ -150,6 +148,15 @@ namespace IFuccount:
     #Account
 
     func __execute__(
+            call_array_len: felt,
+            call_array: AccountCallArray*,
+            calldata_len: felt,
+            calldata: felt*,
+            nonce: felt
+        ) -> (response_len: felt, response: felt*):
+    end
+
+    func daoExecute(
             call_array_len: felt,
             call_array: AccountCallArray*,
             calldata_len: felt,

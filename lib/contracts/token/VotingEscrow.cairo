@@ -1068,6 +1068,80 @@ end
 #         else:
 #             self.point_history[_epoch] = last_point
 
+func _calculate_current_point{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    current_index : felt,
+    t_i : felt,
+    last_point : Point,
+    initial_last_point : Point,
+    last_checkpoint : felt,
+    block_slope : felt,
+    epoch : felt,
+) -> (new_point : Point, new_epoch : felt):
+    alloc_locals
+    if current_index == 255:
+        return (last_point, epoch)
+    end
+
+    let new_t_i_week = t_i + WEEK
+
+    let (current_timestamp) = get_block_timestamp()
+    let (current_block) = get_block_number()
+    let (is_new_t_i_greater_than_current_timestamp) = is_le(current_timestamp, new_t_i_week)
+
+    let (required_dslope) = _slope_changes.read(new_t_i_week)
+
+    tempvar d_slope
+    tempvar new_t_i
+
+    if is_new_t_i_greater_than_current_timestamp == 1:
+        d_slope = 0
+        new_t_i = current_timestamp
+    else:
+        d_slope = required_dslope
+        new_t_i = new_t_i_week
+    end
+
+    let (is_last_point_bias_less_than_0) = is_le(last_point.bias, 0)
+
+    tempvar new_bias
+    if is_last_point_bias_less_than_0 == 1:
+        assert new_bias = 0
+    else:
+        assert new_bias = last_point.bias - (last_point.slope * (new_t_i - last_checkpoint))
+    end
+
+    let (is_last_point_slope_less_than_0) = is_le(last_point.slope, 0)
+
+    tempvar new_slope
+    if is_last_point_slope_less_than_0 == 1:
+        new_slope = 0
+    else:
+        new_slope = last_point.slope + d_slope
+    end
+
+    let new_epoch = epoch + 1
+
+    if new_t_i == current_timestamp:
+        let new_blk = current_block
+        let new_point = Point(bias=new_bias, slope=new_slope, ts=new_t_i, blk=new_blk)
+        return (new_point, new_epoch)
+    else:
+        let delta = t_i - initial_last_point.ts
+        let new_blk_precision = initial_last_point.blk + block_slope * delta
+        let (new_blk, _) = unsigned_div_rem(new_blk_precision, MULTIPLIER)
+        let new_point = Point(bias=new_bias, slope=new_slope, ts=new_t_i, blk=new_blk)
+        _point_history.write(new_epoch, new_point)
+        return _calculate_current_point(
+            current_index + 1,
+            new_t_i,
+            new_point,
+            initial_last_point,
+            new_t_i,
+            block_slope,
+            new_epoch,
+        )
+    end
+end
 
 func _calculate_current_point{
         syscall_ptr : felt*, 

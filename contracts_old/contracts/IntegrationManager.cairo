@@ -127,7 +127,7 @@ end
 #
 
 @view
-func checkIsShareAvailable{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_share: felt) -> (res: felt): 
+func checkIsShareAvailable{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_asset: felt) -> (res: felt): 
     let (res) = isAssetAvailable.read(_asset)
     return (res=res)
 end

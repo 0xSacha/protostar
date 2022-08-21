@@ -5,16 +5,12 @@
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin, SignatureBuiltin, BitwiseBuiltin
 
-from openzeppelin.introspection.erc165.library import ERC165
-
-from contracts.Account_Lib import Account, AccountCallArray
-from contracts.Fund import Fund, AssetInfo, PositionInfo, ShareWithdraw
-
+from contracts.FuccountLib import FuccountLib, AccountCallArray, AssetInfo, PositionInfo, ShareWithdraw, ShareInfo
 from starkware.cairo.common.uint256 import (
     Uint256,
 )
 
-
+#
 # Constructor
 #
 
@@ -24,8 +20,7 @@ func constructor{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }(public_key: felt, vaultFactory:felt):
-    Account.initializer(public_key, vaultFactory)
-    Fund.initializer(vaultFactory)
+    FuccountLib.initializer(public_key, vaultFactory)
     return ()
 end
 
@@ -33,13 +28,15 @@ end
 # Getters
 #
 
+#Account 
+
 @view
 func get_public_key{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }() -> (res: felt):
-    let (res) = Account.get_public_key()
+    let (res) = FuccountLib.get_public_key()
     return (res=res)
 end
 
@@ -49,208 +46,220 @@ func get_nonce{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }() -> (res: felt):
-    let (res) = Account.get_nonce()
+    let (res) = FuccountLib.get_nonce()
     return (res=res)
 end
 
 @view
-func supportsInterface{
+func supports_interface{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
     } (interfaceId: felt) -> (success: felt):
-    let (success) = ERC165.supports_interface(interfaceId)
+    let (success) = FuccountLib.supports_interface(interfaceId)
     return (success)
 end
 
+#fund
 
-
-## Fund
 @view
-func getManagerAccount{
+func manager{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
     }() -> (res: felt):
-    let (res:felt) = Fund.getManagerAccount()
+    let (res:felt) = FuccountLib.get_manager_account()
     return (res) 
 end
 @view
-func getDenominationAsset{
+func denominationAsset{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
     }() -> (res: felt):
-    let (res:felt) = Fund.getDenominationAsset()
+    let (res:felt) = FuccountLib.get_denomination_asset()
     return (res=res)
 end
 
 @view
-func getAssetBalance{
+func assetBalance{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
     }(_asset: felt) -> (res: Uint256):
-    let (assetBalance_:Uint256) = Fund.getAssetBalance(_asset)
+    let (assetBalance_:Uint256) = FuccountLib.get_asset_balance(_asset)
     return (assetBalance_)
 end
 
-
-func getNotNulAssets{
+@view
+func notNulAssets{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
     }() -> (notNulAssets_len:felt, notNulAssets: AssetInfo*):
-    let (notNulAssets_len:felt, notNulAssets:AssetInfo*) = Fund.getNotNulAssets()
+    let (notNulAssets_len:felt, notNulAssets:AssetInfo*) = FuccountLib.get_not_nul_assets()
     return(notNulAssets_len, notNulAssets)
 end
 
-func getNotNulPositions{
+func notNulShares{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }() -> (notNulShares_len:felt, notNulShares: ShareInfo*):
+    return FuccountLib.get_not_nul_shares()
+end
+
+@view
+func notNulPositions{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
     }() -> (notNulPositions_len:felt, notNulPositions: felt*):
-    let (notNulPositions_len:felt, notNulPositions:AssetInfo*) = Fund.getNotNulPositions()
+    let (notNulPositions_len:felt, notNulPositions:AssetInfo*) = FuccountLib.get_not_nul_positions()
     return(notNulPositions_len, notNulPositions)
 end
 
-func getSharePrice{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
+
+@view
+func shareToDeno{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    id : Uint256, amount : Uint256) -> (denominationAsset: felt, amount_len: felt, amount:Uint256*):
+    return FuccountLib.share_to_deno(id, amount)
+end
+
+@view
+func sharePrice{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
      price : Uint256
 ):
-    let (price : Uint256) = Fund.getSharePrice()
+    let (price : Uint256) = FuccountLib.get_share_price()
     return (price=price)
 end
 
-func calculLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
+@view
+func liquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
     gav : Uint256
 ):
-    let (gav) = Fund.calculLiquidGav()
+    let (gav) = FuccountLib.calcul_liquid_gav()
     return (gav=gav)
 end
 
-func calculNotLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
+@view
+func notLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
     gav : Uint256
 ):
-    let (gav) = Fund.calculNotLiquidGav()
+    let (gav) = FuccountLib.calcul_not_liquid_gav()
     return (gav=gav)
 end
 
-func calculGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
+
+@view
+func gav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
     gav : Uint256
 ):
-    let (gav) = Fund.calculGav()
+    let (gav) = FuccountLib.calcul_gav()
     return (gav=gav)
 end
 
+
+@view
 func previewReedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     id : Uint256,
     amount : Uint256,
     assets_len : felt,
     assets : felt*,
-    percentsAsset_len : felt,
-    percentsAsset : felt*,
     shares_len : felt,
     shares : ShareWithdraw*,
-    percentsShare_len : felt,
-    percentsShare : felt*,
 ) -> (assetCallerAmount_len: felt,assetCallerAmount:Uint256*, assetManagerAmount_len: felt,assetManagerAmount:Uint256*,assetStackingVaultAmount_len: felt, assetStackingVaultAmount:Uint256*, assetDaoTreasuryAmount_len: felt,assetDaoTreasuryAmount:Uint256*, shareCallerAmount_len: felt, shareCallerAmount:Uint256*, shareManagerAmount_len: felt, shareManagerAmount:Uint256*, shareStackingVaultAmount_len: felt, shareStackingVaultAmount:Uint256*, shareDaoTreasuryAmount_len: felt, shareDaoTreasuryAmount:Uint256*):
-    let (assetCallerAmount_len: felt,assetCallerAmount:Uint256*, assetManagerAmount_len: felt,assetManagerAmount:Uint256*,assetStackingVaultAmount_len: felt, assetStackingVaultAmount:Uint256*, assetDaoTreasuryAmount_len: felt,assetDaoTreasuryAmount:Uint256*, shareCallerAmount_len: felt, shareCallerAmount:Uint256*, shareManagerAmount_len: felt, shareManagerAmount:Uint256*, shareStackingVaultAmount_len: felt, shareStackingVaultAmount:Uint256*, shareDaoTreasuryAmount_len: felt, shareDaoTreasuryAmount:Uint256*) = Fund.previewReedem(id,
-    amount,
-    assets_len,
-    assets,
-    percentsAsset_len,
-    percentsAsset,
-    shares_len,
-    shares,
-    percentsShare_len,
-    percentsShare,
-    )
-    return(assetCallerAmount_len,assetCallerAmount, assetManagerAmount_len,assetManagerAmount,assetStackingVaultAmount_len, assetStackingVaultAmount, assetDaoTreasuryAmount_len,assetDaoTreasuryAmount, shareCallerAmount_len, shareCallerAmount, shareManagerAmount_len, shareManagerAmount, shareStackingVaultAmount_len, shareStackingVaultAmount, shareDaoTreasuryAmount_len, shareDaoTreasuryAmount)
+    return FuccountLib.preview_reedem(id,amount, assets_len,assets,shares_len, shares)
 end
 
 
-## Shares
+
+func previewDeposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+     _amount: Uint256
+) -> (shareAmount: Uint256, fundAmount: Uint256, managerAmount: Uint256, treasuryAmount: Uint256, stackingVaultAmount: Uint256):
+    return FuccountLib.preview_deposit(_amount)
+end
+
 
 @view
-func uri{
-        syscall_ptr: felt*,
-        pedersen_ptr: HashBuiltin*,
-        range_check_ptr
-    }() -> (uri: felt):
-    return Fund.uri()
-end
-
-
-func getName{
+func name{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }() -> (res: felt):
-    let (name_) = Fund.name()
+    let (name_) = FuccountLib.get_name()
     return (name_)
 end
 
-func getSymbol{
+
+@view
+func symbol{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }() -> (res: felt):
-    let (symbol_) = Fund.symbol()
+    let (symbol_) = FuccountLib.get_symbol()
     return (symbol_)
 end
 
+@view
 func totalId{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
     }() -> (res: Uint256):
-    let (totalSupply_: Uint256) = Fund.getTotalId()
+    let (totalSupply_: Uint256) = FuccountLib.get_total_id()
     return (totalSupply_)
 end
 
+@view
 func sharesTotalSupply{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
     }() -> (res: Uint256):
-    let (sharesTotalSupply_: Uint256) = Fund.sharesTotalSupply()
+    let (sharesTotalSupply_: Uint256) = FuccountLib.get_shares_total_supply()
     return (sharesTotalSupply_)
 end
 
-
+@view
 func balanceOf{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }(account: felt, id: Uint256) -> (balance: Uint256):
-    let (balance: Uint256) = Fund.balanceOf(account, id)
+    let (balance: Uint256) = FuccountLib.balance_of(account, id)
     return (balance)
 end
 
+@view
 func ownerShares{
         syscall_ptr : felt*, 
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }(account: felt) -> (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*):
-    let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = Fund.ownerShares(account)
+    let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = FuccountLib.owner_shares(account)
     return (assetId_len, assetId, assetAmount_len,assetAmount)
 end
 
-func getSharePricePurchased{
+@view
+func sharePricePurchased{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
         range_check_ptr
     }(tokenId: Uint256) -> (res: Uint256):
-    let (sharePricePurchased_: Uint256) =  Fund.sharePricePurchased(tokenId)
+    let (sharePricePurchased_: Uint256) =  FuccountLib.get_share_price_purchased(tokenId)
     return (sharePricePurchased_)
 end
 
-func getMintedTimesTamp{
+
+@view
+func mintedBlockTimestamp{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
         range_check_ptr
     }(tokenId: Uint256) -> (res: felt):
-    let (mintedTimesTamp_: felt) = Fund.mintedBlockTimesTamp(tokenId)
+    let (mintedTimesTamp_: felt) = FuccountLib.get_minted_block_timestamp(tokenId)
     return (mintedTimesTamp_)
 end
 
@@ -266,7 +275,7 @@ func balanceOfBatch{
         ids_len: felt,
         ids: Uint256*
     ) -> (balances_len: felt, balances: Uint256*):
-    let (balances_len, balances) =  Fund.balanceOfBatch(accounts_len, accounts, ids_len, ids)
+    let (balances_len, balances) =  FuccountLib.balance_of_batch(accounts_len, accounts, ids_len, ids)
     return (balances_len, balances)
 end
 
@@ -276,7 +285,7 @@ func isApprovedForAll{
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
     }(account: felt, operator: felt) -> (isApproved: felt):
-    let (is_approved) = Fund.isApprovedForAll(account, operator)
+    let (is_approved) = FuccountLib.is_approved_for_all(account, operator)
     return (is_approved)
 end
 
@@ -294,25 +303,31 @@ func activater{
     }(
         _fundName: felt,
         _fundSymbol: felt,
-        _uri: felt,
         _fundLevel: felt,
         _denominationAsset: felt,
         _managerAccount:felt,
         _shareAmount:Uint256,
         _sharePrice:Uint256,
-        data_len:felt,
-        data:felt*,
     ):
-    Fund.activater( _fundName,
+    FuccountLib.activater( _fundName,
         _fundSymbol,
-        _uri,
         _denominationAsset,
         _managerAccount,
         _shareAmount,
-        _sharePrice,
-        data_len,
-        data)
-    Account.setFundLevel(_fundLevel)
+        _sharePrice)
+    FuccountLib.set_fund_level(_fundLevel)
+    return ()
+end
+
+
+
+@external
+func close{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    }():
+    FuccountLib.close()
     return ()
 end
 
@@ -322,7 +337,7 @@ func set_public_key{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }(new_public_key: felt):
-    Account.set_public_key(new_public_key)
+    FuccountLib.set_public_key(new_public_key)
     return ()
 end
 
@@ -343,7 +358,7 @@ func is_valid_signature{
         signature_len: felt,
         signature: felt*
     ) -> (is_valid: felt):
-    let (is_valid) = Account.is_valid_signature(hash, signature_len, signature)
+    let (is_valid) = FuccountLib.is_valid_signature(hash, signature_len, signature)
     return (is_valid=is_valid)
 end
 
@@ -361,7 +376,37 @@ func __execute__{
         calldata: felt*,
         nonce: felt
     ) -> (response_len: felt, response: felt*):
-    let (response_len, response) = Account.execute(
+    let (response_len, response) = FuccountLib.execute(
+        call_array_len,
+        call_array,
+        calldata_len,
+        calldata,
+        nonce
+    )
+    return (response_len=response_len, response=response)
+end
+
+@external
+func daoExecute{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr,
+        ecdsa_ptr: SignatureBuiltin*,
+        bitwise_ptr: BitwiseBuiltin*
+    }(
+        call_array_len: felt,
+        call_array: AccountCallArray*,
+        calldata_len: felt,
+        calldata: felt*,
+        nonce: felt
+    ) -> (response_len: felt, response: felt*):
+    let (vault_factory_) = vault_factory.read()
+    let (dao_) = IVaultFactory.getOwner(vault_factory_)
+    let (caller_) = get_caller_address()
+    with_attr error_message("dao_execute: caller is not dao")
+        assert caller_ = dao_
+    end
+    let (response_len, response) = FuccountLib._unsafe_execute(
         call_array_len,
         call_array,
         calldata_len,
@@ -375,9 +420,9 @@ end
 
 @external
 func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-      _amount: Uint256, data_len: felt, data: felt*
+      _amount: Uint256,
 ):
-   Fund.deposit(_amount, data_len, data)
+   FuccountLib.deposit(_amount)
     return ()
 end
 
@@ -388,16 +433,13 @@ func reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     amount : Uint256,
     assets_len : felt,
     assets : felt*,
-    percentsAsset_len : felt,
-    percentsAsset : felt*,
     shares_len : felt,
     shares : ShareWithdraw*,
-    percentsShare_len : felt,
-    percentsShare : felt*,
 ):
-    Fund.reedem(id, amount, assets_len, assets, percentsAsset_len, percentsAsset, shares_len, shares, percentsShare_len, percentsShare)
+    FuccountLib.reedem(id, amount, assets_len, assets, shares_len, shares)
     return ()
 end
+
 
 
 #Shares
@@ -408,7 +450,7 @@ func setApprovalForAll{
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
     }(operator: felt, approved: felt):
-    Fund.setApprovalForAll(operator, approved)
+    FuccountLib.set_approval_for_all(operator, approved)
     return ()
 end
 
@@ -422,10 +464,8 @@ func safeTransferFrom{
         to: felt,
         id: Uint256,
         amount: Uint256,
-        data_len: felt,
-        data: felt*
     ):
-    Fund.safeTransferFrom(from_, to, id, amount, data_len, data)
+    FuccountLib.safe_transfer_from(from_, to, id, amount)
     return ()
 end
 
@@ -442,11 +482,9 @@ func safeBatchTransferFrom{
         ids: Uint256*,
         amounts_len: felt,
         amounts: Uint256*,
-        data_len: felt,
-        data: felt*
     ):
-    Fund.safeBatchTransferFrom(
-        from_, to, ids_len, ids, amounts_len, amounts, data_len, data)
+    FuccountLib.safe_batch_transfer_from(
+        from_, to, ids_len, ids, amounts_len, amounts)
     return ()
 end
 
@@ -457,7 +495,7 @@ func burn{
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
     }(from_: felt, id: Uint256, amount: Uint256):
-    Fund.burn(from_, id, amount)
+    FuccountLib.burn(from_, id, amount)
     return ()
 end
 
@@ -473,6 +511,6 @@ func burnBatch{
         amounts_len: felt,
         amounts: Uint256*
     ):
-    Fund.burnBatch(from_, ids_len, ids, amounts_len, amounts)
+    FuccountLib.burn_batch(from_, ids_len, ids, amounts_len, amounts)
     return ()
 end

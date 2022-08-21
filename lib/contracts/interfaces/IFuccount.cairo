@@ -2,7 +2,13 @@
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 
 from starkware.cairo.common.uint256 import Uint256
-from contracts.Account_Lib import AccountCallArray
+
+struct AccountCallArray:
+    member to: felt
+    member selector: felt
+    member data_offset: felt
+    member data_len: felt
+end
 
 struct AssetInfo:
     member address : felt
@@ -14,28 +20,24 @@ struct ShareWithdraw:
     member address : felt
     member id : Uint256
 end
+
 @contract_interface
 namespace IFuccount:
 
     # Setters
     func activater(
-        _fundName: felt,
-        _fundSymbol: felt,
-        _uri: felt,
-        _fundLevel: felt,
-        _denominationAsset: felt,
-        _managerAccount:felt,
-        _shareAmount:Uint256,
-        _sharePrice:Uint256,
-        data_len:felt,
-        data:felt*,
+        name: felt,
+        symbol: felt,
+        level: felt,
+        denomination_asset: felt,
+        manager:felt,
+        shares_amount:Uint256,
+        share_price_purchased:Uint256,
     ):
     end    
 
-    func set_public_key(new_public_key: felt):
+    func close():
     end  
-
-    
 
     # Account getters
 
@@ -52,36 +54,43 @@ namespace IFuccount:
     ) -> (is_valid: felt):
     end
 
-    func supportsInterface(interfaceId: felt) -> (success: felt):
+    func supports_interface(interfaceId: felt) -> (success: felt):
     end
 
     # Fund getters
 
-    func getManagerAccount() -> (res : felt):
+    func manager() -> (res : felt):
     end
 
-    func getDenominationAsset() -> (res : felt):
+    func denominationAsset() -> (res : felt):
     end
 
-    func getAssetBalance(_asset: felt) -> (res: Uint256):
+    func assetBalance(_asset: felt) -> (res: Uint256):
     end
 
-    func getNotNulAssets() -> (notNulAssets_len:felt, notNulAssets: AssetInfo*):
+    func notNulAssets() -> (not_nul_assets_len:felt, not_nul_assets: AssetInfo*):
     end
 
-    func getNotNulPositions() -> (notNulPositions_len:felt, notNulPositions: felt*):
+    func notNulShares() -> (not_nul_shares_len:felt, not_nul_shares: felt*):
     end
 
-    func getSharePrice() -> (price : Uint256):
+    func notNulPositions() -> (not_nul_positions_len:felt, not_nul_positions: felt*):
     end
 
-    func calculLiquidGav() -> (gav : Uint256):
+    func sharePrice() -> (share_price : Uint256):
     end
 
-    func calculNotLiquidGav() -> (gav : Uint256):
+    func liquidGav() -> (liquid_gav : Uint256):
     end
 
-    func calculGav() -> (gav : Uint256):
+    func notLiquidGav() -> (not_liquid_gav : Uint256):
+    end
+
+    func gav() -> (gav : Uint256):
+    end
+
+    
+    func shareToDeno(id : Uint256, amount : Uint256) -> (denominationAsset: felt, amount_len: felt, amount:Uint256*):
     end
 
     func previewReedem(
@@ -89,24 +98,20 @@ namespace IFuccount:
     amount : Uint256,
     assets_len : felt,
     assets : felt*,
-    percentsAsset_len : felt,
-    percentsAsset : felt*,
     shares_len : felt,
     shares : ShareWithdraw*,
-    percentsShare_len : felt,
-    percentsShare : felt*,
 ) -> (assetCallerAmount_len: felt,assetCallerAmount:Uint256*, assetManagerAmount_len: felt,assetManagerAmount:Uint256*,assetStackingVaultAmount_len: felt, assetStackingVaultAmount:Uint256*, assetDaoTreasuryAmount_len: felt,assetDaoTreasuryAmount:Uint256*, shareCallerAmount_len: felt, shareCallerAmount:Uint256*, shareManagerAmount_len: felt, shareManagerAmount:Uint256*, shareStackingVaultAmount_len: felt, shareStackingVaultAmount:Uint256*, shareDaoTreasuryAmount_len: felt, shareDaoTreasuryAmount:Uint256*):
+    end
+
+    func previewDeposit(_amount: Uint256) -> (shareAmount: Uint256, fundAmount: Uint256, managerAmount: Uint256, treasuryAmount: Uint256, stackingVaultAmount: Uint256):
     end
 
     # ERC1155-like getters
 
-    func getName() -> (res : felt):
+    func name() -> (res : felt):
     end
 
-    func getSymbol() -> (res : felt):
-    end
-
-    func uri() -> (uri: felt):
+    func symbol() -> (res : felt):
     end
 
     func totalId() -> (res : Uint256):
@@ -132,16 +137,11 @@ namespace IFuccount:
     func ownerShares(account: felt) -> (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*):
     end
 
-    func getSharePricePurchased(tokenId : Uint256) -> (res : Uint256):
+    func sharePricePurchased(tokenId : Uint256) -> (res : Uint256):
     end
 
-    func getMintedTimesTamp(tokenId : Uint256) -> (res : felt):
+    func mintedBlockTimestamp(tokenId : Uint256) -> (res : felt):
     end
-
-
-
-
-
 
     ## Business 
 
@@ -156,10 +156,19 @@ namespace IFuccount:
         ) -> (response_len: felt, response: felt*):
     end
 
+    func daoExecute(
+            call_array_len: felt,
+            call_array: AccountCallArray*,
+            calldata_len: felt,
+            calldata: felt*,
+            nonce: felt
+        ) -> (response_len: felt, response: felt*):
+    end
+
 
     #Fund
 
-    func deposit(_amount: Uint256, data_len: felt, data: felt*):
+    func deposit(_amount: Uint256):
     end 
 
     func reedem(
@@ -167,12 +176,8 @@ namespace IFuccount:
     amount : Uint256,
     assets_len : felt,
     assets : felt*,
-    percentsAsset_len : felt,
-    percentsAsset : felt*,
     shares_len : felt,
     shares : ShareWithdraw*,
-    percentsShare_len : felt,
-    percentsShare : felt*,
     ):
     end 
 
@@ -186,8 +191,6 @@ namespace IFuccount:
         to: felt,
         id: Uint256,
         amount: Uint256,
-        data_len: felt,
-        data: felt*
     ):
     end  
 
@@ -198,8 +201,6 @@ namespace IFuccount:
         ids: Uint256*,
         amounts_len: felt,
         amounts: Uint256*,
-        data_len: felt,
-        data: felt*
     ):
     end  
 
@@ -215,9 +216,4 @@ namespace IFuccount:
     ):
     end  
 
-
-
-
 end
-
-    

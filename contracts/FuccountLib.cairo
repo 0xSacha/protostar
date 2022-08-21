@@ -17,10 +17,10 @@ from starkware.cairo.common.math import (
     split_felt,
 )
 
-from openzeppelin.introspection.IERC165 import IERC165
-from openzeppelin.introspection.ERC165 import ERC165
+from openzeppelin.introspection.erc165.IERC165 import IERC165
+from openzeppelin.introspection.erc165.library import ERC165
 from contracts.interfaces.IERC1155Receiver import IERC1155_Receiver
-from openzeppelin.security.safemath import SafeUint256
+from openzeppelin.security.safemath.library import SafeUint256
 from openzeppelin.security.reentrancyguard import ReentrancyGuard
 
 from starkware.cairo.common.uint256 import (

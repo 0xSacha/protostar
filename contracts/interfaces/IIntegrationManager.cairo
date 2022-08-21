@@ -23,20 +23,25 @@ namespace IIntegrationManager:
     end
 
  
-    func checkIsContractIntegrated(_contract: felt) -> (res: felt):
+    func isContractIntegrated(_contract: felt) -> (res: felt):
     end
 
-    func checkIsAssetAvailable(_asset: felt) -> (res: felt):
+    func isAvailableAsset(asset: felt) -> (res: felt):
     end
 
-    func checkIsIntegrationAvailable(_contract: felt, _selector: felt) -> (res: felt):
+    func isAvailableIntegration(contract: felt, selector:felt) -> (res: felt): 
     end
 
-    func checkIsExternalPositionAvailable(_externalPosition:felt) -> (res: felt): 
+    func isAvailableExternalPosition(external_position: felt) -> (is_available_external_position: felt): 
     end
 
-    func checkIsShareAvailable(_share: felt) -> (res: felt): 
+    func isAvailableShare(_share: felt) -> (res: felt): 
     end
+
+    func isIntegratedContract(contract: felt) -> (res: felt): 
+    end
+
+    
 
     func getIntegration(_contract: felt, _selector: felt) -> (res: felt):
     end

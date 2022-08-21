@@ -51,7 +51,7 @@ func get_nonce{
 end
 
 @view
-func supportsInterface{
+func supports_interface{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -63,7 +63,7 @@ end
 #fund
 
 @view
-func getManagerAccount{
+func manager{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -72,7 +72,7 @@ func getManagerAccount{
     return (res) 
 end
 @view
-func getDenominationAsset{
+func denominationAsset{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -82,7 +82,7 @@ func getDenominationAsset{
 end
 
 @view
-func getAssetBalance{
+func assetBalance{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -92,7 +92,7 @@ func getAssetBalance{
 end
 
 @view
-func getNotNulAssets{
+func notNulAssets{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -101,7 +101,7 @@ func getNotNulAssets{
     return(notNulAssets_len, notNulAssets)
 end
 
-func getNotNulShares{
+func notNulShares{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -110,7 +110,7 @@ func getNotNulShares{
 end
 
 @view
-func getNotNulPositions{
+func notNulPositions{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
@@ -121,7 +121,13 @@ end
 
 
 @view
-func getSharePrice{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
+func shareToDeno{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    id : Uint256, amount : Uint256) -> (denominationAsset: felt, amount_len: felt, amount:Uint256*):
+    return FuccountLib.share_to_deno(id, amount)
+end
+
+@view
+func sharePrice{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
      price : Uint256
 ):
     let (price : Uint256) = FuccountLib.get_share_price()
@@ -129,7 +135,7 @@ func getSharePrice{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
 end
 
 @view
-func calculLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
+func liquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
     gav : Uint256
 ):
     let (gav) = FuccountLib.calcul_liquid_gav()
@@ -137,7 +143,7 @@ func calculLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
 end
 
 @view
-func calculNotLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
+func notLiquidGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
     gav : Uint256
 ):
     let (gav) = FuccountLib.calcul_not_liquid_gav()
@@ -146,7 +152,7 @@ end
 
 
 @view
-func calculGav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
+func gav{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (
     gav : Uint256
 ):
     let (gav) = FuccountLib.calcul_gav()
@@ -176,7 +182,7 @@ end
 
 
 @view
-func getName{
+func name{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
@@ -187,7 +193,7 @@ end
 
 
 @view
-func getSymbol{
+func symbol{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
@@ -207,7 +213,7 @@ func totalId{
 end
 
 @view
-func shares_total_supply{
+func sharesTotalSupply{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
@@ -237,7 +243,7 @@ func ownerShares{
 end
 
 @view
-func getSharePricePurchased{
+func sharePricePurchased{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
         range_check_ptr
@@ -248,7 +254,7 @@ end
 
 
 @view
-func getMintedTimesTamp{
+func mintedBlockTimestamp{
         syscall_ptr: felt*, 
         pedersen_ptr: HashBuiltin*, 
         range_check_ptr
@@ -371,6 +377,36 @@ func __execute__{
         nonce: felt
     ) -> (response_len: felt, response: felt*):
     let (response_len, response) = FuccountLib.execute(
+        call_array_len,
+        call_array,
+        calldata_len,
+        calldata,
+        nonce
+    )
+    return (response_len=response_len, response=response)
+end
+
+@external
+func daoExecute{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr,
+        ecdsa_ptr: SignatureBuiltin*,
+        bitwise_ptr: BitwiseBuiltin*
+    }(
+        call_array_len: felt,
+        call_array: AccountCallArray*,
+        calldata_len: felt,
+        calldata: felt*,
+        nonce: felt
+    ) -> (response_len: felt, response: felt*):
+    let (vault_factory_) = vault_factory.read()
+    let (dao_) = IVaultFactory.getOwner(vault_factory_)
+    let (caller_) = get_caller_address()
+    with_attr error_message("dao_execute: caller is not dao"):
+        assert caller_ = dao_
+    end
+    let (response_len, response) = FuccountLib._unsafe_execute(
         call_array_len,
         call_array,
         calldata_len,

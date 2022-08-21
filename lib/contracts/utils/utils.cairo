@@ -74,22 +74,18 @@ func uint256_percent{pedersen_ptr : HashBuiltin*, range_check_ptr}(
     assert _high.low = 0
     assert _high.high = 0
 
-    let (hundred) = felt_to_uint256(100)
-    let (res) = uint256_div(mul, hundred)
+    let (res) = uint256_div(mul, Uint256(10**2,0))
 
     return (res=res)
 end
 
 func uint256_permillion{pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    x : Uint256, percent : Uint256
+    x : Uint256, permillion : Uint256
 ) -> (res : Uint256):
-    let (mul, _high) = uint256_mul(x, percent)
+    let (mul, _high) = uint256_mul(x, permillion)
     assert _high.low = 0
     assert _high.high = 0
-
-    let (hundred) = felt_to_uint256(100)
-    let (res) = uint256_div(mul, hundred)
-
+    let (res) = uint256_div(mul, Uint256(10**6,0))
     return (res=res)
 end
 

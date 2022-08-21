@@ -10,7 +10,7 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin
 from contracts.interfaces.IVaultFactory import IVaultFactory, Integration
 from contracts.interfaces.IEmpiricOracle import IEmpiricOracle
 from contracts.interfaces.IOraclePriceFeedMixin import IOraclePriceFeedMixin
-from contracts.interfaces.IFuccountMock import IFuccountMock
+from contracts.interfaces.IFuccount import IFuccount
 from contracts.interfaces.IERC20 import IERC20
 from contracts.interfaces.IIntegrationManager import IIntegrationManager
 from contracts.interfaces.IFeeManager import IFeeManager, FeeConfig
@@ -100,13 +100,13 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     %{ stop_pranks = [start_prank(ids.ADMIN, contract) for contract in [ids.vf_contract] ] %}
 
     
-     IVaultFactory.set_fee_manager(vf_contract, fm_contract)
-     IVaultFactory.set_policy_manager(vf_contract, pm_contract)
-     IVaultFactory.set_integration_manager(vf_contract, im_contract)
-     IVaultFactory.set_max_fund_level(vf_contract, 2)
-     IVaultFactory.set_stacking_dispute(vf_contract, sd_contract)
-     IVaultFactory.set_guarantee_ratio(vf_contract, 50000)
-     IVaultFactory.set_exit_timestamp(vf_contract, DAY)
+     IVaultFactory.setFeeManager(vf_contract, fm_contract)
+     IVaultFactory.setPolicyManager(vf_contract, pm_contract)
+     IVaultFactory.setIntegrationManager(vf_contract, im_contract)
+     IVaultFactory.setMaxFundLevel(vf_contract, 2)
+     IVaultFactory.setStackingDispute(vf_contract, sd_contract)
+     IVaultFactory.SetGuaranteeRatio(vf_contract, 50000)
+     IVaultFactory.setExitTimestamp(vf_contract, DAY)
      
 
     %{ [stop_prank() for stop_prank in stop_pranks] %}
@@ -135,13 +135,13 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
 
     %{ stop_pranks = [start_prank(ids.ADMIN, contract) for contract in [ids.vf_contract, ids.or_contract, ids.pp_contract] ] %}
     
-     IVaultFactory.set_value_interpretor(vf_contract, vi_contract)
-     IVaultFactory.set_orcale(vf_contract, or_contract)
+     IVaultFactory.setValueInterpretor(vf_contract, vi_contract)
+     IVaultFactory.setOrcale(vf_contract, or_contract)
      IEmpiricOracle.set_value(or_contract,ETHkey, 2000000000000000000000, 18)
      IEmpiricOracle.set_value(or_contract,BTCkey, 25000000000000000000000, 18)
      IEmpiricOracle.set_value(or_contract,DAIkey, 1000000, 6)
 
-     IVaultFactory.set_primitive_price_feed(vf_contract, pp_contract)
+     IVaultFactory.setPrimitivePriceFeed(vf_contract, pp_contract)
      IOraclePriceFeedMixin.addPrimitive(pp_contract, eth_contract, ETHkey)
      IOraclePriceFeedMixin.addPrimitive(pp_contract, btc_contract, BTCkey)
      IOraclePriceFeedMixin.addPrimitive(pp_contract, dai_contract, DAIkey)
@@ -160,16 +160,16 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     %}
 
     %{ stop_pranks = [start_prank(ids.ADMIN, contract) for contract in [ids.vf_contract] ] %}
-    IVaultFactory.set_share_price_feed(vf_contract, sp_contract)
-    IVaultFactory.set_approve_prelogic(vf_contract, la_contract)
+    IVaultFactory.setSharePriceFeed(vf_contract, sp_contract)
+    IVaultFactory.setApprovePrelogic(vf_contract, la_contract)
     %{ [stop_prank() for stop_prank in stop_pranks] %}
 
     #Initial PreLogic
     %{ stop_pranks = [start_prank(ids.ADMIN, contract) for contract in [ids.vf_contract] ] %}
-    IVaultFactory.set_stacking_vault(vf_contract, STACKINGVAULT)
-    IVaultFactory.set_dao_treasury(vf_contract, DAOTREASURY)
-    IVaultFactory.set_stacking_vault_fee(vf_contract, 16)
-    IVaultFactory.set_dao_treasury_fee(vf_contract, 4)
+    IVaultFactory.setStackingVault(vf_contract, STACKINGVAULT)
+    IVaultFactory.setDaoTreasury(vf_contract, DAOTREASURY)
+    IVaultFactory.setStackingVaultFee(vf_contract, 16)
+    IVaultFactory.setDaoTreasuryFee(vf_contract, 4)
     %{ [stop_prank() for stop_prank in stop_pranks] %}
 
 
@@ -189,7 +189,7 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     assert [assets] = eth_contract
     assert [assets + 1] = btc_contract
     assert [assets + 2] = dai_contract
-     IVaultFactory.addGlobalAllowedAsset(vf_contract,3, assets)
+     IVaultFactory.addGlobalAllowedAssets(vf_contract,3, assets)
     %{ [stop_prank() for stop_prank in stop_pranks] %}
     return ()
 end
@@ -210,14 +210,13 @@ alloc_locals
      IERC20.approve(eth_contract, vf_contract, Uint256(10000000000000000000,0))
     %{ stop_prank() %}
     
-    let (local data : felt*) = alloc()
     let (local feeConfig : felt*) = alloc()
     assert [feeConfig] = 10
     assert [feeConfig + 1] = 10
     assert [feeConfig + 2] = 10
     assert [feeConfig + 3] = 10
     %{ stop_prank = start_prank(ids.ADMIN, ids.vf_contract) %}
-    let (name_) = IFuccountMock.getName(f1_contract)
+    let (name_) = IFuccount.name(f1_contract)
     IVaultFactory.initializeFund(
     vf_contract, f1_contract, 1, 420, 42, eth_contract, Uint256(1000000000000000000,0), Uint256(10000000000000000000,0), 4, feeConfig, 1)
     %{ stop_prank()  %}
@@ -247,7 +246,7 @@ alloc_locals
     # %{ stop_prank = start_prank(ids.ADMIN, ids.f1_contract_bis) %}
     # %{ stop_prank()  %}
 
-    let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = IFuccountMock.ownerShares(f1_contract,ADMIN)
+    let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = IFuccount.ownerShares(f1_contract,ADMIN)
     assert assetId_len = 1
     let id = assetId[0]
     let amount = assetAmount[0]
@@ -257,46 +256,46 @@ alloc_locals
         print(ids.amount.low)
     %}
 
-    let (mintedBlockTimesTamp_:felt) =  IFuccountMock.getMintedTimesTamp(f1_contract, id )
-    let (sharePricePurchased_:Uint256) = IFuccountMock.getSharePricePurchased(f1_contract, id)
-    let (totalId_:Uint256) = IFuccountMock.totalId(f1_contract)
-    let (sharesTotalSupply:Uint256) = IFuccountMock.sharesTotalSupply(f1_contract)
+    let (mintedBlockTimesTamp_:felt) =  IFuccount.mintedBlockTimestamp(f1_contract, id )
+    let (sharePricePurchased_:Uint256) = IFuccount.sharePricePurchased(f1_contract, id)
+    let (totalId_:Uint256) = IFuccount.totalId(f1_contract)
+    let (sharesTotalSupply:Uint256) = IFuccount.sharesTotalSupply(f1_contract)
     
-    # assert mintedBlockTimesTamp_ = 0
-    # assert sharePricePurchased_.low = 100000000000000000
-    # assert totalId_.low = 1
-    # assert sharesTotalSupply.low = 10000000000000000000
+    assert mintedBlockTimesTamp_ = 0
+    assert sharePricePurchased_.low = 100000000000000000
+    assert totalId_.low = 1
+    assert sharesTotalSupply.low = 10000000000000000000
 
-    # %{
-    #     print('shares info')
-    #     print(ids.mintedBlockTimesTamp_) 
-    #     print(ids.sharePricePurchased_.low)
-    #     print(ids.totalId_.low)
-    #     print(ids.sharesTotalSupply.low)
-    # %}
+    %{
+        print('shares info')
+        print(ids.mintedBlockTimesTamp_) 
+        print(ids.sharePricePurchased_.low)
+        print(ids.totalId_.low)
+        print(ids.sharesTotalSupply.low)
+    %}
 
-    # let (notNulAssets_len:felt, notNulAssets: AssetInfo*) = IFuccountMock.getNotNulAssets(f1_contract_bis)
-    # let (notNulPositions_len:felt, notNulPositions: felt*) = IFuccountMock.getNotNulPositions(f1_contract_bis)
-    # let (sharePrice_) = IFuccountMock.getSharePrice(f1_contract_bis)
-    # let (liquidGav) = IFuccountMock.calculLiquidGav(f1_contract_bis)
-    # let (notLiquidGav) = IFuccountMock.calculNotLiquidGav(f1_contract_bis)
-    # let (gav) = IFuccountMock.calculGav(f1_contract_bis)
-    # assert notNulAssets_len = 1
-    # assert notNulPositions_len = 0
-    # let notNulAssets1 =  notNulAssets[0]
-    # # let notNulPosition__ = notNulPositions[0]
-    # assert notNulPositions_len = 0
-    #     %{
-    #     print('fund info')
-    #     print(ids.notNulAssets1.address)
-    #     print(ids.notNulAssets1.amount.low)
-    #     print(ids.notNulAssets1.valueInDeno.low)
-    #     print(ids.sharePrice_.low)
-    #     print(ids.liquidGav.low)
-    #     print(ids.gav.low)
-    #     print(ids.notLiquidGav.low)
-    # %}
-    # let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = IFuccountMock.ownerShares(f1_contract,ADMIN)
+    let (notNulAssets_len:felt, notNulAssets: AssetInfo*) = IFuccount.notNulAssets(f1_contract)
+    let (notNulPositions_len:felt, notNulPositions: felt*) = IFuccount.notNulPositions(f1_contract)
+    let (sharePrice_) = IFuccount.sharePrice(f1_contract)
+    let (liquidGav) = IFuccount.liquidGav(f1_contract)
+    let (notLiquidGav) = IFuccount.notLiquidGav(f1_contract)
+    let (gav) = IFuccount.gav(f1_contract)
+    assert notNulAssets_len = 1
+    assert notNulPositions_len = 0
+    let notNulAssets1 =  notNulAssets[0]
+    # let notNulPosition__ = notNulPositions[0]
+    assert notNulPositions_len = 0
+        %{
+        print('fund info')
+        print(ids.notNulAssets1.address)
+        print(ids.notNulAssets1.amount.low)
+        print(ids.notNulAssets1.valueInDeno.low)
+        print(ids.sharePrice_.low)
+        print(ids.liquidGav.low)
+        print(ids.gav.low)
+        print(ids.notLiquidGav.low)
+    %}
+    let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = IFuccount.ownerShares(f1_contract,ADMIN)
 
     
 
@@ -306,11 +305,11 @@ alloc_locals
     %{ stop_prank() %}
 
     %{ stop_prank = start_prank(ids.ADMIN, ids.f1_contract) %}
-    IFuccountMock.deposit(f1_contract, Uint256(1000000000000000000,0),0, data2)
+    IFuccount.deposit(f1_contract, Uint256(1000000000000000000,0))
     %{ stop_prank()  %}
 
-    let (notNulAssets_len:felt, notNulAssets: AssetInfo*) = IFuccountMock.getNotNulAssets(f1_contract)
-    let (notNulPositions_len:felt, notNulPositions: felt*) = IFuccountMock.getNotNulPositions(f1_contract)
+    let (notNulAssets_len:felt, notNulAssets: AssetInfo*) = IFuccount.notNulAssets(f1_contract)
+    let (notNulPositions_len:felt, notNulPositions: felt*) = IFuccount.notNulPositions(f1_contract)
     let firstAsset = notNulAssets[0]
     %{
         print(ids.notNulAssets_len)
@@ -320,13 +319,13 @@ alloc_locals
 
     %}
 
-    let (sharePrice_) = IFuccountMock.getSharePrice(f1_contract)
+    let (sharePrice_) = IFuccount.sharePrice(f1_contract)
 
-    let (liquidGav) = IFuccountMock.calculLiquidGav(f1_contract)
+    let (liquidGav) = IFuccount.liquidGav(f1_contract)
 
-    let (notLiquidGav) = IFuccountMock.calculNotLiquidGav(f1_contract)
+    let (notLiquidGav) = IFuccount.notLiquidGav(f1_contract)
 
-    let (gav) = IFuccountMock.calculGav(f1_contract)
+    let (gav) = IFuccount.gav(f1_contract)
 
         %{
         print('fund info')
@@ -340,7 +339,7 @@ alloc_locals
     %{ stop_prank = start_prank(ids.ADMIN, ids.dai_contract) %}
     IERC20.transfer(dai_contract, f1_contract, Uint256(10000000,0))
     %{ stop_prank()  %}
-    let (notNulAssets_len:felt, notNulAssets: AssetInfo*) = IFuccountMock.getNotNulAssets(f1_contract)
+    let (notNulAssets_len:felt, notNulAssets: AssetInfo*) = IFuccount.notNulAssets(f1_contract)
 
     let secondAsset = notNulAssets[0]
     %{
@@ -351,13 +350,13 @@ alloc_locals
 
     %}
    
-    let (sharePrice2_) = IFuccountMock.getSharePrice(f1_contract)
+    let (sharePrice2_) = IFuccount.sharePrice(f1_contract)
 
-    let (liquidGav2) = IFuccountMock.calculLiquidGav(f1_contract)
+    let (liquidGav2) = IFuccount.liquidGav(f1_contract)
 
-    let (notLiquidGav2) = IFuccountMock.calculNotLiquidGav(f1_contract)
+    let (notLiquidGav2) = IFuccount.notLiquidGav(f1_contract)
 
-    let (gav2) = IFuccountMock.calculGav(f1_contract)
+    let (gav2) = IFuccount.gav(f1_contract)
 
         %{
         print('fund info')
@@ -369,12 +368,12 @@ alloc_locals
 
 
 
-    # let (totalId_:Uint256) = IFuccountMock.totalId(f1_contract)
+    # let (totalId_:Uint256) = IFuccount.totalId(f1_contract)
     # %{
     #     print(ids.totalId_.low)
     # %}
 
-    # let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = IFuccountMock.ownerShares(f1_contract,ADMIN)
+    # let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = IFuccount.ownerShares(f1_contract,ADMIN)
 
     # assert assetId_len = 2
     # let id1 = assetId[0]
@@ -394,10 +393,10 @@ alloc_locals
     # assert stackingVaultBalance_.low = 16000000000000000
     # assert daoTreasuryBalance_.low = 4000000000000000
 
-    # let (mintedBlockTimesTamp_:felt) =  IFuccountMock.getMintedTimesTamp(f1_contract, id2 )
-    # let (sharePricePurchased_:Uint256) = IFuccountMock.getSharePricePurchased(f1_contract, id2)
-    # let (totalId_:Uint256) = IFuccountMock.totalId(f1_contract)
-    # let (sharesTotalSupply:Uint256) = IFuccountMock.sharesTotalSupply(f1_contract)
+    # let (mintedBlockTimesTamp_:felt) =  IFuccount.getMintedTimesTamp(f1_contract, id2 )
+    # let (sharePricePurchased_:Uint256) = IFuccount.getSharePricePurchased(f1_contract, id2)
+    # let (totalId_:Uint256) = IFuccount.totalId(f1_contract)
+    # let (sharesTotalSupply:Uint256) = IFuccount.sharesTotalSupply(f1_contract)
     
     # assert mintedBlockTimesTamp_ = 0
     # assert sharePricePurchased_.low = 100000000000000000

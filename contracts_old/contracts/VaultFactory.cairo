@@ -162,22 +162,6 @@ end
 func maxFundLevel() -> (res : felt):
 end
 
-@storage_var
-func stackingDispute() -> (res : felt):
-end
-
-@storage_var
-func guaranteeRatio() -> (res : felt):
-end
-
-@storage_var
-func exitTimestamp() -> (res : felt):
-end
-
-
-
-
-
 #
 # Constructor 
 #
@@ -234,10 +218,7 @@ func areDependenciesSet{
     let (primitivePriceFeed_:felt) = getPrimitivePriceFeed()
     let (approvePreLogic_:felt) = getApprovePreLogic()
     let (maxFundLevel_:felt) = getMaxFundLevel()
-    let (stackingDispute_: felt) = getStackingDispute()
-    let (guaranteeRatio_: felt) = getGuaranteeRatio()
-    let (exitTimestamp_: felt) = getExitTimestamp()
-    let  mul_:felt = approvePreLogic_  * oracle_ * feeManager_ * policyManager_ * integrationManager_ * valueInterpretor_ * primitivePriceFeed_ * maxFundLevel_ * stackingDispute_ * exitTimestamp_
+    let  mul_:felt = approvePreLogic_  * oracle_ * feeManager_ * policyManager_ * integrationManager_ * valueInterpretor_ * primitivePriceFeed_ * maxFundLevel_
     let (isZero_:felt) = __is_zero(mul_)
     if isZero_ == 1:
         return (res = 0)
@@ -389,26 +370,6 @@ func getMaxFundLevel{
     return(res)
 end
 
-@view
-func getStackingDispute{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (res: felt):
-    let(res:felt) = stackingDispute.read()
-    return (res=res)
-end
-
-@view
-func getGuaranteeRatio{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (res: felt):
-    let(res:felt) = guaranteeRatio.read()
-    return (res=res)
-end
-
-@view
-func getExitTimestamp{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (res: felt):
-    let(res:felt) = exitTimestamp.read()
-    return (res=res)
-end
-
-
-
 #get Vault info helper to fetch info for the frontend, to be removed once tracker is implemented
 
 @view
@@ -431,8 +392,6 @@ func getVaultAmount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
     let(res:felt) = vaultAmount.read()
     return (res=res)
 end
-
-
 
 
 @view
@@ -588,32 +547,6 @@ func setMaxFundLevel{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
 end
 
 @external
-func setStackingDispute{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _stackingDispute : felt):
-    Ownable.assert_only_owner()
-    stackingDispute.write(_stackingDispute)
-    return ()
-end
-
-@external
-func setGuaranteeRatio{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _guaranteeRatio : felt):
-    Ownable.assert_only_owner()
-    guaranteeRatio.write(_guaranteeRatio)
-    return ()
-end
-
-@external
-func setExitTimestamp{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        _exitTimestamp : felt):
-    Ownable.assert_only_owner()
-    exitTimestamp.write(_exitTimestamp)
-    return ()
-end
-
-
-
-@external
 func addGlobalAllowedAsset{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
@@ -708,7 +641,6 @@ func initializeFund{
     _isPublic:felt,
     ):
     alloc_locals
-
     onlyDependenciesSet()
     let (feeManager_:felt) = feeManager.read()
     let (policyManager_:felt) = policyManager.read()
@@ -716,7 +648,6 @@ func initializeFund{
     let (valueInterpretor_:felt) = valueInterpretor.read()
     let (primitivePriceFeed_:felt) = primitivePriceFeed.read()
     let (name_:felt) = IFuccount.getName(_fund)
-
     with_attr error_message("initializeFund: vault already initialized"):
         assert name_ = 0
     end
@@ -888,7 +819,7 @@ func __addGlobalAllowedExternalPosition{
     end
 
     IIntegrationManager.setAvailableExternalPosition(_integrationManager, externalPosition_)
-    
+
     let newExternalPositionList_len:felt = _externalPositionList_len -1
     let newExternalPositionList:felt* = _externalPositionList + 1
 
