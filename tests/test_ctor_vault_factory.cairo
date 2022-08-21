@@ -11,6 +11,7 @@ from contracts.interfaces.IVaultFactory import IVaultFactory
 from contracts.interfaces.IEmpiricOracle import IEmpiricOracle
 from contracts.interfaces.IOraclePriceFeedMixin import IOraclePriceFeedMixin
 from contracts.interfaces.IFuccount import IFuccount
+#from contracts.interfaces.IFuccountLib import IFuccountLib
 from contracts.interfaces.IERC20 import IERC20
 from contracts.interfaces.IIntegrationManager import IIntegrationManager
 from contracts.interfaces.IFeeManager import IFeeManager, FeeConfig
@@ -345,8 +346,6 @@ alloc_locals
     %}
     let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = IFuccount.ownerShares(f1_contract,ADMIN)
 
-    
-
     let (local data2 : felt*) = alloc()
     %{ stop_prank = start_prank(ids.ADMIN, ids.eth_contract) %}
     let (f1_contract) = fund_instance.deployed()
@@ -457,8 +456,6 @@ alloc_locals
         print(ids.notLiquidGav2.low)
     %}
 
-
-
     # let (totalId_:Uint256) = IFuccount.totalId(f1_contract)
     # %{
     #     print(ids.totalId_.low)
@@ -501,6 +498,7 @@ end
 func test_initialize_fund_buy_shares{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
 alloc_locals
     let (f1_contract) = fund_instance.deployed()
+    let (f2_contract) = fund_instance.deployed()
     let (vf_contract) = vf_instance.deployed()
     let (eth_contract) = eth_instance.deployed()
     let (dai_contract) = dai_instance.deployed()
@@ -592,7 +590,7 @@ alloc_locals
         print(ids.id.low)
         print(ids.amount.low)
     %}
-    IFuccountLib.mint(f1_contract,f2_contract,Uint256(1,0),Uint256(2, 0))
+    #IFuccountLib.mint(f1_contract,f2_contract,Uint256(1,0),Uint256(2, 0))
     let (number_shares:felt) = IFuccount.ownerShares(f2_contract)
     assert number_shares = 1
 
