@@ -45,9 +45,9 @@ from contracts.interfaces.IPolicyManager import IPolicyManager
 
 from contracts.interfaces.IIntegrationManager import IIntegrationManager
 
-from contracts.PreLogic.interfaces.IOraclePriceFeedMixin import IOraclePriceFeedMixin
+from contracts.interfaces.IOraclePriceFeedMixin import IOraclePriceFeedMixin
 
-from contracts.PreLogic.interfaces.IValueInterpretor import IValueInterpretor
+from contracts.interfaces.IValueInterpretor import IValueInterpretor
 
 from contracts.interfaces.IERC20 import IERC20
 
@@ -793,7 +793,7 @@ func add_global_allowed_assets_from_tab{
     let (VI_:felt) = value_interpretor.read()
     let (PPF_:felt) = primitive_price_feed.read()
     let (isSupportedPrimitiveAsset_) = IOraclePriceFeedMixin.checkIsSupportedPrimitiveAsset(PPF_,asset_)
-    let (isSupportedDerivativeAsset_) = IValueInterpretor.checkIsSupportedDerivativeAsset(VI_,asset_)
+    let (isSupportedDerivativeAsset_) = IValueInterpretor.isSupportedDerivativeAsset(VI_,asset_)
     let (notAllowed_) = is_zero(isSupportedPrimitiveAsset_ + isSupportedDerivativeAsset_)
     with_attr error_message("only_dependencies_set:Dependencies not set"):
         assert notAllowed_ = 0
@@ -825,7 +825,7 @@ func add_global_allowed_external_positions_from_tab{
     end
     let externalPosition_:felt = [_externalPositionList]
     let (VI_:felt) = value_interpretor.read()
-    let (isSupportedExternalPosition_) = IValueInterpretor.checkIsSupportedExternalPosition(VI_,externalPosition_)
+    let (isSupportedExternalPosition_) = IValueInterpretor.isSupportedExternalPosition(VI_,externalPosition_)
     with_attr error_message("__add_global_allowed_external_position: PriceFeed not set"):
         assert isSupportedExternalPosition_ = 1
     end

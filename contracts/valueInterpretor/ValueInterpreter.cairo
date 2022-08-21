@@ -226,11 +226,11 @@ func calcul_asset_value{
     else:
         let (isSupportedDerivativeAsset_) = is_supported_derivative_asset.read(base_asset)
         if isSupportedDerivativeAsset_ == 1:
-        let (derivativePriceFeed_:felt) = get_derivative_price_feed(base_asset)
+        let (derivativePriceFeed_:felt) = derivativePriceFeed(base_asset)
         let (res:Uint256) = calc_derivative_value(derivativePriceFeed_, base_asset, amount, denomination_asset)
         return(res=res)
         else:
-        let (externalPositionPriceFeed_:felt) = get_external_position_price_feed(base_asset)
+        let (externalPositionPriceFeed_:felt) = externalPositionPriceFeed(base_asset)
         let (res:Uint256) = calcul_external_position_value(externalPositionPriceFeed_, base_asset, amount, denomination_asset)
         return(res=res)
         end
@@ -298,7 +298,7 @@ func calcul_underlying_values{
     let base_asset_:felt = [underlying_assets]
     let amount_:Uint256 = [underlying_amounts]        
 
-    let (underlying_value:Uint256) = calcul_asset_value(base_asset_, amount_, denomination_asset)
+    let (underlyingValue_:Uint256) = calcul_asset_value(base_asset_, amount_, denomination_asset)
     let (nextValue_:Uint256) = calcul_underlying_values(underlying_assets_len - 1, underlying_assets + 1, underlying_amounts_len - 1, underlying_amounts + Uint256.SIZE, denomination_asset)
     let (res_:Uint256, _) = uint256_add(underlyingValue_, nextValue_)  
     return (res=res_)

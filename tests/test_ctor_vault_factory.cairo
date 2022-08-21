@@ -7,7 +7,7 @@ from starkware.cairo.common.alloc import (
 )
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 
-from contracts.interfaces.IVaultFactory import IVaultFactory, Integration
+from contracts.interfaces.IVaultFactory import IVaultFactory
 from contracts.interfaces.IEmpiricOracle import IEmpiricOracle
 from contracts.interfaces.IOraclePriceFeedMixin import IOraclePriceFeedMixin
 from contracts.interfaces.IFuccount import IFuccount
@@ -45,9 +45,11 @@ const REEDEM_SELECTOR = 48171946380744487310448203515318920862752427823122522294
 const DAY = 86400 
 
 
-struct integration:
+struct Integration:
     member contract : felt
     member selector : felt
+    member integration: felt
+    member level: felt
 end
 
 struct AssetInfo:
@@ -231,15 +233,14 @@ alloc_locals
     assert managementFee = 10
     assert performanceFee = 10
 
-
-    let (availableIntegrations_len:felt, availableIntegrations: integration*) = IIntegrationManager.availableIntegrations(im_contract)
+    let (availableIntegrations_len:felt, availableIntegrations: Integration*) = IIntegrationManager.availableIntegrations(im_contract)
     assert availableIntegrations_len = 5
-    let integr_:integration = availableIntegrations[3]
+    let integr_:Integration = availableIntegrations[3]
 
     assert integr_.contract = f1_contract
     assert integr_.selector = DEPOSIT_SELECTOR
 
-    let integr_:integration = availableIntegrations[4]
+    let integr_:Integration = availableIntegrations[4]
     assert integr_.contract = f1_contract
     assert integr_.selector = REEDEM_SELECTOR
 
@@ -428,15 +429,15 @@ end
 #     assert availableAssets[1] = btc_contract
 #     assert availableAssets[2] = dai_contract
 
-#     let (availableIntegrations_len:felt, availableIntegrations: integration*) = IIntegrationManager.availableIntegrations(im_contract)
-#     let integr_:integration = availableIntegrations[0]
+#     let (availableIntegrations_len:felt, availableIntegrations: Integration*) = IIntegrationManager.availableIntegrations(im_contract)
+#     let integr_:Integration = availableIntegrations[0]
 #         %{ 
 #         print(ids.availableIntegrations_len)
 #         print(ids.integr_.contract)
 #     %}
-#     assert availableIntegrations[0] = integration(eth_contract, APPROVE_SELECTOR)
-#     assert availableIntegrations[1] = integration(btc_contract, APPROVE_SELECTOR)
-#     assert availableIntegrations[2] = integration(dai_contract, APPROVE_SELECTOR)
+#     assert availableIntegrations[0] = Integration(eth_contract, APPROVE_SELECTOR)
+#     assert availableIntegrations[1] = Integration(btc_contract, APPROVE_SELECTOR)
+#     assert availableIntegrations[2] = Integration(dai_contract, APPROVE_SELECTOR)
 
 #     return ()
 # end
