@@ -1,7 +1,7 @@
 
 %lang starknet
 
-from starkware.starknet.common.syscalls import get_contract_address
+from starkware.starknet.common.syscalls import get_contract_address, get_caller_address
 from starkware.cairo.common.alloc import (
     alloc,
 )
@@ -413,103 +413,192 @@ alloc_locals
 end
 
 
-# @external
-# func test_initialize_fund_buy_shares{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
-# alloc_locals
-#     let (f1_contract) = fund_instance.deployed()
-#     let (f2_contract) = fund_instance.deployed()
-#     let (vf_contract) = vf_instance.deployed()
-#     let (eth_contract) = eth_instance.deployed()
-#     let (dai_contract) = dai_instance.deployed()
-#     let (fm_contract) = fm_instance.deployed()
-#     let (im_contract) = im_instance.deployed()
+@external
+ func test_initialize_fund_buy_shares_fail{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
+ alloc_locals
+    let (f1_contract) = fund_instance.deployed()
+    let (f2_contract) = fund_instance.deployed()
+    let (vf_contract) = vf_instance.deployed()
+    let (eth_contract) = eth_instance.deployed()
+    let (dai_contract) = dai_instance.deployed()
+    let (fm_contract) = fm_instance.deployed()
+    let (im_contract) = im_instance.deployed()
 
-#     %{ stop_prank = start_prank(ids.ADMIN, ids.eth_contract) %}
-#      IERC20.approve(eth_contract, vf_contract, Uint256(10000000000000000000,0))
-#     %{ stop_prank() %}
+    %{ stop_prank = start_prank(ids.ADMIN, ids.eth_contract) %}
+     IERC20.approve(eth_contract, vf_contract, Uint256(10000000000000000000,0))
+    %{ stop_prank() %}
 
-#     let (local data2 : felt*) = alloc()
-#     %{ stop_prank = start_prank(ids.ADMIN, ids.eth_contract) %}
-#      IERC20.approve(eth_contract, f1_contract, Uint256(10000000000000000000,0))
-#     %{ stop_prank() %}
+    let (local data2 : felt*) = alloc()
+    %{ stop_prank = start_prank(ids.ADMIN, ids.eth_contract) %}
+     IERC20.approve(eth_contract, f1_contract, Uint256(10000000000000000000,0))
+    %{ stop_prank() %}
 
-#     %{ stop_prank = start_prank(ids.ADMIN, ids.f1_contract) %}
-#     IFuccount.deposit(f1_contract, Uint256(1000000000000000000,0))
-#     %{ stop_prank()  %}
+    let (asset_manager) = IFuccount.manager(f1_contract)
+
+    %{stop_prank = start_prank(ids.ADMIN, ids.f1_contract) %}
+       let (caller) = get_caller_address()
+       %{
+            print("get_caller_address")
+            print(ids.caller)
+            print("asset_manager")
+            print(ids.asset_manager) 
+        %}
+    %{ stop_prank() %}
+
+    %{ expect_revert%}
+    %{ stop_prank = start_prank(ids.ADMIN, ids.f1_contract) %}
+    IFuccount.deposit(f1_contract, Uint256(1000000000000000000,0))
+    %{ stop_prank()  %}
     
-#     let (local feeConfig : felt*) = alloc()
-#     assert [feeConfig] = 10
-#     assert [feeConfig + 1] = 10
-#     assert [feeConfig + 2] = 10
-#     assert [feeConfig + 3] = 10
-#     %{ stop_prank = start_prank(ids.ADMIN, ids.vf_contract) %}
-#     let (name_) = IFuccount.name(f1_contract)
-#     IVaultFactory.initializeFund(
-#     vf_contract, f1_contract, 1, 420, 42, eth_contract, Uint256(1000000000000000000,0), Uint256(10000000000000000000,0), 4, feeConfig, 1)
-#     %{ stop_prank()  %}
+    let (local feeConfig : felt*) = alloc()
+    assert [feeConfig] = 10
+    assert [feeConfig + 1] = 10
+    assert [feeConfig + 2] = 10
+    assert [feeConfig + 3] = 10
+    %{ stop_prank = start_prank(ids.ADMIN, ids.vf_contract) %}
+    let (name_) = IFuccount.name(f1_contract)
+    IVaultFactory.initializeFund(
+    vf_contract, f1_contract, 1, 420, 42, eth_contract, Uint256(1000000000000000000,0), Uint256(10000000000000000000,0), 4, feeConfig, 0)
+    %{ stop_prank()  %}
 
-#     let (entranceFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.ENTRANCE_FEE)
-#     let (exitFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.EXIT_FEE)
-#     let (managementFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.MANAGEMENT_FEE)
-#     let (performanceFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.PERFORMANCE_FEE)
+    let (entranceFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.ENTRANCE_FEE)
+    let (exitFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.EXIT_FEE)
+    let (managementFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.MANAGEMENT_FEE)
+    let (performanceFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.PERFORMANCE_FEE)
 
-#     assert entranceFee = 10
-#     assert exitFee = 10
-#     assert managementFee = 10
-#     assert performanceFee = 10
+    assert entranceFee = 10
+    assert exitFee = 10
+    assert managementFee = 10
+    assert performanceFee = 10
+
+    let (availableIntegrations_len:felt, availableIntegrations: Integration*) = IIntegrationManager.availableIntegrations(im_contract)
+    assert availableIntegrations_len = 5
+    let integr_:Integration = availableIntegrations[3]
+
+    assert integr_.contract = f1_contract
+    assert integr_.selector = DEPOSIT_SELECTOR
+
+    let integr_:Integration = availableIntegrations[4]
+    assert integr_.contract = f1_contract
+    assert integr_.selector = REEDEM_SELECTOR
+
+    # %{ stop_prank = start_prank(ids.ADMIN, ids.f1_contract_bis) %}
+    # %{ stop_prank()  %}
+
+    let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = IFuccount.ownerShares(f1_contract,ADMIN)
+    assert assetId_len = 1
+    let id = assetId[0]
+    let amount = assetAmount[0]
+    %{
+    print('owner shares')
+    print(ids.id.low)
+    print(ids.amount.low)
+    %}
+    IFuccount.deposit(f1_contract,Uint256(5,0))
+    return()
+end
+
+@external
+func test_initialize_fund_buy_shares{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
+ alloc_locals
+    let (f1_contract) = fund_instance.deployed()
+    let (f2_contract) = fund_instance.deployed()
+    let (vf_contract) = vf_instance.deployed()
+    let (eth_contract) = eth_instance.deployed()
+    let (dai_contract) = dai_instance.deployed()
+    let (fm_contract) = fm_instance.deployed()
+    let (im_contract) = im_instance.deployed()
+
+    %{ stop_prank = start_prank(ids.ADMIN, ids.eth_contract) %}
+     IERC20.approve(eth_contract, vf_contract, Uint256(10000000000000000000,0))
+    %{ stop_prank() %}
+
+    let (local data2 : felt*) = alloc()
+    %{ stop_prank = start_prank(ids.ADMIN, ids.eth_contract) %}
+     IERC20.approve(eth_contract, f1_contract, Uint256(10000000000000000000,0))
+    %{ stop_prank() %}
 
 
-#     let (local feeConfig2 : felt*) = alloc()
-#     assert [feeConfig2] = 10
-#     assert [feeConfig2 + 1] = 10
-#     assert [feeConfig2 + 2] = 10
-#     assert [feeConfig2 + 3] = 10
+    %{stop_prank = start_prank(ids.ADMIN, ids.vf_contract) %}
+    let (local depositors: felt*) = alloc()
+    assert [depositors] = USER_1
+    IVaultFactory.addAllowedDepositors(vf_contract,f1_contract,1,depositors)
+    let (asset_manager) = IVaultFactory.getOwner(f1_contract)
+    %{stop_prank = start_prank(ids.ADMIN, ids.f1_contract)%}
+    let (caller) = get_caller_address()
+    %{
+    print(ids.caller)
+    print(ids.asset_manager)
+    %}
+    %{stop_prank() %}
 
-#     %{ stop_prank = start_prank(ids.ADMIN, ids.vf_contract) %}
-#     let (name_) = IFuccount.name(f1_contract)
-#     IVaultFactory.initializeFund(
-#     vf_contract, f2_contract, 1, 420, 42, eth_contract, Uint256(1000000000000000000,0), Uint256(10000000000000000000,0), 4, feeConfig2, 1)
-#     %{ stop_prank() %}
+    %{stop_prank = start_prank(ids.ADMIN, ids.f1_contract) %}
+    
+    IFuccount.deposit(f1_contract, Uint256(1000000000000000000,0))
+    %{ stop_prank()  %}
+    
+    let (local feeConfig : felt*) = alloc()
+    assert [feeConfig] = 10
+    assert [feeConfig + 1] = 10
+    assert [feeConfig + 2] = 10
+    assert [feeConfig + 3] = 10
+    
+    let (asset_manager) = IFuccount.manager(f1_contract)
 
-#     %{ stop_prank = start_prank(ids.ADMIN, ids.f1_contract) %}
-#     IFuccount.deposit(f2_contract, Uint256(1000000000000000000,0))
-#     %{ stop_prank()  %}
+    %{stop_prank = start_prank(ids.ADMIN, ids.f1_contract) %}
+       let (caller) = get_caller_address()
+       %{
+            print("get_caller_address")
+            print(ids.caller)
+            print("asset_manager")
+            print(ids.asset_manager) 
+        %}
+    %{ stop_prank() %}
 
-#     let (entranceFee) = IFeeManager.getFeeConfig(fm_contract, f2_contract,FeeConfig.ENTRANCE_FEE)
-#     let (exitFee) = IFeeManager.getFeeConfig(fm_contract, f2_contract,FeeConfig.EXIT_FEE)
-#     let (managementFee) = IFeeManager.getFeeConfig(fm_contract, f2_contract,FeeConfig.MANAGEMENT_FEE)
-#     let (performanceFee) = IFeeManager.getFeeConfig(fm_contract, f2_contract,FeeConfig.PERFORMANCE_FEE)
+    %{ stop_prank = start_prank(ids.ADMIN, ids.vf_contract) %}
+    let (name_) = IFuccount.name(f1_contract)
+    IVaultFactory.initializeFund(
+    vf_contract, f1_contract, 1, 420, 42, eth_contract, Uint256(1000000000000000000,0), Uint256(10000000000000000000,0), 4, feeConfig, 0)
+    %{ stop_prank()  %}
 
-#     assert entranceFee = 10
-#     assert exitFee = 10
-#     assert managementFee = 10
-#     assert performanceFee = 10
+    let (entranceFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.ENTRANCE_FEE)
+    let (exitFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.EXIT_FEE)
+    let (managementFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.MANAGEMENT_FEE)
+    let (performanceFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.PERFORMANCE_FEE)
+
+    assert entranceFee = 10
+    assert exitFee = 10
+    assert managementFee = 10
+    assert performanceFee = 10
+
+    let (availableIntegrations_len:felt, availableIntegrations: Integration*) = IIntegrationManager.availableIntegrations(im_contract)
+    assert availableIntegrations_len = 5
+    let integr_:Integration = availableIntegrations[3]
+
+    assert integr_.contract = f1_contract
+    assert integr_.selector = DEPOSIT_SELECTOR
+
+    let integr_:Integration = availableIntegrations[4]
+    assert integr_.contract = f1_contract
+    assert integr_.selector = REEDEM_SELECTOR
+
+    # %{ stop_prank = start_prank(ids.ADMIN, ids.f1_contract_bis) %}
+    # %{ stop_prank()  %}
+
+    let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = IFuccount.ownerShares(f1_contract,ADMIN)
+    assert assetId_len = 1
+    let id = assetId[0]
+    let amount = assetAmount[0]
+    %{
+    print('owner shares')
+    print(ids.id.low)
+    print(ids.amount.low)
+    %}
+
+    return()
+end
 
 
-#     let (availableIntegrations_len:felt, availableIntegrations: integration*) = IIntegrationManager.availableIntegrations(im_contract)
-#     assert availableIntegrations_len = 5
-#     let integr_:integration = availableIntegrations[3]
-
-#     assert integr_.contract = f1_contract
-#     assert integr_.selector = DEPOSIT_SELECTOR
-
-#     let integr_:integration = availableIntegrations[4]
-#     assert integr_.contract = f1_contract
-#     assert integr_.selector = REEDEM_SELECTOR
-
-#     # %{ stop_prank = start_prank(ids.ADMIN, ids.f1_contract_bis) %}
-#     # %{ stop_prank()  %}
-
-#     let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = IFuccount.ownerShares(f1_contract,ADMIN)
-#     assert assetId_len = 1
-#     let id = assetId[0]
-#     let amount = assetAmount[0]
-#     %{
-#         print('owner shares')
-#         print(ids.id.low)
-#         print(ids.amount.low)
-#     %}
-#     #IFuccountLib.mint(f1_contract,f2_contract,Uint256(1,0),Uint256(2, 0))
 #     let (number_shares:felt) = IFuccount.ownerShares(f2_contract)
 #     assert number_shares = 1
 
@@ -641,7 +730,6 @@ end
 #         %{ ids.token_contract = context.token_contract %}
 #         return (token_contract)
 #     end
-# end
 
 
 namespace fund_instance:
@@ -699,4 +787,3 @@ namespace sd_instance:
         return (sd_instance)
     end
 end
-
