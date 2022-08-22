@@ -10,5 +10,16 @@ namespace IStackingDispute:
     func getSecurityFundBalance(stackingDispute_: felt)-> (res: Uint256):
     end
 
+    func deposit(fund_address : felt,token_id : Uint256, amount : Uint256) -> ():
+    end
+
+    func withdraw(fund_address : felt, token_id : Uint256,amount : Uint256) -> ():
+    end
+
+    func managerDeposit(fund : felt, token_id : Uint256, amount :Uint256):
+    end
+
+    func managerWithdraw(fund : felt, token_id : Uint256,amount : Uint256) -> ():
+
 end
 

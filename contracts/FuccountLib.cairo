@@ -1684,10 +1684,11 @@ func _assert_enought_guarantee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
     alloc_locals
    let (shareSupply_) = shares_total_supply.read()
    let (contractAddress_ : felt) = get_contract_address()
+   let (manager_) = manager.read()
    let (vault_factory_) = vault_factory.read()
    let (stackingDispute_) = IVaultFactory.getStackingDispute(vault_factory_)
    let (securityFundBalance_)  = IStackingDispute.getSecurityFundBalance(stackingDispute_, contractAddress_)
-   let (guaranteeRatio_) = IVaultFactory.getGuaranteeRatio(vault_factory_)
+   let (guaranteeRatio_) = IVaultFactory.getManagerGuaranteeRatio(vault_factory_, manager_)
    let (minGuarantee_) =  uint256_percent(shareSupply_, Uint256(guaranteeRatio_,0))
    let (isEnoughtGuarantee_) = uint256_le(minGuarantee_, securityFundBalance_)
    with_attr error_message("_assert_enought_guarantee: Asser manager need to provide more guarantee "):
