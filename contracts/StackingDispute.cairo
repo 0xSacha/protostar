@@ -179,7 +179,7 @@ end
 
 
 @external
-func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt,token_id : Uint256, amount_to_deposit: Uint256) -> ():
+func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt,token_id : Uint256, amount_to_deposit: Uint256):
     alloc_locals
     let (caller_addr) = get_caller_address()
     let (vault_status) = is_fund_disputed.read(fund)
@@ -211,7 +211,7 @@ func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 end
 
 @external
-func withdraw{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt, token_id : Uint256,amount : Uint256) -> ():
+func withdraw{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt, token_id : Uint256,amount : Uint256):
     alloc_locals 
     let (is_guarantee_withdrawable) = isGuaranteeWithdrawable(fund)
     with_attr error_message("Guarantee is not withdrawable yet"):
@@ -264,7 +264,7 @@ func managerDeposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
 end
 
 @external
-func managerWithdraw {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt, token_id : Uint256,amount : Uint256) -> ():
+func managerWithdraw{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt, token_id : Uint256,amount : Uint256):
     alloc_locals 
     let (asset_man) = IFuccount.manager(fund)
     let (caller_addr) = get_caller_address()
@@ -294,7 +294,7 @@ func managerWithdraw {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
     return()
 end
 
-func resultDispute {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(bool : felt, fund : felt):
+func resultDispute{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(bool : felt, fund : felt):
     alloc_locals
     let (dispute_fund) = is_fund_disputed.read(fund)
     let (contract_address) = get_contract_address()

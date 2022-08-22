@@ -77,7 +77,6 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     tempvar f2_contract
     tempvar f3_contract
     tempvar sd_contract
-
     ##Vault Factory
     %{ 
     context.VF = deploy_contract("./contracts/VaultFactory.cairo",[ids.ADMIN]).contract_address 
@@ -99,12 +98,6 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     ids.sd_contract = context.SD
     %}
 
-    let (f1_contract) = fund_instance.deployed()
-    let (vf_contract) = vf_instance.deployed()
-    let (eth_contract) = eth_instance.deployed()
-    let (dai_contract) = dai_instance.deployed()
-    let (fm_contract) = fm_instance.deployed()
-    let (im_contract) = im_instance.deployed()
 
     %{ stop_prank = start_prank(ids.ADMIN, ids.eth_contract) %}
      IERC20.approve(eth_contract, vf_contract, Uint256(10000000000000000000,0))
@@ -291,18 +284,18 @@ alloc_locals
     assert integr_.contract = f1_contract
     assert integr_.selector = REEDEM_SELECTOR
 
-    # %{ stop_prank = start_prank(ids.ADMIN, ids.f1_contract_bis) %}
-    # %{ stop_prank()  %}
-
     let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = IFuccount.ownerShares(f1_contract,ADMIN)
     assert assetId_len = 1
     let id = assetId[0]
     let amount = assetAmount[0]
-    %{
-        print('owner shares')
-        print(ids.id.low)
-        print(ids.amount.low)
-    %}
+
+    assert id.low = 0
+    assert amount.low = 10000000000000000000
+    # %{
+    #     print('owner shares')
+    #     print(ids.id.low)
+    #     print(ids.amount.low)
+    # %}
 
     let (mintedBlockTimesTamp_:felt) =  IFuccount.mintedBlockTimestamp(f1_contract, id )
     let (sharePricePurchased_:Uint256) = IFuccount.sharePricePurchased(f1_contract, id)
@@ -314,13 +307,13 @@ alloc_locals
     assert totalId_.low = 1
     assert sharesTotalSupply.low = 10000000000000000000
 
-    %{
-        print('shares info')
-        print(ids.mintedBlockTimesTamp_) 
-        print(ids.sharePricePurchased_.low)
-        print(ids.totalId_.low)
-        print(ids.sharesTotalSupply.low)
-    %}
+    # %{
+    #     print('shares info')
+    #     print(ids.mintedBlockTimesTamp_) 
+    #     print(ids.sharePricePurchased_.low)
+    #     print(ids.totalId_.low)
+    #     print(ids.sharesTotalSupply.low)
+    # %}
 
     let (notNulAssets_len:felt, notNulAssets: AssetInfo*) = IFuccount.notNulAssets(f1_contract)
     let (notNulPositions_len:felt, notNulPositions: felt*) = IFuccount.notNulPositions(f1_contract)
@@ -328,10 +321,10 @@ alloc_locals
     let (liquidGav) = IFuccount.liquidGav(f1_contract)
     let (notLiquidGav) = IFuccount.notLiquidGav(f1_contract)
     let (gav) = IFuccount.gav(f1_contract)
+
     assert notNulAssets_len = 1
     assert notNulPositions_len = 0
     let notNulAssets1 =  notNulAssets[0]
-    # let notNulPosition__ = notNulPositions[0]
     assert notNulPositions_len = 0
         %{
         print('fund info')
@@ -343,56 +336,10 @@ alloc_locals
         print(ids.gav.low)
         print(ids.notLiquidGav.low)
     %}
-    let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = IFuccount.ownerShares(f1_contract,ADMIN)
 
-    let (local data2 : felt*) = alloc()
-    %{ stop_prank = start_prank(ids.ADMIN, ids.eth_contract) %}
-    let (f1_contract) = fund_instance.deployed()
-    let (vf_contract) = vf_instance.deployed()
-    let (eth_contract) = eth_instance.deployed()
-    let (dai_contract) = dai_instance.deployed()
-    let (fm_contract) = fm_instance.deployed()
-    let (im_contract) = im_instance.deployed()
 
     %{ stop_prank = start_prank(ids.ADMIN, ids.eth_contract) %}
-     IERC20.approve(eth_contract, vf_contract, Uint256(10000000000000000000,0))
-    %{ stop_prank() %}
-    
-    let (local feeConfig : felt*) = alloc()
-    assert [feeConfig] = 10
-    assert [feeConfig + 1] = 10
-    assert [feeConfig + 2] = 10
-    assert [feeConfig + 3] = 10
-    %{ stop_prank = start_prank(ids.ADMIN, ids.vf_contract) %}
-    let (name_) = IFuccount.name(f1_contract)
-    IVaultFactory.initializeFund(
-    vf_contract, f1_contract, 1, 420, 42, eth_contract, Uint256(1000000000000000000,0), Uint256(10000000000000000000,0), 4, feeConfig, 1)
-    %{ stop_prank()  %}
-
-    let (entranceFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.ENTRANCE_FEE)
-    let (exitFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.EXIT_FEE)
-    let (managementFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.MANAGEMENT_FEE)
-    let (performanceFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.PERFORMANCE_FEE)
-
-    assert entranceFee = 10
-    assert exitFee = 10
-    assert managementFee = 10
-    assert performanceFee = 10
-
-
-    let (availableIntegrations_len:felt, availableIntegrations: integration*) = IIntegrationManager.availableIntegrations(im_contract)
-    assert availableIntegrations_len = 5
-    let integr_:integration = availableIntegrations[3]
-
-    assert integr_.contract = f1_contract
-    assert integr_.selector = DEPOSIT_SELECTOR
-
-    let integr_:integration = availableIntegrations[4]
-    assert integr_.contract = f1_contract
-    assert integr_.selector = REEDEM_SELECTOR
-
-    %{ stop_prank = start_prank(ids.ADMIN, ids.eth_contract) %}
-     sd_contract
+     IStackingDispute.deposit(sd_contract, f1_contract, id, amount)
     %{ stop_prank() %}
 
     %{ stop_prank = start_prank(ids.ADMIN, ids.eth_contract) %}
@@ -403,63 +350,64 @@ alloc_locals
     IFuccount.deposit(f1_contract, Uint256(1000000000000000000,0))
     %{ stop_prank()  %}
 
-    let (notNulAssets_len:felt, notNulAssets: AssetInfo*) = IFuccount.notNulAssets(f1_contract)
-    let (notNulPositions_len:felt, notNulPositions: felt*) = IFuccount.notNulPositions(f1_contract)
-    let firstAsset = notNulAssets[0]
-    %{
-        print(ids.notNulAssets_len)
-        print(ids.firstAsset.address)
-        print(ids.firstAsset.valueInDeno.low)
-        print(ids.firstAsset.amount.low)
+    # let (notNulAssets_len:felt, notNulAssets: AssetInfo*) = IFuccount.notNulAssets(f1_contract)
+    # let (notNulPositions_len:felt, notNulPositions: felt*) = IFuccount.notNulPositions(f1_contract)
+    # let firstAsset = notNulAssets[0]
+    # %{
+    #     print(ids.notNulAssets_len)
+    #     print(ids.firstAsset.address)
+    #     print(ids.firstAsset.valueInDeno.low)
+    #     print(ids.firstAsset.amount.low)
 
-    %}
+    # %}
 
-    let (sharePrice_) = IFuccount.sharePrice(f1_contract)
+    # let (sharePrice_) = IFuccount.sharePrice(f1_contract)
 
-    let (liquidGav) = IFuccount.liquidGav(f1_contract)
+    # let (liquidGav) = IFuccount.liquidGav(f1_contract)
 
-    let (notLiquidGav) = IFuccount.notLiquidGav(f1_contract)
+    # let (notLiquidGav) = IFuccount.notLiquidGav(f1_contract)
 
-    let (gav) = IFuccount.gav(f1_contract)
+    # let (gav) = IFuccount.gav(f1_contract)
 
-        %{
-        print('fund info')
-        print(ids.sharePrice_.low)
-        print(ids.liquidGav.low)
-        print(ids.gav.low)
-        print(ids.notLiquidGav.low)
-    %}
+    #     %{
+    #     print('fund info')
+    #     print(ids.sharePrice_.low)
+    #     print(ids.liquidGav.low)
+    #     print(ids.gav.low)
+    #     print(ids.notLiquidGav.low)
+    # %}
 
 
-    %{ stop_prank = start_prank(ids.ADMIN, ids.dai_contract) %}
-    IERC20.transfer(dai_contract, f1_contract, Uint256(10000000,0))
-    %{ stop_prank()  %}
-    let (notNulAssets_len:felt, notNulAssets: AssetInfo*) = IFuccount.notNulAssets(f1_contract)
+    # %{ stop_prank = start_prank(ids.ADMIN, ids.dai_contract) %}
+    # IERC20.transfer(dai_contract, f1_contract, Uint256(10000000,0))
+    # %{ stop_prank()  %}
+    
+    # let (notNulAssets_len:felt, notNulAssets: AssetInfo*) = IFuccount.notNulAssets(f1_contract)
 
-    let secondAsset = notNulAssets[0]
-    %{
-        print(ids.notNulAssets_len)
-        print(ids.secondAsset.address)
-        print(ids.secondAsset.valueInDeno.low)
-        print(ids.secondAsset.amount.low)
+    # let secondAsset = notNulAssets[0]
+    # %{
+    #     print(ids.notNulAssets_len)
+    #     print(ids.secondAsset.address)
+    #     print(ids.secondAsset.valueInDeno.low)
+    #     print(ids.secondAsset.amount.low)
 
-    %}
+    # %}
    
-    let (sharePrice2_) = IFuccount.sharePrice(f1_contract)
+    # let (sharePrice2_) = IFuccount.sharePrice(f1_contract)
 
-    let (liquidGav2) = IFuccount.liquidGav(f1_contract)
+    # let (liquidGav2) = IFuccount.liquidGav(f1_contract)
 
-    let (notLiquidGav2) = IFuccount.notLiquidGav(f1_contract)
+    # let (notLiquidGav2) = IFuccount.notLiquidGav(f1_contract)
 
-    let (gav2) = IFuccount.gav(f1_contract)
+    # let (gav2) = IFuccount.gav(f1_contract)
 
-        %{
-        print('fund info')
-        print(ids.sharePrice2_.low)
-        print(ids.liquidGav2.low)
-        print(ids.gav2.low)
-        print(ids.notLiquidGav2.low)
-    %}
+    #     %{
+    #     print('fund info')
+    #     print(ids.sharePrice2_.low)
+    #     print(ids.liquidGav2.low)
+    #     print(ids.gav2.low)
+    #     print(ids.notLiquidGav2.low)
+    # %}
 
     # let (totalId_:Uint256) = IFuccount.totalId(f1_contract)
     # %{
