@@ -48,8 +48,6 @@ const DAY = 86400
 struct Integration:
     member contract : felt
     member selector : felt
-    member integration: felt
-    member level: felt
 end
 
 struct AssetInfo:
@@ -235,12 +233,12 @@ alloc_locals
 
     let (availableIntegrations_len:felt, availableIntegrations: Integration*) = IIntegrationManager.availableIntegrations(im_contract)
     assert availableIntegrations_len = 5
-    let integr_:Integration = availableIntegrations[3]
+    let integr_:Integration = availableIntegrations[1]
 
     assert integr_.contract = f1_contract
     assert integr_.selector = DEPOSIT_SELECTOR
 
-    let integr_:Integration = availableIntegrations[4]
+    let integr_:Integration = availableIntegrations[0]
     assert integr_.contract = f1_contract
     assert integr_.selector = REEDEM_SELECTOR
 

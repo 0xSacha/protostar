@@ -305,10 +305,10 @@ func complete_available_assets_tab{
         return ()
     end
     let (asset_:felt) = id_to_available_asset.read(available_assets_len - 1)
-    assert available_assets[available_assets_len] = asset_
+    assert available_assets[0] = asset_
     return complete_available_assets_tab(
         available_assets_len=available_assets_len - 1,
-        available_assets= available_assets,
+        available_assets= available_assets + 1,
     )
 end
 
@@ -321,10 +321,10 @@ func complete_available_external_positions_tab{
         return ()
     end
     let (external_position_:felt) = id_to_available_external_position.read(available_external_positions_len - 1)
-    assert available_external_positions[available_external_positions_len] = external_position_
+    assert available_external_positions[0] = external_position_
     return complete_available_external_positions_tab(
         available_external_positions_len= available_external_positions_len - 1,
-        available_external_positions= available_external_positions,
+        available_external_positions= available_external_positions + 1,
     )
 end
 
@@ -337,9 +337,9 @@ func complete_available_integrations_tab{
         return ()
     end
     let (integration_:Integration) = id_to_available_integration.read(available_integrations_len - 1)
-    assert available_integrations[available_integrations_len] = integration_
+    assert available_integrations[0] = integration_
     return complete_available_integrations_tab(
         available_integrations_len=available_integrations_len - 1,
-        available_integrations= available_integrations,
+        available_integrations= available_integrations + Integration.SIZE,
     )
 end

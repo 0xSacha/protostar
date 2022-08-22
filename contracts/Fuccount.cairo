@@ -301,21 +301,22 @@ func activater{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }(
-        _fundName: felt,
-        _fundSymbol: felt,
-        _fundLevel: felt,
-        _denominationAsset: felt,
-        _managerAccount:felt,
-        _shareAmount:Uint256,
-        _sharePrice:Uint256,
+        fundName: felt,
+        fundSymbol: felt,
+        fundLevel: felt,
+        denominationAsset: felt,
+        managerAccount:felt,
+        shareAmount:Uint256,
+        sharePrice:Uint256,
     ):
-    FuccountLib.activater( _fundName,
-        _fundSymbol,
-        _denominationAsset,
-        _managerAccount,
-        _shareAmount,
-        _sharePrice)
-    FuccountLib.set_fund_level(_fundLevel)
+    FuccountLib.activater( 
+        fundName,
+        fundSymbol,
+        denominationAsset,
+        managerAccount,
+        shareAmount,
+        sharePrice)
+    FuccountLib.set_fund_level(fundLevel)
     return ()
 end
 
