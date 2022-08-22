@@ -197,7 +197,7 @@ end
 
 
 @external
-func test_initialize_fuccount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
+func test_initialize_fuccount_buy_sell{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
 alloc_locals
     let (f1_contract) = fund_instance.deployed()
     let (vf_contract) = vf_instance.deployed()
@@ -300,7 +300,11 @@ alloc_locals
      IFuccount.setApprovalForAll(f1_contract, sd_contract, 1)
     %{ stop_prank() %}
 
-    %{ stop_prank = start_prank(ids.ADMIN, ids.f1_contract) %}
+    #we should have an approve specifying id and amount 
+    let (is_approved_) = IFuccount.isApprovedForAll(f1_contract, ADMIN, sd_contract)
+    assert is_approved_ = 1
+
+    %{ stop_prank = start_prank(ids.ADMIN, ids.sd_contract) %}
      IStackingDispute.deposit(sd_contract, f1_contract, id, amount)
     %{ stop_prank() %}
 
