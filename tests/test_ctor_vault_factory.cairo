@@ -15,6 +15,7 @@ from contracts.interfaces.IFuccount import IFuccount
 from contracts.interfaces.IERC20 import IERC20
 from contracts.interfaces.IIntegrationManager import IIntegrationManager
 from contracts.interfaces.IFeeManager import IFeeManager, FeeConfig
+from contracts.interfaces.IStackingDispute import IStackingDispute
 
 
 
@@ -134,14 +135,14 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     assert performanceFee = 10
 
 
-    let (availableIntegrations_len:felt, availableIntegrations: integration*) = IIntegrationManager.availableIntegrations(im_contract)
+    let (availableIntegrations_len:felt, availableIntegrations: Integration*) = IIntegrationManager.availableIntegrations(im_contract)
     assert availableIntegrations_len = 5
-    let integr_:integration = availableIntegrations[3]
+    let integr_:Integration = availableIntegrations[3]
 
     assert integr_.contract = f1_contract
     assert integr_.selector = DEPOSIT_SELECTOR
 
-    let integr_:integration = availableIntegrations[4]
+    let integr_:Integration = availableIntegrations[4]
     assert integr_.contract = f1_contract
     assert integr_.selector = REEDEM_SELECTOR
     %{ stop_pranks = [start_prank(ids.ADMIN, contract) for contract in [ids.vf_contract] ] %}
@@ -391,7 +392,7 @@ alloc_locals
     assert integr_.selector = REEDEM_SELECTOR
 
     %{ stop_prank = start_prank(ids.ADMIN, ids.eth_contract) %}
-     IERC20.approve(eth_contract, f1_contract, Uint256(10000000000000000000,0))
+     sd_contract
     %{ stop_prank() %}
 
     %{ stop_prank = start_prank(ids.ADMIN, ids.eth_contract) %}

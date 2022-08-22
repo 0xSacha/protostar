@@ -301,6 +301,13 @@ func resultDispute {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
     with_attr error_message("Fund is not in dispute"):
        assert dispute_fund = TRUE
     end
+    let (vault_factory_) = vault_factory.read()
+    let (dao_) = IVaultFactory.getOwner(vault_factory_)
+    let (caller_) = get_caller_address()
+    with_attr error_message("Only callable byt the DAO"):
+       assert dao_ = caller_
+    end
+
     let (asset_manager) = IFuccount.manager(fund)
     if bool == TRUE:
         let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = ownerShares(fund,asset_manager)
