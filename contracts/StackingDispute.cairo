@@ -189,7 +189,7 @@ func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     let (balance_user) = ERC1155_balances.read(fund,caller_addr,token_id)
     let (balance_report) = report_fund_balance.read(fund)
     let(contract_address) = get_contract_address()
-    IFuccount.safeTransferFrom(contract_address,caller_addr,contract_address,token_id,amount_to_deposit)
+    IFuccount.safeTransferFrom(fund,caller_addr,contract_address,token_id,amount_to_deposit)
     ### Balance user is UINT256, to change everywhere
     let (new_balance_user) = SafeUint256.add(amount_to_deposit,balance_user)
     ERC1155_balances.write(fund,caller_addr,token_id,new_balance_user)

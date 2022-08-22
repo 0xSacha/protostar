@@ -83,7 +83,6 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     ids.vf_contract = context.VF
     %}    
     
-    
     #Extensions
     %{ 
     context.PM = deploy_contract("./contracts/extensions/PolicyManager.cairo",[context.VF]).contract_address 
@@ -99,9 +98,8 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     context.SD = deploy_contract("./contracts/StackingDispute.cairo",[context.VF]).contract_address 
     ids.sd_contract = context.SD
     %}
-    %{ stop_pranks = [start_prank(ids.ADMIN, contract) for contract in [ids.vf_contract] ] %}
 
-    
+    %{ stop_pranks = [start_prank(ids.ADMIN, contract) for contract in [ids.vf_contract] ] %}
      IVaultFactory.setFeeManager(vf_contract, fm_contract)
      IVaultFactory.setPolicyManager(vf_contract, pm_contract)
      IVaultFactory.setIntegrationManager(vf_contract, im_contract)
@@ -298,8 +296,11 @@ alloc_locals
         print(ids.notLiquidGav.low)
     %}
 
+    %{ stop_prank = start_prank(ids.ADMIN, ids.f1_contract) %}
+     IFuccount.setApprovalForAll(f1_contract, sd_contract, 1)
+    %{ stop_prank() %}
 
-    %{ stop_prank = start_prank(ids.ADMIN, ids.eth_contract) %}
+    %{ stop_prank = start_prank(ids.ADMIN, ids.f1_contract) %}
      IStackingDispute.deposit(sd_contract, f1_contract, id, amount)
     %{ stop_prank() %}
 
