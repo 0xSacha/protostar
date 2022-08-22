@@ -1684,7 +1684,7 @@ func _assert_enought_guarantee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
     alloc_locals
    let (shareSupply_) = shares_total_supply.read()
    let (contractAddress_ : felt) = get_contract_address()
-   let (manager_) = manager.read()
+   let (manager_) = get_manager_account()
    let (vault_factory_) = vault_factory.read()
    let (stackingDispute_) = IVaultFactory.getStackingDispute(vault_factory_)
    let (securityFundBalance_)  = IStackingDispute.getSecurityFundBalance(stackingDispute_, contractAddress_)

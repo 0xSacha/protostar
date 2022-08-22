@@ -11,7 +11,6 @@ from contracts.interfaces.IVaultFactory import IVaultFactory
 from contracts.interfaces.IEmpiricOracle import IEmpiricOracle
 from contracts.interfaces.IOraclePriceFeedMixin import IOraclePriceFeedMixin
 from contracts.interfaces.IFuccount import IFuccount
-#from contracts.interfaces.IFuccountLib import IFuccountLib
 from contracts.interfaces.IERC20 import IERC20
 from contracts.interfaces.IIntegrationManager import IIntegrationManager
 from contracts.interfaces.IFeeManager import IFeeManager, FeeConfig
@@ -77,11 +76,14 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     tempvar f2_contract
     tempvar f3_contract
     tempvar sd_contract
+
     ##Vault Factory
     %{ 
     context.VF = deploy_contract("./contracts/VaultFactory.cairo",[ids.ADMIN]).contract_address 
     ids.vf_contract = context.VF
     %}    
+    
+    
     #Extensions
     %{ 
     context.PM = deploy_contract("./contracts/extensions/PolicyManager.cairo",[context.VF]).contract_address 
@@ -97,47 +99,6 @@ func __setup__{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     context.SD = deploy_contract("./contracts/StackingDispute.cairo",[context.VF]).contract_address 
     ids.sd_contract = context.SD
     %}
-
-
-    %{ stop_prank = start_prank(ids.ADMIN, ids.eth_contract) %}
-     IERC20.approve(eth_contract, vf_contract, Uint256(10000000000000000000,0))
-    %{ stop_prank() %}
-    
-    let (local feeConfig : felt*) = alloc()
-    assert [feeConfig] = 10
-    assert [feeConfig + 1] = 10
-    assert [feeConfig + 2] = 10
-    assert [feeConfig + 3] = 10
-    %{ stop_prank = start_prank(ids.ADMIN, ids.vf_contract) %}
-    let (name_) = IFuccount.name(f1_contract)
-    IVaultFactory.initializeFund(
-    vf_contract, f1_contract, 1, 420, 42, eth_contract, Uint256(1000000000000000000,0), Uint256(10000000000000000000,0), 4, feeConfig, 1)
-
-    IVaultFactory.initializeFund(
-    vf_contract, f2_contract, 1, 69, 42, eth_contract, Uint256(1000000000000000000,0), Uint256(10000000000000000000,0), 4, feeConfig, 1)
-    %{ stop_prank() %}
-
-    let (entranceFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.ENTRANCE_FEE)
-    let (exitFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.EXIT_FEE)
-    let (managementFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.MANAGEMENT_FEE)
-    let (performanceFee) = IFeeManager.getFeeConfig(fm_contract, f1_contract,FeeConfig.PERFORMANCE_FEE)
-
-    assert entranceFee = 10
-    assert exitFee = 10
-    assert managementFee = 10
-    assert performanceFee = 10
-
-
-    let (availableIntegrations_len:felt, availableIntegrations: Integration*) = IIntegrationManager.availableIntegrations(im_contract)
-    assert availableIntegrations_len = 5
-    let integr_:Integration = availableIntegrations[3]
-
-    assert integr_.contract = f1_contract
-    assert integr_.selector = DEPOSIT_SELECTOR
-
-    let integr_:Integration = availableIntegrations[4]
-    assert integr_.contract = f1_contract
-    assert integr_.selector = REEDEM_SELECTOR
     %{ stop_pranks = [start_prank(ids.ADMIN, contract) for contract in [ids.vf_contract] ] %}
 
     
