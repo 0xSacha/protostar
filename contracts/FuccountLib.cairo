@@ -17,11 +17,11 @@ from starkware.cairo.common.math import (
     split_felt,
 )
 
-from openzeppelin.introspection.erc165.IERC165 import IERC165
-from openzeppelin.introspection.erc165.library import ERC165
+from openzeppelin.introspection.IERC165 import IERC165
+from openzeppelin.introspection.ERC165 import ERC165
 from contracts.interfaces.IERC1155Receiver import IERC1155_Receiver
-from openzeppelin.security.safemath.library import SafeUint256
-from openzeppelin.security.reentrancyguard.library import ReentrancyGuard
+from openzeppelin.security.safemath import SafeUint256
+from openzeppelin.security.reentrancyguard import ReentrancyGuard
 
 from starkware.cairo.common.uint256 import (
     Uint256,
@@ -34,7 +34,7 @@ from starkware.cairo.common.uint256 import (
 )
 from contracts.utils.utils import felt_to_uint256, uint256_div, uint256_percent, uint256_pow, uint256_mul_low
 
-from openzeppelin.token.erc20.IERC20 import IERC20
+from openzeppelin.token.erc20.interfaces.IERC20 import IERC20
 from contracts.interfaces.IVaultFactory import IVaultFactory
 from contracts.interfaces.IFeeManager import FeeConfig, IFeeManager
 from contracts.interfaces.IPolicyManager import IPolicyManager
@@ -42,7 +42,7 @@ from contracts.interfaces.IFuccount import IFuccount
 from contracts.interfaces.IStackingDispute import IStackingDispute
 from contracts.interfaces.IPreLogic import IPreLogic
 from contracts.interfaces.IIntegrationManager import IIntegrationManager
-from contracts.PreLogic.interfaces.IValueInterpretor import IValueInterpretor
+from contracts.interfaces.IValueInterpretor import IValueInterpretor
 
 
 const IERC1155_ID = 0xd9b67a26
