@@ -2,6 +2,7 @@
 %lang starknet
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
+from starkware.starknet.common.syscalls import get_caller_address
 from contracts.interfaces.IVaultFactory import IVaultFactory
 from contracts.interfaces.IIntegrationManager import IIntegrationManager
 
@@ -39,7 +40,7 @@ func runPreLogic{
     let incomingAsset_:felt = [_callData + 4 + 2*routes_len]
     let (VF_:felt) = vaultFactory.read()
     let (IM_:felt) = IVaultFactory.getIntegrationManager(VF_)
-    let (isAllowedAsset_:felt) = IIntegrationManager.checkIsAssetAvailable(IM_, incomingAsset_)
+    let (isAllowedAsset_:felt) = IIntegrationManager.isAvailableAsset(IM_, incomingAsset_)
     with_attr error_message("swapExactTokensForTokensFromAlphaRoad: incoming Asset not tracked"):
         assert_not_zero(isAllowedAsset_)
     end

@@ -4,7 +4,7 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.math import assert_not_zero
 from starkware.cairo.common.uint256 import Uint256
 from starkware.cairo.common.alloc import alloc
-from contracts.interfaces.IJediSwapPair import IJediSwapPair, IJediSwapPairERC20
+from contracts.PreLogic.interfaces.IJediSwapPair import IJediSwapPair, IJediSwapPairERC20
 
 from contracts.utils.utils import felt_to_uint256, uint256_div, uint256_percent, uint256_mul_low
 

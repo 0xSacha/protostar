@@ -418,7 +418,7 @@ func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
       _amount: Uint256,
 ):
    FuccountLib.deposit(_amount)
-    return ()
+   return ()
 end
 
 

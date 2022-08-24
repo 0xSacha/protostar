@@ -879,9 +879,12 @@ func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     let (fund_:felt) = get_contract_address()
     let (denomination_asset_:felt) = denomination_asset.read()
     let (caller_ : felt) = get_caller_address()
+    let (manager : felt) = manager.read()
 
     # _assert_max_min_range(_amount)
-    _assert_allowed_depositor(caller_)
+    if caller_ != manager:
+        _assert_allowed_depositor(caller_)
+    end
 
     let (shareAmount_: Uint256, fundAmount_: Uint256, managerAmount_: Uint256, treasuryAmount_: Uint256, stackingVaultAmount_: Uint256) = preview_deposit(_amount)
     # transfer fee to fee_treasury, stacking_vault

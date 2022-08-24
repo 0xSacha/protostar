@@ -27,7 +27,7 @@ from contracts.utils.utils import felt_to_uint256, uint256_div, uint256_percent,
 from contracts.interfaces.IFuccount import IFuccount
 from contracts.interfaces.IVaultFactory import IVaultFactory
 
-from openzeppelin.security.safemath.library import SafeUint256
+from openzeppelin.security.safemath import SafeUint256
 from starkware.cairo.common.math_cmp import is_le, is_not_zero
 
 

@@ -44,7 +44,7 @@ func runPreLogic{
     let (incomingAsset_:felt) = IARFPoolFactory.getPool(IARFPoolFactoryContract_, poolPair_)
     let (VF_:felt) = vaultFactory.read()
     let (IM_:felt) = IVaultFactory.getIntegrationManager(VF_)
-    let (isAllowedAsset_:felt) = IIntegrationManager.checkIsAssetAvailable(IM_, incomingAsset_)
+    let (isAllowedAsset_:felt) = IIntegrationManager.isAvailableAsset(IM_, incomingAsset_)
     with_attr error_message("addLiquidityFromAlpha: incoming LP Asset not available on agnety"):
         assert_not_zero(isAllowedAsset_)
     end

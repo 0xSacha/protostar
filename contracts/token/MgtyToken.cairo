@@ -1,7 +1,7 @@
 %lang starknet
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
-from starkware.cairo.common.uint256 import Uint256
+from starkware.cairo.common.uint256 import Uint256,uint256_le, uint256_check
 from starkware.cairo.common.bool import TRUE
 
 from openzeppelin.access.ownable import Ownable
@@ -27,8 +27,8 @@ func constructor{
         recipient: felt,
         owner: felt
     ):
-    Uint256.uint256_check(_max_supply)
-    let (validMaxSupply_) = Uint256.uint256_le(_max_supply, Uint256(0, 0))
+    uint256_check(_max_supply)
+    let (validMaxSupply_) = uint256_le(_max_supply, Uint256(0, 0))
     max_supply.write(_max_supply)
     ERC20.initializer(name, symbol, decimals)
     ERC20._mint(recipient, initial_supply)
@@ -76,8 +76,8 @@ func get_max_supply{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }() -> (max_supply: Uint256):
-    let (max_supply: Uint256) = max_supply.read()
-    return (max_supply)
+    let (max_supply_: Uint256) = max_supply.read()
+    return (max_supply_)
 end
 
 @view
