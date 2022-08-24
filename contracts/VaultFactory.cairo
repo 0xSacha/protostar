@@ -51,9 +51,9 @@ from contracts.interfaces.IValueInterpretor import IValueInterpretor
 
 from contracts.interfaces.IERC20 import IERC20
 
-from openzeppelin.access.ownable.library import Ownable
+from openzeppelin.access.ownable import Ownable
 
-from openzeppelin.security.safemath.library import SafeUint256
+from openzeppelin.security.safemath import SafeUint256
 
 #
 # Events
