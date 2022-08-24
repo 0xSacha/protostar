@@ -809,9 +809,7 @@ end
     #
 
 
-func preview_deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-
-     _amount: Uint256
+func preview_deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_amount: Uint256
 ) -> (shareAmount: Uint256, fundAmount: Uint256, managerAmount: Uint256, treasuryAmount: Uint256, stackingVaultAmount: Uint256):
     alloc_locals
     let (fund_:felt) = get_contract_address()
@@ -879,21 +877,15 @@ func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     let (fund_:felt) = get_contract_address()
     let (denomination_asset_:felt) = denomination_asset.read()
     let (caller_ : felt) = get_caller_address()
-    let (manager : felt) = manager.read()
-
-    # _assert_max_min_range(_amount)
-    if caller_ != manager:
-        _assert_allowed_depositor(caller_)
-    end
-
+    let (manager_ : felt) = manager_account.read()
+    _assert_allowed_depositor(caller_)
     let (shareAmount_: Uint256, fundAmount_: Uint256, managerAmount_: Uint256, treasuryAmount_: Uint256, stackingVaultAmount_: Uint256) = preview_deposit(_amount)
     # transfer fee to fee_treasury, stacking_vault
-    let (_manager_account:felt) = manager_account.read()
     let (treasury:felt) = _get_dao_treasury()
     let (stacking_vault:felt) = _get_stacking_vault()
 
     # transfer asset
-    IERC20.transferFrom(denomination_asset_, caller_, _manager_account, managerAmount_)
+    IERC20.transferFrom(denomination_asset_, caller_, manager_, managerAmount_)
     IERC20.transferFrom(denomination_asset_, caller_, treasury, treasuryAmount_)
     IERC20.transferFrom(denomination_asset_, caller_, stacking_vault, stackingVaultAmount_)
     IERC20.transferFrom(denomination_asset_, caller_, fund_, fundAmount_)
@@ -1652,15 +1644,19 @@ end
 # end
 
 func _assert_allowed_depositor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    _caller : felt):
+    caller : felt):
     alloc_locals
+    let (manager_) = manager_account.read()
+    if manager_ == caller:
+        return()
+    end
     let (policyManager_) = _get_policy_manager()
     let (fund_:felt) = get_contract_address()
     let (isPublic_:felt) = IPolicyManager.isPublic(policyManager_, fund_)
     if isPublic_ == 1:
         return()
     else:
-        let (isAllowedDepositor_:felt) = IPolicyManager.isAllowedDepositor(policyManager_, fund_, _caller)
+        let (isAllowedDepositor_:felt) = IPolicyManager.isAllowedDepositor(policyManager_, fund_, caller)
         with_attr error_message("_assert_allowed_depositor: not allowed depositor"):
         assert isAllowedDepositor_ = 1
         end

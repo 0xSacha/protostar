@@ -41,7 +41,7 @@ func runPreLogic{
     let incomingAsset_:felt = [_callData + 1]
     let (VF_:felt) = vaultFactory.read()
     let (IM_:felt) = IVaultFactory.getIntegrationManager(VF_)
-    let (isAllowedAsset_:felt) = IIntegrationManager.checkIsAssetAvailable(IM_, incomingAsset_)
+    let (isAllowedAsset_:felt) = IIntegrationManager.isAvailableAsset(IM_, incomingAsset_)
     with_attr error_message("swapExactTokensForTokensFromAlphaRoad: incoming Asset not tracked"):
         assert_not_zero(isAllowedAsset_)
     end

@@ -27,7 +27,7 @@ from contracts.utils.utils import felt_to_uint256, uint256_div, uint256_percent,
 from contracts.interfaces.IFuccount import IFuccount
 from contracts.interfaces.IVaultFactory import IVaultFactory
 
-from openzeppelin.security.safemath.library import SafeUint256
+from openzeppelin.security.safemath import SafeUint256
 from starkware.cairo.common.math_cmp import is_le, is_not_zero
 
 
@@ -38,12 +38,12 @@ from starkware.cairo.common.math_cmp import is_le, is_not_zero
 
 
 @event
-func fundFroze(vault_address: felt):
+func fundFroze(fund: felt):
 end
 
 @event
 func depositToDisputeFund(
-    vault_address : felt,
+    fund : felt,
     caller_address : felt,
     token_id : Uint256,
     amount_to_deposit: Uint256
@@ -52,7 +52,7 @@ end
 
 @event
 func withdrawFromDisputeFund(
-    vault_address : felt,
+    fund : felt,
     caller_address : felt,
     token_id : Uint256,
     amount_to_deposit: Uint256
@@ -61,7 +61,7 @@ end
 
 @event
 func depositToSecurityFund(
-    vault_address : felt,
+    fund : felt,
     caller_address : felt,
     token_id : Uint256,
     amount_to_deposit: Uint256
@@ -70,7 +70,7 @@ end
 
 @event
 func withdrawFromSecurityFund(
-    vault_address : felt,
+    fund : felt,
     caller_address : felt,
     token_id : Uint256,
     amount_to_deposit: Uint256
@@ -78,11 +78,11 @@ func withdrawFromSecurityFund(
 end
 
 @event
-func fundResultBan (vault_address : felt):
+func fundResultBan (fund : felt):
 end
 
 @event
-func fundResultLegit (vault_address : felt):
+func fundResultLegit (fund : felt):
 end
 
 
@@ -99,15 +99,15 @@ func vault_factory() -> (res : felt):
 end
 
 @storage_var
-func ERC1155_balances (vault_address : felt, user_address : felt, token_id: Uint256) -> (balance : Uint256):
+func ERC1155_balances (fund : felt, user_address : felt, token_id: Uint256) -> (balance : Uint256):
 end
 
 @storage_var
-func report_fund_balance(vault_address : felt) -> (balance : Uint256):
+func report_fund_balance(fund : felt) -> (balance : Uint256):
 end
 
 @storage_var
-func security_fund_balance(vault_address : felt) -> (balance : Uint256):
+func security_fund_balance(fund : felt) -> (balance : Uint256):
 end
 
 
@@ -136,8 +136,8 @@ func balanceOf{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }(account: felt, id: Uint256, vault_address : felt) -> (balance: Uint256):
-    let (balances) = ERC1155_balances.read(vault_address,account,id)
+    }(account: felt, id: Uint256, fund : felt) -> (balance: Uint256):
+    let (balances) = ERC1155_balances.read(fund,account,id)
     return (balances)
 end
 
@@ -179,31 +179,31 @@ end
 
 
 @external
-func deposit_to_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(vault_address : felt,token_id : Uint256, amount_to_deposit: Uint256) -> ():
+func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt,token_id : Uint256, amount_to_deposit: Uint256):
     alloc_locals
     let (caller_addr) = get_caller_address()
-    let (vault_status) = is_fund_disputed.read(vault_address)
+    let (vault_status) = is_fund_disputed.read(fund)
     if vault_status == TRUE:
         return()
     end
-    let (balance_user) = ERC1155_balances.read(vault_address,caller_addr,token_id)
-    let (balance_report) = report_fund_balance.read(vault_address)
+    let (balance_user) = ERC1155_balances.read(fund,caller_addr,token_id)
+    let (balance_report) = report_fund_balance.read(fund)
     let(contract_address) = get_contract_address()
-    IFuccount.safeTransferFrom(contract_address,caller_addr,contract_address,token_id,amount_to_deposit)
+    IFuccount.safeTransferFrom(fund,caller_addr,contract_address,token_id,amount_to_deposit)
     ### Balance user is UINT256, to change everywhere
     let (new_balance_user) = SafeUint256.add(amount_to_deposit,balance_user)
-    ERC1155_balances.write(vault_address,caller_addr,token_id,new_balance_user)
-    depositToDisputeFund.emit(vault_address,caller_addr,token_id,amount_to_deposit)
+    ERC1155_balances.write(fund,caller_addr,token_id,new_balance_user)
+    depositToDisputeFund.emit(fund,caller_addr,token_id,amount_to_deposit)
     let (new_balance_fund) = SafeUint256.add(amount_to_deposit,balance_report)
-    report_fund_balance.write(vault_address, new_balance_fund)
+    report_fund_balance.write(fund, new_balance_fund)
 
-    let (balance_complains_user) = report_fund_balance.read(vault_address)
-    let (sharesTotalSupply) = IFuccount.sharesTotalSupply(vault_address)
+    let (balance_complains_user) = report_fund_balance.read(fund)
+    let (sharesTotalSupply) = IFuccount.sharesTotalSupply(fund)
     let (percent) = uint256_percent(sharesTotalSupply,balance_complains_user) 
     let (condiiton) = uint256_le(Uint256(5, 0),percent)
     if condiiton == 1:
-        is_fund_disputed.write(vault_address,1)
-        fundFroze.emit(vault_address)
+        is_fund_disputed.write(fund,1)
+        fundFroze.emit(fund)
         return()
     else:
         return ()
@@ -211,7 +211,7 @@ func deposit_to_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, 
 end
 
 @external
-func withdraw_to_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt, token_id : Uint256,amount_to_withdraw : Uint256) -> ():
+func withdraw{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt, token_id : Uint256,amount : Uint256):
     alloc_locals 
     let (is_guarantee_withdrawable) = isGuaranteeWithdrawable(fund)
     with_attr error_message("Guarantee is not withdrawable yet"):
@@ -222,18 +222,18 @@ func withdraw_to_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
     let (balance_user) = ERC1155_balances.read(fund,caller_addr,token_id)
     let (dispute_fund_balance_) = report_fund_balance.read(fund)
     let(contract_address) = get_contract_address()
-    let (new_dispute_fund_balance) = SafeUint256.sub_le(dispute_fund_balance_, amount_to_withdraw)
-    let (new_user_balancer) = SafeUint256.sub_le(balance_user, amount_to_withdraw)
-    IFuccount.safeTransferFrom(fund,contract_address,caller_addr,token_id,amount_to_withdraw)
+    let (new_dispute_fund_balance) = SafeUint256.sub_le(dispute_fund_balance_, amount)
+    let (new_user_balancer) = SafeUint256.sub_le(balance_user, amount)
+    IFuccount.safeTransferFrom(fund,contract_address,caller_addr,token_id,amount)
 
     ERC1155_balances.write(fund,caller_addr,token_id, new_user_balancer)
     report_fund_balance.write(caller_addr, new_dispute_fund_balance)
 
-    withdrawFromDisputeFund.emit(fund,caller_addr,token_id,amount_to_withdraw)
+    withdrawFromDisputeFund.emit(fund,caller_addr,token_id,amount)
     return()
 end
 
-func asset_manager_deposit {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt, token_id : Uint256, amount:Uint256):
+func managerDeposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt, token_id : Uint256, amount:Uint256):
     let (asset_man) = IFuccount.manager(fund)
     let (caller_addr) = get_caller_address()
 
@@ -264,7 +264,7 @@ func asset_manager_deposit {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
 end
 
 @external
-func withdraw_asset_manager_dispute_fund {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt, token_id : Uint256,amount_to_withdraw : Uint256) -> ():
+func managerWithdraw{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(fund : felt, token_id : Uint256,amount : Uint256):
     alloc_locals 
     let (asset_man) = IFuccount.manager(fund)
     let (caller_addr) = get_caller_address()
@@ -273,12 +273,12 @@ func withdraw_asset_manager_dispute_fund {syscall_ptr : felt*, pedersen_ptr : Ha
     end
 
     let (balance_user) = ERC1155_balances.read(fund,caller_addr,token_id)
-    let (new_balance_user) = SafeUint256.sub_le(balance_user, amount_to_withdraw)
+    let (new_balance_user) = SafeUint256.sub_le(balance_user, amount)
     let (security_balance) = security_fund_balance.read(fund)
-    let (new_security_balance) = SafeUint256.sub_le(security_balance, amount_to_withdraw)
+    let (new_security_balance) = SafeUint256.sub_le(security_balance, amount)
     
     let(contract_address) = get_contract_address()
-    IFuccount.safeTransferFrom(fund,contract_address,caller_addr,token_id,amount_to_withdraw)
+    IFuccount.safeTransferFrom(fund,contract_address,caller_addr,token_id,amount)
 
     ERC1155_balances.write(fund,caller_addr,token_id, new_balance_user)
     security_fund_balance.write(caller_addr,new_security_balance)
@@ -290,31 +290,38 @@ func withdraw_asset_manager_dispute_fund {syscall_ptr : felt*, pedersen_ptr : Ha
         return ()
     end
 
-    withdrawFromSecurityFund.emit(fund,caller_addr,token_id,amount_to_withdraw)
+    withdrawFromSecurityFund.emit(fund,caller_addr,token_id,amount)
     return()
 end
 
-func resultDispute {syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(bool : felt, vault_address : felt):
+func resultDispute{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(bool : felt, fund : felt):
     alloc_locals
-    let (dispute_fund) = is_fund_disputed.read(vault_address)
+    let (dispute_fund) = is_fund_disputed.read(fund)
     let (contract_address) = get_contract_address()
     with_attr error_message("Fund is not in dispute"):
        assert dispute_fund = TRUE
     end
-    let (asset_manager) = IFuccount.manager(vault_address)
+    let (vault_factory_) = vault_factory.read()
+    let (dao_) = IVaultFactory.getOwner(vault_factory_)
+    let (caller_) = get_caller_address()
+    with_attr error_message("Only callable byt the DAO"):
+       assert dao_ = caller_
+    end
+
+    let (asset_manager) = IFuccount.manager(fund)
     if bool == TRUE:
-        let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = ownerShares(vault_address,asset_manager)
-        IFuccount.burnBatch(vault_address,contract_address, assetId_len, assetId, assetAmount_len, assetAmount)
-        fundResultBan.emit(vault_address)
+        let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = ownerShares(fund,asset_manager)
+        IFuccount.burnBatch(fund,contract_address, assetId_len, assetId, assetAmount_len, assetAmount)
+        fundResultBan.emit(fund)
         return ()
     else:
-        let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = IFuccount.ownerShares(vault_address,contract_address)
-        let (assetIdAM_len:felt, assetIdAM:Uint256*, assetAmountAM_len:felt,assetAmountAM:Uint256*) = ownerShares(vault_address,asset_manager)
+        let (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*) = IFuccount.ownerShares(fund,contract_address)
+        let (assetIdAM_len:felt, assetIdAM:Uint256*, assetAmountAM_len:felt,assetAmountAM:Uint256*) = ownerShares(fund,asset_manager)
         let (local assetIdwam : Uint256*) = alloc()
         let (local assetAmountWam : Uint256*) = alloc()
         let (assetIdWAM_len, assetIdWAM, assetAmountWAM_len, assetAmountWAM) = get_all_shares_from_dispute_fund(assetId_len, assetId, assetAmount_len,assetAmount,assetIdAM_len, assetIdAM, assetAmountAM_len,assetAmountAM,0, assetIdwam, 0, assetAmountWam)
-        IFuccount.burnBatch(vault_address,contract_address, assetIdWAM_len, assetIdWAM, assetIdWAM_len, assetAmountWAM)
-        fundResultLegit.emit(vault_address)
+        IFuccount.burnBatch(fund,contract_address, assetIdWAM_len, assetIdWAM, assetIdWAM_len, assetAmountWAM)
+        fundResultLegit.emit(fund)
         return ()
     end
 end
@@ -349,12 +356,12 @@ func ownerShares{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }( vault_address : felt, account: felt) -> (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*):
+    }( fund : felt, account: felt) -> (assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*):
     alloc_locals
-    let (totalId_:Uint256) = IFuccount.totalId(vault_address)
+    let (totalId_:Uint256) = IFuccount.totalId(fund)
     let (local assetId : Uint256*) = alloc()
     let (local assetAmount : Uint256*) = alloc()
-    let (tabSize_:felt) = completeMultiAssetTab(totalId_, 0, assetId, 0, assetAmount, account,vault_address)    
+    let (tabSize_:felt) = completeMultiAssetTab(totalId_, 0, assetId, 0, assetAmount, account,fund)    
     return (tabSize_, assetId, tabSize_, assetAmount)
 end
 
@@ -362,13 +369,13 @@ func completeMultiAssetTab{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }(totalId:Uint256, assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*, account:felt, vault_address : felt) -> (tabSize:felt):
+    }(totalId:Uint256, assetId_len:felt, assetId:Uint256*, assetAmount_len:felt,assetAmount:Uint256*, account:felt, fund : felt) -> (tabSize:felt):
     alloc_locals
     if totalId.low == 0:
         return (tabSize=assetId_len)
     end
     let (newTotalId_) =  SafeUint256.sub_le( totalId, Uint256(1,0))
-    let (balance_) = ERC1155_balances.read(vault_address,account, newTotalId_)
+    let (balance_) = ERC1155_balances.read(fund,account, newTotalId_)
     let (isZero_) = is_not_zero(balance_.low)
     if isZero_ == 1:
         # assert assetId[assetId_len*Uint256.SIZE] = newTotalId_
@@ -382,7 +389,7 @@ func completeMultiAssetTab{
         assetAmount_len=assetAmount_len+1,
         assetAmount=assetAmount ,
         account=account,
-        vault_address=vault_address
+        fund=fund
         )
     end
     return completeMultiAssetTab(
@@ -392,7 +399,7 @@ func completeMultiAssetTab{
         assetAmount_len=assetAmount_len,
         assetAmount=assetAmount,
         account=account,
-        vault_address=vault_address
+        fund=fund
         )
 end
 

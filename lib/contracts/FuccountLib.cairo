@@ -17,11 +17,11 @@ from starkware.cairo.common.math import (
     split_felt,
 )
 
-from openzeppelin.introspection.erc165.IERC165 import IERC165
-from openzeppelin.introspection.erc165.library import ERC165
+from openzeppelin.introspection.IERC165 import IERC165
+from openzeppelin.introspection.ERC165 import ERC165
 from contracts.interfaces.IERC1155Receiver import IERC1155_Receiver
-from openzeppelin.security.safemath.library import SafeUint256
-from openzeppelin.security.reentrancyguard.library import ReentrancyGuard
+from openzeppelin.security.safemath import SafeUint256
+from openzeppelin.security.reentrancyguard import ReentrancyGuard
 
 from starkware.cairo.common.uint256 import (
     Uint256,
@@ -34,7 +34,7 @@ from starkware.cairo.common.uint256 import (
 )
 from contracts.utils.utils import felt_to_uint256, uint256_div, uint256_percent, uint256_pow, uint256_mul_low
 
-from openzeppelin.token.erc20.IERC20 import IERC20
+from openzeppelin.token.erc20.interfaces.IERC20 import IERC20
 from contracts.interfaces.IVaultFactory import IVaultFactory
 from contracts.interfaces.IFeeManager import FeeConfig, IFeeManager
 from contracts.interfaces.IPolicyManager import IPolicyManager
@@ -42,7 +42,7 @@ from contracts.interfaces.IFuccount import IFuccount
 from contracts.interfaces.IStackingDispute import IStackingDispute
 from contracts.interfaces.IPreLogic import IPreLogic
 from contracts.interfaces.IIntegrationManager import IIntegrationManager
-from contracts.PreLogic.interfaces.IValueInterpretor import IValueInterpretor
+from contracts.interfaces.IValueInterpretor import IValueInterpretor
 
 
 const IERC1155_ID = 0xd9b67a26
@@ -459,7 +459,7 @@ func get_not_nul_assets{
     }() -> (notNulAssets_len:felt, notNulAssets: AssetInfo*):
     alloc_locals
     let (IM_:felt) = _get_integration_manager()
-    let (availableAssets_len: felt, availableAssets:felt*) = IIntegrationManager.getAvailableAssets(IM_)
+    let (availableAssets_len: felt, availableAssets:felt*) = IIntegrationManager.availableAssets(IM_)
     let (local notNulAssets : AssetInfo*) = alloc()
     let (notNulAssets_len:felt) = _complete_non_nul_asset_tab(availableAssets_len, availableAssets, 0, notNulAssets)    
     return(notNulAssets_len, notNulAssets)
@@ -475,7 +475,7 @@ func get_not_nul_shares{
     let (IM_:felt) = _get_integration_manager()
     let (selfAddress) = get_contract_address()
     let (denomination_asset_) = get_denomination_asset()
-    let (availableAShares_len: felt, availableShares:felt*) = IIntegrationManager.getAvailableShares(IM_)
+    let (availableAShares_len: felt, availableShares:felt*) = IIntegrationManager.availableShares(IM_)
     let (local notNulShares : ShareInfo*) = alloc()
     let (notNulShares_len:felt) = _complete_non_nul_shares_tab(availableAShares_len, availableShares, 0, notNulShares, selfAddress, denomination_asset_)    
     return(notNulShares_len, notNulShares)
@@ -488,7 +488,7 @@ func get_not_nul_positions{
     }() -> (notNulPositions_len:felt, notNulPositition: felt*):
     alloc_locals
     let (IM_:felt) = _get_integration_manager()
-    let (availableExternalPositions_len: felt, availableExternalPositions:felt*) = IIntegrationManager.getAvailableExternalPositions(IM_)
+    let (availableExternalPositions_len: felt, availableExternalPositions:felt*) = IIntegrationManager.availableExternalPositions(IM_)
     let (local notNulExternalPositions : PositionInfo*) = alloc()
     let (notNulExternalPositions_len:felt) = _complete_non_nul_position_tab(availableExternalPositions_len, availableExternalPositions, 0, notNulExternalPositions)    
     return(notNulExternalPositions_len, notNulExternalPositions)
@@ -768,7 +768,7 @@ end
         if asset_len == 0:
             return()
         end
-        let (isAllowedAssetToReedem_) = IPolicyManager.checkIsAllowedAssetToReedem(policyManager, contractAddress, asset[0])
+        let (isAllowedAssetToReedem_) = IPolicyManager.isAllowedAssetToReedem(policyManager, contractAddress, asset[0])
         with_attr error_message("_assert_allowed_asset_to_reedem:  Only allowed assets can be reedem"):
             assert isAllowedAssetToReedem_ = 1
         end
@@ -879,18 +879,20 @@ func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     let (fund_:felt) = get_contract_address()
     let (denomination_asset_:felt) = denomination_asset.read()
     let (caller_ : felt) = get_caller_address()
+    let (manager_ : felt) = manager_account.read()
 
     # _assert_max_min_range(_amount)
-    _assert_allowed_depositor(caller_)
+    if caller_ != manager_:
+        _assert_allowed_depositor(caller_)
+    end
 
     let (shareAmount_: Uint256, fundAmount_: Uint256, managerAmount_: Uint256, treasuryAmount_: Uint256, stackingVaultAmount_: Uint256) = preview_deposit(_amount)
     # transfer fee to fee_treasury, stacking_vault
-    let (_manager_account:felt) = manager_account.read()
     let (treasury:felt) = _get_dao_treasury()
     let (stacking_vault:felt) = _get_stacking_vault()
 
     # transfer asset
-    IERC20.transferFrom(denomination_asset_, caller_, _manager_account, managerAmount_)
+    IERC20.transferFrom(denomination_asset_, caller_, manager_, managerAmount_)
     IERC20.transferFrom(denomination_asset_, caller_, treasury, treasuryAmount_)
     IERC20.transferFrom(denomination_asset_, caller_, stacking_vault, stackingVaultAmount_)
     IERC20.transferFrom(denomination_asset_, caller_, fund_, fundAmount_)
@@ -920,12 +922,12 @@ func reedem{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     #check timelock (fund lvl3)
     let (fund_level_:felt) = get_fund_level()
     if fund_level_ == 3:
-        let (policyManager_:felt) = _get_policy_manager()
-        let (currentTimesTamp_:felt) = get_block_timestamp()
-        let (reedemTime_:felt) = IPolicyManager.getReedemTime(policyManager_, fund_)
-        with_attr error_message("reedem: timelock not reached"):
-            assert_le(reedemTime_, currentTimesTamp_)
-        end
+        # let (policyManager_:felt) = _get_policy_manager()
+        # let (currentTimesTamp_:felt) = get_block_timestamp()
+        # let (reedemTime_:felt) = IPolicyManager.getReedemTime(policyManager_, fund_)
+        # with_attr error_message("reedem: timelock not reached"):
+        #     assert_le(reedemTime_, currentTimesTamp_)
+        # end
         tempvar syscall_ptr = syscall_ptr
         tempvar range_check_ptr = range_check_ptr
         tempvar pedersen_ptr = pedersen_ptr
@@ -1125,6 +1127,28 @@ func set_public_key{
         return _unsafe_execute(call_array_len, call_array, calldata_len, calldata, nonce)
     end
 
+func dao_execute{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr,
+        ecdsa_ptr: SignatureBuiltin*,
+        bitwise_ptr: BitwiseBuiltin*
+    }(
+        call_array_len: felt,
+        call_array: AccountCallArray*,
+        calldata_len: felt,
+        calldata: felt*,
+        nonce: felt
+    ) -> (response_len: felt, response: felt*):
+    let (vault_factory_) = vault_factory.read()
+    let (dao_) = IVaultFactory.getOwner(vault_factory_)
+    let (caller_) = get_caller_address()
+    with_attr error_message("dao_execute: caller is not dao"):
+        assert caller_ = dao_
+    end
+    return _unsafe_execute(call_array_len, call_array, calldata_len, calldata, nonce)
+end
+
     func eth_execute{
             syscall_ptr : felt*,
             pedersen_ptr : HashBuiltin*,
@@ -1275,19 +1299,19 @@ func _check_call{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     #check if allowed call
     let (vault_factory_:felt) = vault_factory.read()
     let (integrationManager_:felt) = IVaultFactory.getIntegrationManager(vault_factory_)
-    let (isIntegrationAvailable_) = IIntegrationManager.checkIsIntegrationAvailable(integrationManager_, _contract, _selector)
+    let (isIntegrationAvailable_) = IIntegrationManager.isAvailableIntegration(integrationManager_, _contract, _selector)
     with_attr error_message("the operation is not allowed on Magnety"):
         assert isIntegrationAvailable_ = 1
     end
 
     let (fund_level_) = get_fund_level()
-    let (integrationLevel_) = IIntegrationManager.getIntegrationRequiredLevel(integrationManager_, _contract, _selector)
+    let (integrationLevel_) = IIntegrationManager.integrationRequiredFundLevel(integrationManager_, _contract, _selector)
     with_attr error_message("the operation is not allowed for this fund"):
         assert_le(integrationLevel_, fund_level_)
     end
 
     #perform pre-call logic if necessary
-    let (preLogicContract:felt) = IIntegrationManager.getIntegration(integrationManager_, _contract, _selector)
+    let (preLogicContract:felt) = IIntegrationManager.prelogicContract(integrationManager_, _contract, _selector)
     let (isPreLogicNonRequired:felt) = _is_zero(preLogicContract)
     let (contractAddress_:felt) = get_contract_address()
     if isPreLogicNonRequired ==  0:
@@ -1631,11 +1655,11 @@ func _assert_allowed_depositor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
     alloc_locals
     let (policyManager_) = _get_policy_manager()
     let (fund_:felt) = get_contract_address()
-    let (isPublic_:felt) = IPolicyManager.checkIsPublic(policyManager_, fund_)
+    let (isPublic_:felt) = IPolicyManager.isPublic(policyManager_, fund_)
     if isPublic_ == 1:
         return()
     else:
-        let (isAllowedDepositor_:felt) = IPolicyManager.checkIsAllowedDepositor(policyManager_, fund_, _caller)
+        let (isAllowedDepositor_:felt) = IPolicyManager.isAllowedDepositor(policyManager_, fund_, _caller)
         with_attr error_message("_assert_allowed_depositor: not allowed depositor"):
         assert isAllowedDepositor_ = 1
         end
@@ -1662,10 +1686,11 @@ func _assert_enought_guarantee{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*,
     alloc_locals
    let (shareSupply_) = shares_total_supply.read()
    let (contractAddress_ : felt) = get_contract_address()
+   let (manager_) = get_manager_account()
    let (vault_factory_) = vault_factory.read()
    let (stackingDispute_) = IVaultFactory.getStackingDispute(vault_factory_)
    let (securityFundBalance_)  = IStackingDispute.getSecurityFundBalance(stackingDispute_, contractAddress_)
-   let (guaranteeRatio_) = IVaultFactory.getGuaranteeRatio(vault_factory_)
+   let (guaranteeRatio_) = IVaultFactory.getManagerGuaranteeRatio(vault_factory_, manager_)
    let (minGuarantee_) =  uint256_percent(shareSupply_, Uint256(guaranteeRatio_,0))
    let (isEnoughtGuarantee_) = uint256_le(minGuarantee_, securityFundBalance_)
    with_attr error_message("_assert_enought_guarantee: Asser manager need to provide more guarantee "):

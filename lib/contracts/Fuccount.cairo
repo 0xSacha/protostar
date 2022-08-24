@@ -301,21 +301,22 @@ func activater{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }(
-        _fundName: felt,
-        _fundSymbol: felt,
-        _fundLevel: felt,
-        _denominationAsset: felt,
-        _managerAccount:felt,
-        _shareAmount:Uint256,
-        _sharePrice:Uint256,
+        fundName: felt,
+        fundSymbol: felt,
+        fundLevel: felt,
+        denominationAsset: felt,
+        managerAccount:felt,
+        shareAmount:Uint256,
+        sharePrice:Uint256,
     ):
-    FuccountLib.activater( _fundName,
-        _fundSymbol,
-        _denominationAsset,
-        _managerAccount,
-        _shareAmount,
-        _sharePrice)
-    FuccountLib.set_fund_level(_fundLevel)
+    FuccountLib.activater( 
+        fundName,
+        fundSymbol,
+        denominationAsset,
+        managerAccount,
+        shareAmount,
+        sharePrice)
+    FuccountLib.set_fund_level(fundLevel)
     return ()
 end
 
@@ -400,13 +401,7 @@ func daoExecute{
         calldata: felt*,
         nonce: felt
     ) -> (response_len: felt, response: felt*):
-    let (vault_factory_) = vault_factory.read()
-    let (dao_) = IVaultFactory.getOwner(vault_factory_)
-    let (caller_) = get_caller_address()
-    with_attr error_message("dao_execute: caller is not dao"):
-        assert caller_ = dao_
-    end
-    let (response_len, response) = FuccountLib._unsafe_execute(
+    let (response_len, response) = FuccountLib.dao_execute(
         call_array_len,
         call_array,
         calldata_len,
@@ -423,7 +418,7 @@ func deposit{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
       _amount: Uint256,
 ):
    FuccountLib.deposit(_amount)
-    return ()
+   return ()
 end
 
 

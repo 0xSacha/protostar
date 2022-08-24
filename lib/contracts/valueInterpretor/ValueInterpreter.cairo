@@ -48,11 +48,11 @@ end
 
 
 @storage_var
-func external_position_to_price_feed(externalPosition:felt) -> (res: felt):
+func external_position_to_price_feed(external_position:felt) -> (res: felt):
 end
 
 @storage_var
-func is_supported_external_position(externalPosition:felt) -> (res: felt):
+func is_supported_external_position(external_position:felt) -> (res: felt):
 end
 
 
@@ -84,84 +84,84 @@ end
 #getters
 
 @view
-func calcul_asset_value{
+func calculAssetValue{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
     }(
-        _baseAsset: felt,
-        _amount: Uint256,
-        _denominationAsset:felt,
-    ) -> (res:Uint256):
+        baseAsset: felt,
+        amount: Uint256,
+        denomination_asset:felt,
+    ) -> (asset_value:Uint256):
     alloc_locals
-    if _amount.low == 0:
+    if amount.low == 0:
         return(Uint256(0,0))
     end
 
     let (vault_factory_:felt) = vault_factory.read()
     let (primitivePriceFeed_:felt) = IVaultFactory.getPrimitivePriceFeed(vault_factory_)
-    let (is_supported_primitive_denomination_asset_:felt) = IOraclePriceFeedMixin.checkIsSupportedPrimitiveAsset(primitivePriceFeed_, _denominationAsset)
+    let (is_supported_primitive_denomination_asset_:felt) = IOraclePriceFeedMixin.checkIsSupportedPrimitiveAsset(primitivePriceFeed_, denomination_asset)
     if is_supported_primitive_denomination_asset_ == 1:
-        let (res:Uint256) = __calcul_asset_value(_baseAsset, _amount, _denominationAsset)
-        return(res=res)
+        let (asset_value_:Uint256) = calcul_asset_value(baseAsset, amount, denomination_asset)
+        return(asset_value_)
     else:
         let (eth_address_:felt) = eth_address.read()
-        let (decimalsDenominationAsset_:felt) = IERC20.decimals(_denominationAsset)
+        let (decimalsDenominationAsset_:felt) = IERC20.decimals(denomination_asset)
         let (decimalsDenominationAssetPow_:Uint256) = uint256_pow(Uint256(10,0),decimalsDenominationAsset_)
-        let (baseAsssetValueInEth_:Uint256) = __calcul_asset_value(_baseAsset, _amount, eth_address_)
-        let (oneUnityDenominationAsssetValueInEth_:Uint256) = __calcul_asset_value(_denominationAsset, decimalsDenominationAssetPow_, eth_address_)
+        let (baseAsssetValueInEth_:Uint256) = calcul_asset_value(baseAsset, amount, eth_address_)
+        let (oneUnityDenominationAsssetValueInEth_:Uint256) = calcul_asset_value(denomination_asset, decimalsDenominationAssetPow_, eth_address_)
         let (step_1:Uint256) = uint256_mul_low(baseAsssetValueInEth_, decimalsDenominationAssetPow_)
-        let (res:Uint256) = uint256_div(step_1, oneUnityDenominationAsssetValueInEth_)
-        return(res)
+        let (asset_value_:Uint256) = uint256_div(step_1, oneUnityDenominationAsssetValueInEth_)
+        return(asset_value_)
     end
 end
 
 @view
-func get_derivative_price_feed{
+func derivativePriceFeed{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
     }(
-        _derivative: felt,
-    ) -> (res:felt):
-    let (res:felt) = derivative_to_price_feed.read(_derivative)
-    return(res=res)
+        derivative : felt,
+    ) -> (price_feed : felt):
+    let (price_feed_:felt) = derivative_to_price_feed.read(derivative)
+    return(price_feed_)
 end
 
 @view
-func check_is_supported_derivative_asset{
+func isSupportedDerivativeAsset{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
     }(
-        _derivative: felt,
-    ) -> (res:felt):
-    let (res:felt) = is_supported_derivative_asset.read(_derivative)
-    return(res=res)
+        derivative: felt,
+    ) -> (is_supported_derivative_asset:felt):
+    let (is_supported_derivative_asset_:felt) = is_supported_derivative_asset.read(derivative)
+    return(is_supported_derivative_asset_)
 end
 
 @view
-func get_external_position_price_feed{
+func externalPositionPriceFeed{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
     }(
-        _externalPosition: felt,
-    ) -> (res:felt):
-    let (res:felt) = external_position_to_price_feed.read(_externalPosition)
-    return(res=res)
+        external_position : felt,
+    ) -> (external_position_to_price_feed : felt):
+    let (external_position_to_price_feed_ : felt) = external_position_to_price_feed.read(external_position)
+    return(external_position_to_price_feed_)
 end
 
 @view
-func check_is_supported_external_position{
+func isSupportedExternalPosition{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
     }(
-        _externalPosition: felt,
-    ) -> (res:felt):
-    let (res:felt) = is_supported_external_position.read(_externalPosition)
-    return(res=res)
+        external_position: felt,
+    ) -> (is_supported_external_position:felt):
+    let (is_supported_external_position_:felt) = is_supported_external_position.read(external_position)
+    return(is_supported_external_position_)
 end
 
 #
@@ -169,32 +169,32 @@ end
 #
 
 @external
-func add_derivative{
+func addDerivative{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
     }(
-        _derivative: felt,
-        _priceFeed: felt,
+        derivative: felt,
+        price_feed: felt,
     ):
     only_authorized()
-    is_supported_derivative_asset.write(_derivative, 1)
-    derivative_to_price_feed.write(_derivative, _priceFeed)
+    is_supported_derivative_asset.write(derivative, 1)
+    derivative_to_price_feed.write(derivative, price_feed)
     return()
 end
 
 @external
-func add_external_position{
+func addExternalPosition{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
     }(
-        _externalPosition: felt,
-        _priceFeed: felt,
+        external_position: felt,
+        price_feed: felt,
     ):
     only_authorized()
-    is_supported_external_position.write(_externalPosition, 1)
-    external_position_to_price_feed.write(_externalPosition, _priceFeed)
+    is_supported_external_position.write(external_position, 1)
+    external_position_to_price_feed.write(external_position, price_feed)
     return()
 end
 
@@ -204,107 +204,102 @@ end
 #
 
 
-func __calcul_asset_value{
+func calcul_asset_value{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
     }(
-        _baseAsset: felt,
-        _amount: Uint256,
-        _denominationAsset:felt,
+        base_asset: felt,
+        amount: Uint256,
+        denomination_asset:felt,
     ) -> (res:Uint256):
-    if  _baseAsset == _denominationAsset:
-        return (res=_amount)
+    if  base_asset == denomination_asset:
+        return (res=amount)
     end
     let (vault_factory_:felt) = vault_factory.read()
     let (primitivePriceFeed_:felt) = IVaultFactory.getPrimitivePriceFeed(vault_factory_)
-    let (isSupportedPrimitiveAsset_) = IOraclePriceFeedMixin.checkIsSupportedPrimitiveAsset(primitivePriceFeed_, _baseAsset)
+    let (isSupportedPrimitiveAsset_) = IOraclePriceFeedMixin.checkIsSupportedPrimitiveAsset(primitivePriceFeed_, base_asset)
 
     if isSupportedPrimitiveAsset_ == 1:
-        let (res:Uint256) = IOraclePriceFeedMixin.calcAssetValueBmToDeno(primitivePriceFeed_, _baseAsset, _amount, _denominationAsset)
+        let (res:Uint256) = IOraclePriceFeedMixin.calcAssetValueBmToDeno(primitivePriceFeed_, base_asset, amount, denomination_asset)
         return(res=res)
     else:
-        let (isSupportedDerivativeAsset_) = is_supported_derivative_asset.read(_baseAsset)
+        let (isSupportedDerivativeAsset_) = is_supported_derivative_asset.read(base_asset)
         if isSupportedDerivativeAsset_ == 1:
-        let (derivativePriceFeed_:felt) = get_derivative_price_feed(_baseAsset)
-        let (res:Uint256) = __calc_derivative_value(derivativePriceFeed_, _baseAsset, _amount, _denominationAsset)
+        let (derivativePriceFeed_:felt) = derivativePriceFeed(base_asset)
+        let (res:Uint256) = calc_derivative_value(derivativePriceFeed_, base_asset, amount, denomination_asset)
         return(res=res)
         else:
-        let (externalPositionPriceFeed_:felt) = get_external_position_price_feed(_baseAsset)
-        let (res:Uint256) = __calc_external_position_value(externalPositionPriceFeed_, _baseAsset, _amount, _denominationAsset)
+        let (externalPositionPriceFeed_:felt) = externalPositionPriceFeed(base_asset)
+        let (res:Uint256) = calcul_external_position_value(externalPositionPriceFeed_, base_asset, amount, denomination_asset)
         return(res=res)
         end
     end
 end
 
-func __calc_derivative_value{
+func calc_derivative_value{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
     }(
-        _derivativePriceFeed: felt,
-        _derivative: felt,
-        _amount: Uint256,
-        _denominationAsset:felt,
+        derivative_price_feed: felt,
+        derivative: felt,
+        amount: Uint256,
+        denomination_asset:felt,
     ) -> (res:Uint256):
-    let ( underlyingsAssets_len:felt, underlyingsAssets:felt*, underlyingsAmount_len:felt, underlyingsAmount:Uint256* ) = IDerivativePriceFeed.calc_underlying_values(_derivativePriceFeed, _derivative, _amount)
-    with_attr error_message("__calc_derivative_value: No underlyings"):
+    let ( underlyingsAssets_len:felt, underlyingsAssets:felt*, underlyingsAmount_len:felt, underlyingsAmount:Uint256* ) = IDerivativePriceFeed.calc_underlying_values(derivative_price_feed, derivative, amount)
+    with_attr error_message("calc_derivative_value: No underlyings"):
         assert_not_zero(underlyingsAssets_len)
     end
 
-    with_attr error_message("__calc_derivative_value: Arrays unequal lengths"):
+    with_attr error_message("calc_derivative_value: Arrays unequal lengths"):
         assert underlyingsAssets_len = underlyingsAmount_len
     end
 
-    let (res_:Uint256) = __calc_underlying_values(underlyingsAssets_len, underlyingsAssets, underlyingsAmount_len, underlyingsAmount, _denominationAsset)
+    let (res_:Uint256) = calcul_underlying_values(underlyingsAssets_len, underlyingsAssets, underlyingsAmount_len, underlyingsAmount, denomination_asset)
     return(res=res_)
 end
 
 
-func __calc_external_position_value{
+func calcul_external_position_value{
         pedersen_ptr: HashBuiltin*, 
         syscall_ptr: felt*, 
         range_check_ptr
     }(
-        _externalPositionPriceFeed: felt,
-        _externalPosition: felt,
-        _amount: Uint256,
-        _denominationAsset:felt,
+        external_position_price_feed: felt,
+        external_position: felt,
+        amount: Uint256,
+        denomination_asset:felt,
     ) -> (res:Uint256):
-    let ( underlyingsAssets_len:felt, underlyingsAssets:felt*, underlyingsAmount_len:felt, underlyingsAmount:Uint256* ) = IExternalPositionPriceFeed.calc_underlying_values(_externalPositionPriceFeed, _externalPosition, _amount)
-    with_attr error_message("__calc_external_position_value: No underlyings"):
+    let ( underlyingsAssets_len:felt, underlyingsAssets:felt*, underlyingsAmount_len:felt, underlyingsAmount:Uint256* ) = IExternalPositionPriceFeed.calc_underlying_values(external_position_price_feed, external_position, amount)
+    with_attr error_message("calcul_external_position_value: No underlyings"):
         assert_not_zero(underlyingsAssets_len)
     end
 
-    with_attr error_message("__calc_external_position_value: Arrays unequal lengths"):
+    with_attr error_message("calcul_external_position_value: Arrays unequal lengths"):
         assert underlyingsAssets_len = underlyingsAmount_len
     end
 
-    let (res_:Uint256) = __calc_underlying_values(underlyingsAssets_len, underlyingsAssets, underlyingsAmount_len, underlyingsAmount, _denominationAsset)
+    let (res_:Uint256) = calcul_underlying_values(underlyingsAssets_len, underlyingsAssets, underlyingsAmount_len, underlyingsAmount, denomination_asset)
     return(res=res_)
 end
 
 
-func __calc_underlying_values{
+func calcul_underlying_values{
         syscall_ptr: felt*,
         pedersen_ptr: HashBuiltin*,
         range_check_ptr
-    }(_underlyingsAssets_len:felt, _underlyingsAssets:felt*, _underlyingsAmount_len:felt, _underlyingsAmount:Uint256*, _denominationAsset:felt) -> (res:Uint256):
+    }(underlying_assets_len:felt, underlying_assets:felt*, underlying_amounts_len:felt, underlying_amounts:Uint256*, denomination_asset:felt) -> (res:Uint256):
     alloc_locals
-    if _underlyingsAssets_len == 0:
+    if underlying_assets == 0:
         return (Uint256(0,0))
     end
 
-    let baseAsset_:felt = [_underlyingsAssets]
-    let amount_:Uint256 = [_underlyingsAmount]        
+    let base_asset_:felt = [underlying_assets]
+    let amount_:Uint256 = [underlying_amounts]        
 
-    let (underlyingValue_:Uint256) = calcul_asset_value(baseAsset_, amount_, _denominationAsset)
-
-    let newUnderlyingsAssets_len_:felt = _underlyingsAssets_len -1
-    let newUnderlyingsAssets_:felt* = _underlyingsAssets + 1
-    let newUnderlyingsAmount_len_:felt = _underlyingsAmount_len -1
-    let newUnderlyingsAmount_:Uint256* = _underlyingsAmount + 2
-    let (nextValue_:Uint256) = __calc_underlying_values(newUnderlyingsAssets_len_, newUnderlyingsAssets_, newUnderlyingsAmount_len_, newUnderlyingsAmount_, _denominationAsset)
+    let (underlyingValue_:Uint256) = calcul_asset_value(base_asset_, amount_, denomination_asset)
+    let (nextValue_:Uint256) = calcul_underlying_values(underlying_assets_len - 1, underlying_assets + 1, underlying_amounts_len - 1, underlying_amounts + Uint256.SIZE, denomination_asset)
     let (res_:Uint256, _) = uint256_add(underlyingValue_, nextValue_)  
     return (res=res_)
 end

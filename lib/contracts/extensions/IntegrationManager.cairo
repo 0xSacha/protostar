@@ -145,33 +145,33 @@ func isAvailableExternalPosition{syscall_ptr : felt*, pedersen_ptr : HashBuiltin
 end
 
 @view
-func isAvailableIntegration{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(contract: felt, selector:felt) -> (res: felt): 
+func isAvailableIntegration{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(contract: felt, selector:felt) -> (is_available_integration: felt): 
     let (is_available_integration_) = is_available_integration.read(Integration(contract, selector))
     return (is_available_integration_)
 end
 
 @view
-func isIntegratedContract{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(contract: felt) -> (res: felt): 
+func isIntegratedContract{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(contract: felt) -> (is_integrated_contract: felt): 
     let (is_integrated_contract_) = is_integrated_contract.read(contract)
     return (is_integrated_contract_)
 end
 
 
 @view
-func prelogicContract{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_contract: felt, _selector:felt) -> (prelogic: felt): 
-    let (prelogic_) = integration_to_prelogic.read(Integration(_contract, _selector))
+func prelogicContract{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(contract: felt, selector:felt) -> (prelogic: felt): 
+    let (prelogic_) = integration_to_prelogic.read(Integration(contract, selector))
     return (prelogic_)
 end
 
 @view
-func integrationRequiredFundLevel{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(_contract: felt, _selector:felt) -> (res: felt): 
-    let (integration_required_fund_level_) = integration_required_fund_level.read(Integration(_contract, _selector))
+func integrationRequiredFundLevel{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(contract: felt, selector:felt) -> (integration_required_fund_level: felt): 
+    let (integration_required_fund_level_) = integration_required_fund_level.read(Integration(contract, selector))
     return (integration_required_fund_level_)
 end
 
 
 @view
-func availableAssets{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (availableAssets_len: felt, availableAssets:felt*): 
+func availableAssets{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (available_assets_len: felt, available_assets:felt*): 
     alloc_locals
     let (available_assets_len:felt) = available_assets_length.read()
     let (local available_assets : felt*) = alloc()
@@ -305,10 +305,10 @@ func complete_available_assets_tab{
         return ()
     end
     let (asset_:felt) = id_to_available_asset.read(available_assets_len - 1)
-    assert available_assets[available_assets_len] = asset_
+    assert available_assets[0] = asset_
     return complete_available_assets_tab(
         available_assets_len=available_assets_len - 1,
-        available_assets= available_assets,
+        available_assets= available_assets + 1,
     )
 end
 
@@ -321,10 +321,10 @@ func complete_available_external_positions_tab{
         return ()
     end
     let (external_position_:felt) = id_to_available_external_position.read(available_external_positions_len - 1)
-    assert available_external_positions[available_external_positions_len] = external_position_
+    assert available_external_positions[0] = external_position_
     return complete_available_external_positions_tab(
         available_external_positions_len= available_external_positions_len - 1,
-        available_external_positions= available_external_positions,
+        available_external_positions= available_external_positions + 1,
     )
 end
 
@@ -337,9 +337,9 @@ func complete_available_integrations_tab{
         return ()
     end
     let (integration_:Integration) = id_to_available_integration.read(available_integrations_len - 1)
-    assert available_integrations[available_integrations_len] = integration_
+    assert available_integrations[0] = integration_
     return complete_available_integrations_tab(
         available_integrations_len=available_integrations_len - 1,
-        available_integrations= available_integrations,
+        available_integrations= available_integrations + Integration.SIZE,
     )
 end

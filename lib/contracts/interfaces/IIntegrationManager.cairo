@@ -3,7 +3,7 @@
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 
-struct integration:
+struct Integration:
     member contract : felt
     member selector : felt
 end
@@ -14,8 +14,10 @@ end
 namespace IIntegrationManager:
 
 
+    #Setters 
     func setAvailableAsset(_asset: felt):
     end
+
     func setAvailableExternalPosition(_asset: felt):
     end
 
@@ -23,8 +25,11 @@ namespace IIntegrationManager:
     end
 
  
-    func isContractIntegrated(_contract: felt) -> (res: felt):
+    ##Getters
+
+    func isIntegratedContract(contract: felt) -> (is_integrated_contract: felt):
     end
+
 
     func isAvailableAsset(asset: felt) -> (res: felt):
     end
@@ -38,26 +43,23 @@ namespace IIntegrationManager:
     func isAvailableShare(_share: felt) -> (res: felt): 
     end
 
-    func isIntegratedContract(contract: felt) -> (res: felt): 
+
+    func prelogicContract(contract: felt, selector:felt) -> (prelogic: felt): 
     end
 
-    
-
-    func getIntegration(_contract: felt, _selector: felt) -> (res: felt):
+    func integrationRequiredFundLevel(contract: felt, selector:felt) -> (integration_required_fund_level: felt): 
     end
 
-    func getIntegrationRequiredLevel(_contract: felt, _selector: felt) -> (res: felt):
+
+    func availableAssets() -> (available_assets_len : felt, available_assets :felt*): 
     end
 
-    func getAvailableExternalPositions () -> (availableAssets_len : felt,  availableAssets:felt*):
+    func availableExternalPositions() -> (available_external_positions_len : felt, available_external_positions :felt*): 
     end
 
-    func getAvailableAssets() -> (availableAssets_len :felt,  availableAssets:felt*):
+    func availableShares() -> (share_available_len: felt, share_available:felt*): 
     end
 
-    func getAvailableShares() -> (availableShares_len: felt, availableShares:felt*):
-    end
-
-    func getAvailableIntegrations() -> (availableIntegrations_len:felt, availableIntegrations: integration*): 
+    func availableIntegrations() -> (available_integrations_len:felt, available_integrations: Integration*): 
     end
 end
